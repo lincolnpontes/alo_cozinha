@@ -5,17 +5,17 @@
     <link rel="manifest" href="manifest.json">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
     <meta name="mobile-web-app-capable" content="yes">
-    <meta name="theme-color" content="#1565C0">
-    <title>Pedidos Cozinha v1.2</title>
+    <meta name="theme-color" content="#1565C0" id="metaThemeColor">
+    <title>Pedidos Cozinha v1.3</title>
 
     <style>
         /* CSS EXATAMENTE IGUAL AO DA ETIQUETADORA V1.7 */
         body { font-family: Arial, sans-serif; background-color: #f0f2f5; margin: 0; padding: 0; display: flex; justify-content: center; user-select: none; }
         .app-container { width: 100%; max-width: 500px; background-color: #ffffff; min-height: 100vh; box-shadow: 0 0 10px rgba(0,0,0,0.1); position: relative; }
-        .header { background-color: #1565C0; color: white; padding: 15px; display: flex; justify-content: space-between; align-items: center; }
+        .header { background-color: #1565C0; color: white; padding: 15px; display: flex; justify-content: space-between; align-items: center; transition: background-color 0.3s; }
         .header-title { flex: 1; font-size: 18px; font-weight: bold; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
         .header-actions button { background: none; border: none; color: white; font-size: 24px; cursor: pointer; margin-left: 10px; }
-        .operator-bar { background-color: #1976D2; color: white; padding: 8px 15px; display: flex; align-items: center; gap: 10px; font-size: 14px; }
+        .operator-bar { background-color: #1976D2; color: white; padding: 8px 15px; display: flex; align-items: center; gap: 10px; font-size: 14px; transition: background-color 0.3s; }
         .operator-bar select { flex: 1; padding: 8px; border-radius: 4px; border: none; font-weight: bold; }
         .filters { padding: 10px 15px; display: flex; gap: 10px; overflow-x: auto; white-space: nowrap; border-bottom: 1px solid #eee; }
         .chip { background-color: #e0e0e0; color: #333; padding: 8px 16px; border-radius: 20px; cursor: pointer; font-size: 14px; font-weight: bold; border: 2px solid transparent; }
@@ -54,9 +54,9 @@
         
         .swipe-hint { color: #1976D2; font-size: 24px; font-weight: bold; pointer-events: none; }
         
-        /* Indicação visual de piscar para alerta */
+        /* Indicação visual de piscar para alerta na cozinha */
         .alerta-pisca { animation: bg-pisca 1s infinite; }
-        @keyframes bg-pisca { 0% { background-color: #1565C0; } 50% { background-color: #d32f2f; } 100% { background-color: #1565C0; } }
+        @keyframes bg-pisca { 0% { background-color: #2e7d32; } 50% { background-color: #d32f2f; } 100% { background-color: #2e7d32; } }
     </style>
 </head>
 <body>
@@ -69,17 +69,17 @@
         </div>
     </div>
     
-    <div class="operator-bar">
+    <div class="operator-bar" id="barraOperador">
         <span>Modo atual:</span>
         <select id="seletorModo" onchange="verificarTrocaModo(this)">
-            <option value="balcao">Balcão (Solicitar)</option>
+            <option value="panelas">Panelas (Pedir)</option>
             <option value="cozinha">Cozinha (Receber)</option>
         </select>
     </div>
 
-    <div id="area-balcao">
+    <div id="area-panelas">
         <div class="filters" id="containerFiltros"></div>
-        <ul class="list" id="listaProdutosBalcao"></ul>
+        <ul class="list" id="listaProdutosPanelas"></ul>
     </div>
 
     <div id="area-cozinha" style="display: none;">
@@ -92,7 +92,7 @@
         <div class="modal-title">Acesso Restrito</div>
         <div class="form-group">
             <label>Senha do Administrador:</label>
-            <input type="password" id="senhaAdmin" placeholder="Digite a senha" inputmode="numeric" pattern="[0-9]*">
+            <input type="password" id="senhaAdmin" placeholder="Digite a senha" inputmode="numeric" pattern="[0-9]*" onkeypress="if(event.key === 'Enter') validarSenhaAdmin()">
         </div>
         <div class="modal-actions">
             <button class="btn-cancel" onclick="fecharModal('modalLoginAdmin')">Cancelar</button>
@@ -104,7 +104,7 @@
 <div class="modal-overlay" id="modalPainelUnificado">
     <div class="modal">
         <div style="text-align: center; color: #666; font-size: 13px; font-weight: bold; margin-bottom: 20px;">
-            Pedidos Cozinha - v1.2
+            Pedidos Cozinha - v1.3
         </div>
 
         <h3 style="font-size: 16px; color: #555; margin-bottom: 10px;">Painel de Gestão</h3>
@@ -118,7 +118,8 @@
         <h3 style="font-size: 16px; color: #555; margin-top: 25px; margin-bottom: 10px;">Configurações de Sincronização</h3>
         <div class="form-group">
             <label>URL do Google Apps Script:</label>
-            <input type="text" id="configUrlApp" placeholder="https://script.google.com/macros/s/..." onchange="salvarUrlGeral()">
+            <input type="text" id="configUrlApp" placeholder="https://script.google.com/macros/s/...">
+            <button class="btn-action" style="width: 100%; margin-top: 10px; background-color: #4CAF50;" onclick="salvarUrlGeral()">💾 Salvar URL</button>
         </div>
 
         <div class="modal-actions">
@@ -140,7 +141,7 @@
 
 <div class="modal-overlay" id="modalFormProduto">
     <div class="modal">
-        <div class="modal-title">Produto do Balcão</div>
+        <div class="modal-title">Produto (Panelas)</div>
         <input type="hidden" id="prodIndexOriginal">
         <div class="form-group">
             <label>Nome do Produto:</label>
@@ -204,11 +205,17 @@
                 { nome: "Carnes", cor: "#ffcccc", corTexto: "#000000" }
             ],
             configs: { 
-                modo: "balcao", 
+                modo: "panelas", 
                 url: ""
             }
         };
         let local = JSON.parse(localStorage.getItem('kds_v1_db'));
+        
+        // Migra quem estava como 'balcao' no passado para 'panelas'
+        if(local && local.configs && local.configs.modo === 'balcao') {
+            local.configs.modo = 'panelas';
+        }
+        
         return local || defaultDB;
     }
 
@@ -218,9 +225,10 @@
 
     // --- INICIALIZAÇÃO ---
     function iniciar() {
-        document.getElementById('seletorModo').value = db.configs.modo;
-        aplicarModoVisual(db.configs.modo);
+        document.getElementById('seletorModo').value = db.configs.modo || 'panelas';
+        aplicarModoVisual(db.configs.modo || 'panelas');
         
+        // Listener extra para o botão enter (além do onkeypress inline)
         document.getElementById('senhaAdmin').addEventListener('keypress', function (e) {
             if (e.key === 'Enter') validarSenhaAdmin();
         });
@@ -234,21 +242,30 @@
 
     function aplicarModoVisual(modo) {
         const h = document.getElementById('mainHeader');
+        const barraOp = document.getElementById('barraOperador');
         const t = document.getElementById('appTitle');
+        const themeColor = document.getElementById('metaThemeColor');
         
-        if(modo === 'balcao') {
+        if(modo === 'panelas') {
             h.style.backgroundColor = '#1565C0';
-            t.innerText = "Balcão (Pedir)";
-            document.getElementById('area-balcao').style.display = 'block';
+            barraOp.style.backgroundColor = '#1976D2';
+            themeColor.content = '#1565C0';
+            t.innerText = "Panelas (Pedir)";
+            
+            document.getElementById('area-panelas').style.display = 'block';
             document.getElementById('area-cozinha').style.display = 'none';
+            
             if(loopCozinha) clearInterval(loopCozinha);
             pararAlarme();
             renderizarFiltros();
-            renderizarListaBalcao();
+            renderizarListaPanelas();
         } else {
-            h.style.backgroundColor = '#2e7d32'; // Verde para cozinha
+            h.style.backgroundColor = '#2e7d32'; // Verde Cozinha
+            barraOp.style.backgroundColor = '#388e3c'; // Verde claro Cozinha
+            themeColor.content = '#2e7d32';
             t.innerText = "Cozinha (Receber)";
-            document.getElementById('area-balcao').style.display = 'none';
+            
+            document.getElementById('area-panelas').style.display = 'none';
             document.getElementById('area-cozinha').style.display = 'block';
             
             // Inicia sincronização
@@ -258,7 +275,7 @@
         }
     }
 
-    // --- LÓGICA DO BALCÃO ---
+    // --- LÓGICA DAS PANELAS ---
     function renderizarFiltros() {
         let html = `<div class="chip ${categoriaAtual === null ? 'active' : ''}" style="${categoriaAtual === null ? 'background:#ccc; color:#000;' : ''}" onclick="filtrarCategoria(null)">TODOS</div>`;
         db.categorias.forEach(cat => { 
@@ -268,10 +285,10 @@
         document.getElementById('containerFiltros').innerHTML = html;
     }
 
-    function filtrarCategoria(cat) { categoriaAtual = cat; renderizarFiltros(); renderizarListaBalcao(); }
+    function filtrarCategoria(cat) { categoriaAtual = cat; renderizarFiltros(); renderizarListaPanelas(); }
 
-    function renderizarListaBalcao() {
-        const lista = document.getElementById('listaProdutosBalcao');
+    function renderizarListaPanelas() {
+        const lista = document.getElementById('listaProdutosPanelas');
         lista.innerHTML = '';
         let filtrados = categoriaAtual === null ? db.produtos : db.produtos.filter(p => p.categoria === categoriaAtual);
         
@@ -280,7 +297,7 @@
             const primeiraLetra = p.nome.charAt(0).toUpperCase();
             
             lista.innerHTML += `
-                <li class="item" onclick="enviarPedidoBalcao('${p.nome}')">
+                <li class="item" onclick="enviarPedidoPanelas('${p.nome}')">
                     <div class="item-avatar" style="background-color: ${catObj.cor}; color: ${catObj.corTexto};">${primeiraLetra}</div>
                     <div class="item-info">
                         <div class="item-title">${p.nome}</div>
@@ -292,8 +309,8 @@
         });
     }
 
-    async function enviarPedidoBalcao(nome) {
-        if(!db.configs.url) return alert("URL do Google Script não configurada! Vá na engrenagem.");
+    async function enviarPedidoPanelas(nome) {
+        if(!db.configs.url) return alert("URL do Google Script não configurada! Clique na ⚙️ e configure.");
         if(!confirm(`Pedir reposição de: ${nome}?`)) return;
 
         try {
@@ -361,19 +378,18 @@
         const statusAtual = elemento.getAttribute('data-status');
 
         if (Math.abs(diff) < 20) {
-            // É UM CLIQUE SIMPLES
+            // CLIQUE SIMPLES
             if(statusAtual === 'pendente') alterarStatusPedido(id, 'fazendo');
         } else if (diff > 80) {
-            // SWIPE PARA A DIREITA (RISCAR / CONCLUIR)
+            // SWIPE DIREITA (CONCLUIR)
             if(statusAtual === 'fazendo' || statusAtual === 'pendente') alterarStatusPedido(id, 'concluido');
         } else if (diff < -80) {
-            // SWIPE PARA A ESQUERDA (DESFAZER)
+            // SWIPE ESQUERDA (DESFAZER)
             if(statusAtual === 'concluido') alterarStatusPedido(id, 'fazendo');
         }
     }
 
     async function alterarStatusPedido(id, novoStatus) {
-        // Atualiza a tela imediatamente para UX rápida
         const el = document.getElementById(`ped-${id}`);
         if(el) {
             el.className = `item status-${novoStatus}`;
@@ -419,7 +435,7 @@
     function validarSenhaAdmin() {
         if(document.getElementById('senhaAdmin').value === "1999") {
             fecharModal('modalLoginAdmin');
-            document.getElementById('configUrlApp').value = db.configs.url;
+            document.getElementById('configUrlApp').value = db.configs.url || '';
             document.getElementById('modalPainelUnificado').style.display = 'flex';
         } else {
             alert("Senha incorreta!");
@@ -429,8 +445,14 @@
     }
 
     function salvarUrlGeral() {
-        db.configs.url = document.getElementById('configUrlApp').value;
+        const urlInput = document.getElementById('configUrlApp').value.trim();
+        if(urlInput === "") {
+            alert("A URL não pode estar vazia.");
+            return;
+        }
+        db.configs.url = urlInput;
         salvarBancoLocal();
+        alert("✅ URL salva com sucesso!");
     }
 
     function voltarPainelUnificado() {
