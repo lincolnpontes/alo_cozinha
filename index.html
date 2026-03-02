@@ -6,7 +6,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
     <meta name="mobile-web-app-capable" content="yes">
     <meta name="theme-color" content="#1565C0" id="metaThemeColor">
-    <title>Pedidos Cozinha v1.3</title>
+    <title>Pedidos Cozinha v1.4</title>
 
     <style>
         body { font-family: Arial, sans-serif; background-color: #f0f2f5; margin: 0; padding: 0; display: flex; justify-content: center; user-select: none; }
@@ -41,10 +41,6 @@
         
         .painel-ultimos { flex: 0 0 35%; height: 35%; max-height: 35%; border-top: 3px solid #ccc; background: #fff; display: flex; flex-direction: column; overflow: hidden; }
         .painel-titulo { padding: 10px; background: #eee; font-weight: bold; color: #333; border-bottom: 1px solid #ddd; flex-shrink: 0; display: flex; justify-content: space-between; align-items: center; }
-        
-        .lista-pequena .item { padding: 12px 15px; display: flex; flex-direction: column; align-items: flex-start; gap: 5px; }
-        .lista-pequena .linha-top { width: 100%; white-space: normal; word-break: break-word; font-size: 15px; }
-        .lista-pequena .linha-bottom { width: 100%; display: flex; justify-content: space-between; font-size: 13px; color: #555; }
 
         .swipe-hint { color: #1976D2; font-size: 24px; font-weight: bold; pointer-events: none; }
         .alerta-pisca { animation: bg-pisca 1s infinite; }
@@ -96,7 +92,7 @@
                 <button onclick="abrirHistorico()" style="background:none; border:none; font-size:20px; cursor:pointer;" title="Histórico Completo do Dia">📋</button>
             </div>
             <div class="scroll-area" style="background-color: #fafafa;">
-                <ul class="list lista-pequena" id="listaUltimosPedidosPanelas"></ul>
+                <ul class="list" id="listaUltimosPedidosPanelas"></ul>
             </div>
         </div>
     </div>
@@ -175,7 +171,7 @@
 <div class="modal-overlay" id="modalPainelUnificado">
     <div class="modal">
         <div style="text-align: center; color: #666; font-size: 13px; font-weight: bold; margin-bottom: 20px;">
-            Pedidos Cozinha - v1.3
+            Pedidos Cozinha - v1.4
         </div>
 
         <button class="btn-outline" onclick="abrirGerenciar('produtos')">📦 Gerenciar Produtos</button>
@@ -277,7 +273,6 @@
         };
         let local = JSON.parse(localStorage.getItem('kds_v1_db'));
         if(local) {
-            // Migração de bancos antigos
             if(local.observacoes) { local.obsPedidos = local.observacoes; delete local.observacoes; }
             if(!local.obsPedidos) local.obsPedidos = ["Sem sal", "Pouco óleo", "Urgente"];
             if(!local.obsCancelamentos) local.obsCancelamentos = ["Falta de insumo", "Queimou", "Erro no pedido"];
@@ -390,42 +385,34 @@
         });
     }
 
-    // --- MODAL DE PEDIR (AGORA ADICIONA VÍRGULA NAS OBS) ---
     function abrirModalPedido(nomeProduto) {
         if(!db.configs.url) return alert("URL não configurada! Vá na engrenagem ⚙️");
-        
         document.getElementById('tituloModalPedido').innerText = `Pedir: ${nomeProduto}`;
         document.getElementById('pedidoItemNome').value = nomeProduto;
         document.getElementById('pedidoObsText').value = '';
-        
         const container = document.getElementById('obsChipsContainer');
         container.innerHTML = '';
         db.obsPedidos.forEach(obs => {
             container.innerHTML += `<div class="chip" style="font-weight: normal; background-color:#E3F2FD; color:#1565C0; border-color:#1565C0;" onclick="addObsToText('pedidoObsText', '${obs}')">${obs}</div>`;
         });
-        
         document.getElementById('modalFazerPedido').style.display = 'flex';
     }
 
-    // --- MODAL CANCELAR ---
     function abrirModalCancelamento(id, nomeProduto) {
         document.getElementById('tituloModalCancelar').innerText = `Cancelar: ${nomeProduto}`;
         document.getElementById('cancelarItemId').value = id;
         document.getElementById('cancelarObsText').value = '';
-        
         const container = document.getElementById('obsCancelChipsContainer');
         container.innerHTML = '';
         db.obsCancelamentos.forEach(obs => {
             container.innerHTML += `<div class="chip" style="font-weight: normal; background-color:#ffebee; color:#d32f2f; border-color:#d32f2f;" onclick="addObsToText('cancelarObsText', '${obs}')">${obs}</div>`;
         });
-        
         document.getElementById('modalCancelarPedido').style.display = 'flex';
     }
 
     function addObsToText(inputID, obsStr) {
         const input = document.getElementById(inputID);
-        if(input.value.trim() === '') input.value = obsStr;
-        else input.value += ', ' + obsStr;
+        if(input.value.trim() === '') input.value = obsStr; else input.value += ', ' + obsStr;
         input.focus();
     }
 
@@ -433,7 +420,6 @@
         const nome = document.getElementById('pedidoItemNome').value;
         const obsText = document.getElementById('pedidoObsText').value.trim();
         let nomeParaEnviar = obsText ? `${nome} (Obs: ${obsText})` : nome;
-
         document.getElementById('modalFazerPedido').style.display = 'none';
 
         try {
@@ -484,12 +470,12 @@
         } catch(e) { console.log("Aguardando conexão..."); }
     }
 
-    function darCienciaBuscar(id) {
+    function darCiencia(id) {
         pedidosCientes.add(id.toString());
         renderizarUltimosPedidos();
     }
 
-    // --- ABA ÚLTIMOS PEDIDOS (TEXTO QUEBRADO E FLEX) ---
+    // --- ABA ÚLTIMOS PEDIDOS (TEXTO QUEBRADO NATURALMENTE) ---
     function renderizarUltimosPedidos() {
         const lista = document.getElementById('listaUltimosPedidosPanelas');
         const agora = Date.now();
@@ -510,28 +496,33 @@
             if (p.status === 'pendente') { statusTraduzido = 'Pendente'; corStatus = '#d32f2f'; }
             else if (p.status === 'fazendo') { statusTraduzido = 'Em preparo'; corStatus = '#fbc02d'; }
             else if (p.status === 'enviado') { statusTraduzido = 'Enviado'; corStatus = '#9e9e9e'; }
-            else if (p.status === 'cancelado') { statusTraduzido = 'Cancelado'; corStatus = '#000000'; }
+            else if (p.status === 'cancelado') { 
+                let motivoTxt = p.motivo ? ` (Motivo: ${p.motivo})` : '';
+                if(!pedidosCientes.has(p.id.toString())) {
+                    statusTraduzido = 'Cancelado' + motivoTxt; corStatus = '#000000'; piscaClass = 'alerta-pisca-buscar'; onclickHtml = `onclick="darCiencia('${p.id}')"`;
+                } else {
+                    statusTraduzido = 'Cancelado' + motivoTxt; corStatus = '#9e9e9e'; 
+                }
+            }
             else if (p.status === 'buscar') { 
                 if(!pedidosCientes.has(p.id.toString())) {
-                    statusTraduzido = 'Pode ir buscar'; corStatus = '#d32f2f'; piscaClass = 'alerta-pisca-buscar'; onclickHtml = `onclick="darCienciaBuscar('${p.id}')"`;
+                    statusTraduzido = 'Pode ir buscar'; corStatus = '#d32f2f'; piscaClass = 'alerta-pisca-buscar'; onclickHtml = `onclick="darCiencia('${p.id}')"`;
                 } else {
                     statusTraduzido = 'Pode ir buscar'; corStatus = '#9e9e9e'; 
                 }
             } else { statusTraduzido = 'Finalizado'; corStatus = '#9e9e9e'; }
 
             lista.innerHTML += `
-                <li class="item ${piscaClass}" style="border-left: 5px solid ${corStatus};" ${onclickHtml}>
-                    <strong class="linha-top">${p.produto}</strong>
-                    <div class="linha-bottom">
-                        <span>${new Date(p.timestamp).toLocaleTimeString()}</span>
-                        <strong style="color:${corStatus}">${statusTraduzido}</strong>
+                <li class="item ${piscaClass}" style="border-left: 5px solid ${corStatus}; padding: 10px 15px;" ${onclickHtml}>
+                    <div class="item-info" style="font-size: 14px; white-space: normal; word-break: break-word; line-height: 1.4;">
+                        <strong>${p.produto}</strong> - ${new Date(p.timestamp).toLocaleTimeString()} - <strong style="color:${corStatus}">${statusTraduzido}</strong>
                     </div>
                 </li>
             `;
         });
     }
 
-    // --- COZINHA (AJUSTE NO HORÁRIO E LINHAS) ---
+    // --- COZINHA ---
     function renderizarListaCozinha() {
         const lista = document.getElementById('listaPedidosCozinha');
         const agora = Date.now();
@@ -584,7 +575,6 @@
         });
     }
 
-    // --- EVENTOS DE TOQUE E GESTOS UNIFICADOS (COM DUPLO CLIQUE) ---
     let touchStartX = 0; let pressTimer; let isLongPress = false; let lastTap = 0; let tapTimer;
 
     function handleTouchStart(e, elemento) { 
@@ -609,31 +599,21 @@
         const nomeProd = elemento.getAttribute('data-nome');
 
         if (Math.abs(diff) < 20) {
-            // Área de Toques (Simples ou Duplo)
-            let currentTime = new Date().getTime();
-            let tapLength = currentTime - lastTap;
-            
+            let currentTime = new Date().getTime(); let tapLength = currentTime - lastTap;
             if (tapLength < 350 && tapLength > 0) {
-                // DUPLO TOQUE IDENTIFICADO
                 clearTimeout(tapTimer);
-                if(statusAtual === 'fazendo' || statusAtual === 'pendente') {
-                    abrirModalCancelamento(id, nomeProd);
-                }
+                if(statusAtual === 'fazendo' || statusAtual === 'pendente') abrirModalCancelamento(id, nomeProd);
             } else {
-                // TOQUE SIMPLES
-                tapTimer = setTimeout(() => {
-                    if(statusAtual === 'pendente') alterarStatusPedido(id, 'fazendo');
-                }, 350); // Aguarda para ter certeza que não vai bater de novo
+                tapTimer = setTimeout(() => { if(statusAtual === 'pendente') alterarStatusPedido(id, 'fazendo'); }, 350); 
             }
             lastTap = currentTime;
-
-        } else if (diff > 80) { // SWIPE DIREITA
+        } else if (diff > 80) { 
             if(statusAtual === 'fazendo') alterarStatusPedido(id, 'enviado');
             else if (statusAtual === 'pendente') {
                 elemento.querySelector('.item-subtitle').innerText = "⚠️ Toque para aceitar primeiro!";
                 setTimeout(() => renderizarListaCozinha(), 2000);
             }
-        } else if (diff < -80) { // SWIPE ESQUERDA
+        } else if (diff < -80) { 
             if(statusAtual === 'enviado' || statusAtual === 'buscar' || statusAtual === 'cancelado' || statusAtual === 'concluido') {
                 alterarStatusPedido(id, 'fazendo');
             }
