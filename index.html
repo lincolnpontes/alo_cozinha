@@ -6,23 +6,20 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
     <meta name="mobile-web-app-capable" content="yes">
     <meta name="theme-color" content="#1565C0" id="metaThemeColor">
-    <title>Pedidos Cozinha v1.9</title>
+    <title>Pedidos Cozinha v1.1</title>
 
     <style>
         body { font-family: Arial, sans-serif; background-color: #f0f2f5; margin: 0; padding: 0; display: flex; justify-content: center; user-select: none; }
         .app-container { width: 100%; max-width: 500px; background-color: #ffffff; height: 100vh; display: flex; flex-direction: column; box-shadow: 0 0 10px rgba(0,0,0,0.1); position: relative; overflow: hidden; }
         
-        /* CABEÇALHO UNIFICADO COM SELETOR */
         .header { padding: 15px; display: flex; justify-content: space-between; align-items: center; color: white; background-color: #1565C0; }
         .header-select { background: transparent; color: white; border: none; font-size: 20px; font-weight: bold; outline: none; -webkit-appearance: none; appearance: none; padding-right: 15px; }
         .header-select option { color: black; font-size: 16px; }
         .header-actions button { background: none; border: none; color: white; font-size: 24px; cursor: pointer; margin-left: 10px; }
         
-        /* TEMAS DAS CORES */
         body.theme-panelas .header { background-color: #1565C0 !important; }
         body.theme-cozinha .header { background-color: #2e7d32 !important; }
 
-        /* ÁREAS DE CONTEÚDO */
         .area-conteudo { flex: 1; display: flex; flex-direction: column; overflow: hidden; }
         .scroll-area { overflow-y: auto; flex: 1; min-height: 0; }
 
@@ -37,25 +34,19 @@
         .item-title { font-weight: bold; font-size: 18px; margin-bottom: 4px; }
         .item-subtitle { color: #666; font-size: 14px; }
 
-        /* STATUS COZINHA E PAINEL ÚLTIMOS PEDIDOS */
         .status-pendente { border-left: 8px solid #d32f2f; background-color: #ffebee; }
         .status-fazendo { border-left: 8px solid #fbc02d; background-color: #fffde7; }
         .status-concluido { border-left: 8px solid #9e9e9e; opacity: 0.6; text-decoration: line-through; }
         
-        /* CONGELANDO A ALTURA DO PAINEL ÚLTIMOS EM ~35% */
         .painel-ultimos { flex: 0 0 35%; height: 35%; max-height: 35%; border-top: 3px solid #ccc; background: #fff; display: flex; flex-direction: column; overflow: hidden; }
         .painel-titulo { padding: 10px; background: #eee; font-weight: bold; text-align: center; font-size: 14px; color: #333; border-bottom: 1px solid #ddd; flex-shrink: 0; }
-        
-        /* LISTA PEQUENA EM LINHA ÚNICA */
         .lista-pequena .item { padding: 10px 15px; }
         .lista-pequena .item-title { font-size: 14px; font-weight: normal; margin-bottom: 0; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 
         .swipe-hint { color: #1976D2; font-size: 24px; font-weight: bold; pointer-events: none; }
-        
         .alerta-pisca { animation: bg-pisca 1s infinite; }
         @keyframes bg-pisca { 0% { opacity: 1; } 50% { opacity: 0.6; } 100% { opacity: 1; } }
 
-        /* MODAIS PADRÃO */
         .modal-overlay { display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.6); align-items: center; justify-content: center; z-index: 1000; }
         .modal { background: white; padding: 20px; border-radius: 10px; width: 90%; max-width: 400px; max-height: 90vh; overflow-y: auto; }
         .modal-title { font-size: 20px; font-weight: bold; margin-bottom: 20px; color: #333; border-bottom: 2px solid #1976D2; padding-bottom: 10px; }
@@ -123,23 +114,21 @@
 <div class="modal-overlay" id="modalPainelUnificado">
     <div class="modal">
         <div style="text-align: center; color: #666; font-size: 13px; font-weight: bold; margin-bottom: 20px;">
-            Pedidos Cozinha - v1.9
+            Pedidos Cozinha - v1.1
         </div>
 
         <button class="btn-outline" onclick="abrirGerenciar('produtos')">📦 Gerenciar Produtos</button>
         <button class="btn-outline" onclick="abrirGerenciar('categorias')">🏷️ Gerenciar Categorias</button>
 
-        <h3 style="font-size: 16px; color: #555; margin-top: 25px; margin-bottom: 10px;">Google Apps Script</h3>
+        <h3 style="font-size: 16px; color: #555; margin-top: 25px; margin-bottom: 10px;">Conexão e Sincronização</h3>
         <div class="form-group">
             <input type="text" id="configUrlApp" placeholder="https://script.google.com/macros/s/...">
             <button class="btn-action" style="width: 100%; margin-top: 10px; background-color: #4CAF50;" onclick="salvarUrlGeral()">💾 Salvar URL</button>
         </div>
 
-        <h3 style="font-size: 16px; color: #555; margin-top: 25px; margin-bottom: 10px;">Backup do Sistema</h3>
-        <div style="display: flex; gap: 10px; margin-bottom: 10px;">
-            <button class="btn-outline" style="margin: 0; flex: 1; justify-content: center;" onclick="exportarBanco()">⬇️ Exportar</button>
-            <button class="btn-outline" style="margin: 0; flex: 1; justify-content: center;" onclick="document.getElementById('fileImport').click()">⬆️ Importar</button>
-            <input type="file" id="fileImport" style="display: none;" accept=".json,.txt" onchange="importarBanco(event)">
+        <div style="display: flex; gap: 10px; margin-bottom: 10px; margin-top: 15px;">
+            <button class="btn-outline" style="margin: 0; flex: 1; justify-content: center; font-size: 13px;" onclick="sincronizarSalvarNuvem()">⬆️ Salvar na Nuvem</button>
+            <button class="btn-outline" style="margin: 0; flex: 1; justify-content: center; font-size: 13px;" onclick="sincronizarPuxarNuvem()">⬇️ Puxar da Nuvem</button>
         </div>
 
         <div class="modal-actions">
@@ -214,19 +203,11 @@
 
     function carregarBanco() {
         let defaultDB = {
-            produtos: [
-                { nome: "Arroz Branco", categoria: "Guarnições" },
-                { nome: "Feijão", categoria: "Guarnições" },
-                { nome: "Carne de Sol", categoria: "Carnes" }
-            ],
-            categorias: [
-                { nome: "Guarnições", cor: "#fff0b3", corTexto: "#000000" },
-                { nome: "Carnes", cor: "#ffcccc", corTexto: "#000000" }
-            ],
+            produtos: [{ nome: "Arroz", categoria: "Geral" }],
+            categorias: [{ nome: "Geral", cor: "#fff0b3", corTexto: "#000000" }],
             configs: { modo: "panelas", url: "" }
         };
         let local = JSON.parse(localStorage.getItem('kds_v1_db'));
-        if(local && local.configs && local.configs.modo === 'balcao') { local.configs.modo = 'panelas'; }
         return local || defaultDB;
     }
 
@@ -234,53 +215,35 @@
         localStorage.setItem('kds_v1_db', JSON.stringify(db));
     }
 
-    // --- FUNÇÕES DE BACKUP ---
-    async function exportarBanco() {
-        const dataStr = JSON.stringify(db);
-        const fileName = `backup_kds_${new Date().getTime()}.txt`;
-        const blob = new Blob([dataStr], { type: "text/plain" });
-        
-        if (navigator.canShare) {
-            try {
-                const file = new File([blob], fileName, { type: "text/plain" });
-                if (navigator.canShare({ files: [file] })) {
-                    await navigator.share({
-                        files: [file],
-                        title: 'Backup KDS',
-                        text: 'Arquivo de backup dos produtos e categorias.'
-                    });
-                    return;
-                }
-            } catch (err) { console.log("Share nativo falhou. Tentando download."); }
-        }
-        
-        const url = URL.createObjectURL(blob);
-        const a = document.createElement('a');
-        a.href = url;
-        a.download = fileName;
-        a.click();
-        URL.revokeObjectURL(url);
+    // --- NOVA SINCRONIZAÇÃO EM NUVEM (PRODUTOS E CATEGORIAS) ---
+    async function sincronizarSalvarNuvem() {
+        if(!db.configs.url) return alert("Salve a URL do Google Script primeiro!");
+        try {
+            document.querySelector('#modalPainelUnificado .btn-action').innerText = "Salvando...";
+            await fetch(db.configs.url, { 
+                method: 'POST', mode: 'no-cors', 
+                body: JSON.stringify({ action: 'salvar_banco', dados: { produtos: db.produtos, categorias: db.categorias } }) 
+            });
+            alert("Produtos e Categorias salvos na Nuvem com sucesso!");
+        } catch(e) { alert("Erro ao enviar para a nuvem."); }
+        document.querySelector('#modalPainelUnificado .btn-action').innerText = "💾 Salvar URL";
     }
 
-    function importarBanco(event) {
-        const file = event.target.files[0];
-        if (!file) return;
-        const reader = new FileReader();
-        reader.onload = function(e) {
-            try {
-                const novoDB = JSON.parse(e.target.result);
-                if(novoDB.produtos && novoDB.categorias) {
-                    db = novoDB;
-                    salvarBancoLocal();
-                    alert("Banco de dados restaurado com sucesso!");
-                    location.reload();
-                } else { alert("Arquivo inválido."); }
-            } catch (err) { alert("Erro ao ler o arquivo."); }
-        };
-        reader.readAsText(file);
+    async function sincronizarPuxarNuvem() {
+        if(!db.configs.url) return alert("Salve a URL do Google Script primeiro!");
+        try {
+            let res = await fetch(db.configs.url + "?action=carregar_banco");
+            let nuvemDB = await res.json();
+            if(nuvemDB.produtos && nuvemDB.categorias) {
+                db.produtos = nuvemDB.produtos;
+                db.categorias = nuvemDB.categorias;
+                salvarBancoLocal();
+                alert("Dados puxados com sucesso!");
+                location.reload();
+            } else { alert("Nenhum dado encontrado na nuvem ainda."); }
+        } catch(e) { alert("Erro ao puxar dados da nuvem."); }
     }
 
-    // --- ESCUTA DO TECLADO ---
     document.getElementById('senhaAdmin').addEventListener('input', function(e) {
         if(this.value === "1999") {
             this.blur(); 
@@ -312,25 +275,20 @@
             if(themeColor) themeColor.content = '#1565C0';
             document.getElementById('area-panelas').style.display = 'flex';
             document.getElementById('area-cozinha').style.display = 'none';
-            
             pararAlarme();
             renderizarFiltros();
             renderizarListaPanelas();
-            
             syncGeral();
             loopSync = setInterval(syncGeral, 5000);
-            
         } else {
             if(themeColor) themeColor.content = '#2e7d32';
             document.getElementById('area-panelas').style.display = 'none';
             document.getElementById('area-cozinha').style.display = 'flex';
-            
             syncGeral();
             loopSync = setInterval(syncGeral, 5000);
         }
     }
 
-    // --- LÓGICA DAS PANELAS ---
     function renderizarFiltros() {
         let html = `<div class="chip ${categoriaAtual === null ? 'active' : ''}" style="${categoriaAtual === null ? 'background:#ccc; color:#000;' : ''}" onclick="filtrarCategoria(null)">TODOS</div>`;
         db.categorias.forEach(cat => { 
@@ -365,16 +323,14 @@
     }
 
     async function enviarPedidoPanelas(nome) {
-        if(!db.configs.url) return alert("URL do Script não configurada! Clique na ⚙️.");
+        if(!db.configs.url) return alert("URL não configurada! Clique na ⚙️.");
         if(!confirm(`Pedir reposição de: ${nome}?`)) return;
-
         try {
             await fetch(db.configs.url, { method: 'POST', mode: 'no-cors', body: JSON.stringify({ action: 'novo_pedido', produto: nome }) });
             setTimeout(syncGeral, 1000); 
         } catch(e) { alert("Erro ao enviar pedido."); }
     }
 
-    // --- SINCRONIZAÇÃO GERAL ---
     async function syncGeral() {
         if(!db.configs.url) return;
         try {
@@ -408,8 +364,6 @@
         recentes.forEach(p => {
             let statusTraduzido = p.status === 'pendente' ? 'Pendente' : (p.status === 'fazendo' ? 'Em preparo' : 'Finalizado');
             let corStatus = p.status === 'pendente' ? '#d32f2f' : (p.status === 'fazendo' ? '#fbc02d' : '#9e9e9e');
-            
-            // Requisito: Exibir em LINHA ÚNICA
             lista.innerHTML += `
                 <li class="item" style="border-left: 5px solid ${corStatus};">
                     <div class="item-info">
@@ -420,7 +374,6 @@
         });
     }
 
-    // --- LÓGICA DA COZINHA (SWIPE OTIMISTA) ---
     function renderizarListaCozinha() {
         const lista = document.getElementById('listaPedidosCozinha');
         const agora = Date.now();
@@ -430,7 +383,6 @@
             if(p.status !== 'concluido') return true;
             return (agora - new Date(p.finalizadoEm).getTime()) < 300000;
         }).reverse().forEach(p => {
-            
             let emoji = p.status === 'concluido' ? '✔️' : (p.status === 'fazendo' ? '🔥' : '🔔');
             let acaoTxt = p.status === 'pendente' ? 'Toque para aceitar' : (p.status === 'fazendo' ? '👉 Deslize para concluir' : '👈 Deslize para desfazer');
             
@@ -461,45 +413,38 @@
 
         if (Math.abs(diff) < 20) {
             // CLIQUE: Aceitar
-            if(statusAtual === 'pendente') {
-                elemento.className = `item status-fazendo`;
-                elemento.setAttribute('data-status', 'fazendo');
-                elemento.querySelector('.item-subtitle').innerText = "Atualizando...";
-                elemento.querySelector('.item-avatar').innerText = "🔥";
-                alterarStatusPedido(id, 'fazendo');
-            }
+            if(statusAtual === 'pendente') alterarStatusPedido(id, 'fazendo');
         } else if (diff > 80) {
-            // SWIPE DIREITA: Concluir (Bloqueado se for pendente)
+            // SWIPE DIREITA: Concluir
             if(statusAtual === 'fazendo') {
-                elemento.className = `item status-concluido`;
-                elemento.setAttribute('data-status', 'concluido');
-                elemento.querySelector('.item-subtitle').innerText = "Atualizando...";
-                elemento.querySelector('.item-avatar').innerText = "✔️";
                 alterarStatusPedido(id, 'concluido');
             } else if (statusAtual === 'pendente') {
                 elemento.querySelector('.item-subtitle').innerText = "⚠️ Toque para aceitar primeiro!";
-                setTimeout(() => { if(elemento.getAttribute('data-status')==='pendente') elemento.querySelector('.item-subtitle').innerText = "Toque para aceitar"; }, 2000);
+                setTimeout(() => renderizarListaCozinha(), 2000);
             }
         } else if (diff < -80) {
             // SWIPE ESQUERDA: Desfazer
-            if(statusAtual === 'concluido') {
-                elemento.className = `item status-fazendo`;
-                elemento.setAttribute('data-status', 'fazendo');
-                elemento.querySelector('.item-subtitle').innerText = "Atualizando...";
-                elemento.querySelector('.item-avatar').innerText = "🔥";
-                alterarStatusPedido(id, 'fazendo');
-            }
+            if(statusAtual === 'concluido') alterarStatusPedido(id, 'fazendo');
         }
     }
 
-    async function alterarStatusPedido(id, novoStatus) {
-        try {
-            await fetch(db.configs.url, { method: 'POST', mode: 'no-cors', body: JSON.stringify({ action: 'atualizar_status', id: id, novoStatus: novoStatus }) });
-            syncGeral();
-        } catch(e) {
-            // Se falhar a rede, força o syncGeral() depois pra reverter visualmente
-            syncGeral();
+    // UX OTIMISTA DE VERDADE: Altera na memória local na hora!
+    function alterarStatusPedido(id, novoStatus) {
+        let pedidoLocal = pedidosServidor.find(x => x.id == id);
+        if(pedidoLocal) {
+            pedidoLocal.status = novoStatus;
+            if(novoStatus === 'concluido') pedidoLocal.finalizadoEm = new Date().toISOString();
         }
+        
+        // Redesenha a lista instantaneamente com o dado da memória
+        renderizarListaCozinha();
+
+        // Manda pro Google Sheets no fundo, em silêncio (Fire and Forget)
+        fetch(db.configs.url, { 
+            method: 'POST', 
+            mode: 'no-cors', 
+            body: JSON.stringify({ action: 'atualizar_status', id: id, novoStatus: novoStatus }) 
+        });
     }
 
     function gerenciarAlarme() {
@@ -521,7 +466,6 @@
         alarmeTocando = false;
     }
 
-    // --- GESTÃO E ADMINISTRAÇÃO ---
     function fecharModal(id) { document.getElementById(id).style.display = 'none'; }
     function abrirLoginAdmin() { document.getElementById('senhaAdmin').value = ''; document.getElementById('modalLoginAdmin').style.display = 'flex'; setTimeout(()=>document.getElementById('senhaAdmin').focus(), 100); }
     function salvarUrlGeral() {
@@ -532,7 +476,6 @@
     }
     function voltarPainelUnificado() { fecharModal('modalListagem'); document.getElementById('modalPainelUnificado').style.display = 'flex'; }
 
-    // --- REORDENAÇÃO ---
     function moverItem(tipo, index, direcao) {
         const lista = tipo === 'produtos' ? db.produtos : db.categorias;
         if(direcao === 'cima' && index > 0) {
@@ -558,31 +501,13 @@
             titulo.innerText = "Gerenciar Produtos";
             btnNovo.onclick = () => abrirFormProduto(-1);
             db.produtos.forEach((p, idx) => {
-                lista.innerHTML += `
-                <div class="gerenciar-item">
-                    <div class="gerenciar-info"><strong>${p.nome}</strong><br><span style="color:#666">${p.categoria}</span></div>
-                    <div class="gerenciar-actions">
-                        <button onclick="moverItem('produtos', ${idx}, 'cima')">🔼</button>
-                        <button onclick="moverItem('produtos', ${idx}, 'baixo')">🔽</button>
-                        <button onclick="abrirFormProduto(${idx})">✏️</button>
-                        <button onclick="excluirItem('produtos', ${idx})">🗑️</button>
-                    </div>
-                </div>`;
+                lista.innerHTML += `<div class="gerenciar-item"><div class="gerenciar-info"><strong>${p.nome}</strong><br><span style="color:#666">${p.categoria}</span></div><div class="gerenciar-actions"><button onclick="moverItem('produtos', ${idx}, 'cima')">🔼</button><button onclick="moverItem('produtos', ${idx}, 'baixo')">🔽</button><button onclick="abrirFormProduto(${idx})">✏️</button><button onclick="excluirItem('produtos', ${idx})">🗑️</button></div></div>`;
             });
         } else if (tipo === 'categorias') {
             titulo.innerText = "Gerenciar Categorias";
             btnNovo.onclick = () => abrirFormCategoria(-1);
             db.categorias.forEach((c, idx) => {
-                lista.innerHTML += `
-                <div class="gerenciar-item">
-                    <div class="gerenciar-info"><span class="color-preview" style="background:${c.cor}; color:${c.corTexto}">${c.nome}</span></div>
-                    <div class="gerenciar-actions">
-                        <button onclick="moverItem('categorias', ${idx}, 'cima')">🔼</button>
-                        <button onclick="moverItem('categorias', ${idx}, 'baixo')">🔽</button>
-                        <button onclick="abrirFormCategoria(${idx})">✏️</button>
-                        <button onclick="excluirItem('categorias', '${c.nome}')">🗑️</button>
-                    </div>
-                </div>`;
+                lista.innerHTML += `<div class="gerenciar-item"><div class="gerenciar-info"><span class="color-preview" style="background:${c.cor}; color:${c.corTexto}">${c.nome}</span></div><div class="gerenciar-actions"><button onclick="moverItem('categorias', ${idx}, 'cima')">🔼</button><button onclick="moverItem('categorias', ${idx}, 'baixo')">🔽</button><button onclick="abrirFormCategoria(${idx})">✏️</button><button onclick="excluirItem('categorias', '${c.nome}')">🗑️</button></div></div>`;
             });
         }
         document.getElementById('modalListagem').style.display = 'flex';
