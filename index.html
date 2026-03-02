@@ -6,7 +6,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
     <meta name="mobile-web-app-capable" content="yes">
     <meta name="theme-color" content="#1565C0" id="metaThemeColor">
-    <title>Pedidos Cozinha v1.1</title>
+    <title>Pedidos Cozinha v1.2</title>
 
     <style>
         body { font-family: Arial, sans-serif; background-color: #f0f2f5; margin: 0; padding: 0; display: flex; justify-content: center; user-select: none; }
@@ -114,7 +114,7 @@
 <div class="modal-overlay" id="modalPainelUnificado">
     <div class="modal">
         <div style="text-align: center; color: #666; font-size: 13px; font-weight: bold; margin-bottom: 20px;">
-            Pedidos Cozinha - v1.1
+            Pedidos Cozinha - v1.2
         </div>
 
         <button class="btn-outline" onclick="abrirGerenciar('produtos')">📦 Gerenciar Produtos</button>
@@ -150,7 +150,7 @@
 
 <div class="modal-overlay" id="modalFormProduto">
     <div class="modal">
-        <div class="modal-title">Produto (Panelas)</div>
+        <div class="modal-title">Produto</div>
         <input type="hidden" id="prodIndexOriginal">
         <div class="form-group">
             <label>Nome do Produto:</label>
@@ -198,6 +198,7 @@
     let db = carregarBanco();
     let categoriaAtual = null;
     let pedidosServidor = [];
+    let pedidosBloqueados = new Set(); // TRAVA ANTI-LAG DA V1.2
     let loopSync = null;
     let alarmeTocando = false;
 
@@ -215,7 +216,7 @@
         localStorage.setItem('kds_v1_db', JSON.stringify(db));
     }
 
-    // --- NOVA SINCRONIZAÇÃO EM NUVEM (PRODUTOS E CATEGORIAS) ---
+    // --- SINCRONIZAÇÃO EM NUVEM ---
     async function sincronizarSalvarNuvem() {
         if(!db.configs.url) return alert("Salve a URL do Google Script primeiro!");
         try {
@@ -231,6 +232,7 @@
 
     async function sincronizarPuxarNuvem() {
         if(!db.configs.url) return alert("Salve a URL do Google Script primeiro!");
+        if(!confirm("Você irá sobrepor os dados atuais. Deseja continuar?")) return; // NOVA CONFIRMAÇÃO DA V1.2
         try {
             let res = await fetch(db.configs.url + "?action=carregar_banco");
             let nuvemDB = await res.json();
@@ -335,7 +337,16 @@
         if(!db.configs.url) return;
         try {
             const resp = await fetch(db.configs.url);
-            pedidosServidor = await resp.json();
+            const dadosServidor = await resp.json();
+            
+            // LÓGICA ANTI-LAG: Se o item está bloqueado (sendo atualizado agora), ignoramos o servidor e mantemos o nosso
+            pedidosServidor = dadosServidor.map(pServ => {
+                if(pedidosBloqueados.has(pServ.id.toString())) {
+                    let pLocal = pedidosServidor.find(x => x.id == pServ.id);
+                    return pLocal ? pLocal : pServ;
+                }
+                return pServ;
+            });
             
             if(db.configs.modo === 'cozinha') {
                 renderizarListaCozinha();
@@ -428,22 +439,31 @@
         }
     }
 
-    // UX OTIMISTA DE VERDADE: Altera na memória local na hora!
+    // UX OTIMISTA COM TRAVA (RESOLVE O LAG)
     function alterarStatusPedido(id, novoStatus) {
+        // 1. Coloca o pedido na lista de bloqueados
+        pedidosBloqueados.add(id.toString());
+
+        // 2. Altera a memória local na hora
         let pedidoLocal = pedidosServidor.find(x => x.id == id);
         if(pedidoLocal) {
             pedidoLocal.status = novoStatus;
             if(novoStatus === 'concluido') pedidoLocal.finalizadoEm = new Date().toISOString();
         }
         
-        // Redesenha a lista instantaneamente com o dado da memória
+        // 3. Redesenha a tela instantaneamente
         renderizarListaCozinha();
 
-        // Manda pro Google Sheets no fundo, em silêncio (Fire and Forget)
+        // 4. Manda pro Google em silêncio
         fetch(db.configs.url, { 
             method: 'POST', 
             mode: 'no-cors', 
             body: JSON.stringify({ action: 'atualizar_status', id: id, novoStatus: novoStatus }) 
+        }).then(() => {
+            // 5. Destrava o pedido após 2 segundos (tempo suficiente para o Google processar)
+            setTimeout(() => pedidosBloqueados.delete(id.toString()), 2000);
+        }).catch(() => {
+            pedidosBloqueados.delete(id.toString());
         });
     }
 
