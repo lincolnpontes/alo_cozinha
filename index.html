@@ -2,274 +2,543 @@
 <html lang="pt-BR">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
     <link rel="manifest" href="manifest.json">
-    <title>Pedidos Cozinha v1.1</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <meta name="mobile-web-app-capable" content="yes">
+    <meta name="theme-color" content="#1565C0">
+    <title>Pedidos Cozinha v1.2</title>
+
     <style>
-        :root { --primary: #1565C0; --bg: #f0f2f5; }
-        body { font-family: Arial, sans-serif; margin: 0; background: var(--bg); user-scalable: no; }
+        /* CSS EXATAMENTE IGUAL AO DA ETIQUETADORA V1.7 */
+        body { font-family: Arial, sans-serif; background-color: #f0f2f5; margin: 0; padding: 0; display: flex; justify-content: center; user-select: none; }
+        .app-container { width: 100%; max-width: 500px; background-color: #ffffff; min-height: 100vh; box-shadow: 0 0 10px rgba(0,0,0,0.1); position: relative; }
+        .header { background-color: #1565C0; color: white; padding: 15px; display: flex; justify-content: space-between; align-items: center; }
+        .header-title { flex: 1; font-size: 18px; font-weight: bold; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+        .header-actions button { background: none; border: none; color: white; font-size: 24px; cursor: pointer; margin-left: 10px; }
+        .operator-bar { background-color: #1976D2; color: white; padding: 8px 15px; display: flex; align-items: center; gap: 10px; font-size: 14px; }
+        .operator-bar select { flex: 1; padding: 8px; border-radius: 4px; border: none; font-weight: bold; }
+        .filters { padding: 10px 15px; display: flex; gap: 10px; overflow-x: auto; white-space: nowrap; border-bottom: 1px solid #eee; }
+        .chip { background-color: #e0e0e0; color: #333; padding: 8px 16px; border-radius: 20px; cursor: pointer; font-size: 14px; font-weight: bold; border: 2px solid transparent; }
+        .chip.active { border: 2px solid #333; opacity: 0.9; }
+        .list { padding: 0; margin: 0; list-style: none; padding-bottom: 20px; }
+        .item { display: flex; align-items: center; padding: 15px; border-bottom: 1px solid #eee; cursor: pointer; transition: transform 0.2s; overflow: hidden; }
+        .item:hover { background-color: #f9f9f9; }
+        .item:active { background-color: #e3f2fd; }
+        .item-avatar { background-color: #BBDEFB; color: #1565C0; width: 40px; height: 40px; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-weight: bold; margin-right: 15px; min-width: 40px; }
+        .item-info { flex: 1; pointer-events: none; }
+        .item-title { font-weight: bold; font-size: 18px; margin-bottom: 4px; }
+        .item-subtitle { color: #666; font-size: 14px; }
         
-        /* HEADER & LAYOUT */
-        header { background: var(--primary); color: white; padding: 15px; display: flex; justify-content: space-between; align-items: center; font-weight: bold; }
-        .version-tag { font-size: 10px; opacity: 0.8; text-align: center; padding: 5px; color: #666; }
-        
-        /* FILTROS (CHIPS) */
-        .filters { padding: 10px; display: flex; gap: 8px; overflow-x: auto; white-space: nowrap; border-bottom: 1px solid #ddd; background: white; }
-        .chip { padding: 8px 16px; border-radius: 20px; font-size: 14px; font-weight: bold; cursor: pointer; border: 2px solid transparent; background: #e0e0e0; }
-        .chip.active { border-color: #333; }
+        .modal-overlay { display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.6); align-items: center; justify-content: center; z-index: 1000; }
+        .modal { background: white; padding: 20px; border-radius: 10px; width: 90%; max-width: 400px; max-height: 90vh; overflow-y: auto; }
+        .modal-title { font-size: 20px; font-weight: bold; margin-bottom: 20px; color: #333; border-bottom: 2px solid #1976D2; padding-bottom: 10px; }
+        .form-group { margin-bottom: 15px; }
+        .form-group label { display: block; margin-bottom: 5px; color: #555; font-weight: bold; font-size: 14px; }
+        .form-group input, .form-group select { width: 100%; padding: 10px; border: 1px solid #ccc; border-radius: 5px; box-sizing: border-box; font-size: 16px; }
+        .form-group input[type="color"] { height: 45px; padding: 2px; cursor: pointer; width: 100%; }
+        .modal-actions { display: flex; justify-content: flex-end; gap: 10px; margin-top: 20px; }
+        .btn-cancel { background: #eee; border: none; padding: 10px 20px; border-radius: 5px; cursor: pointer; color: #333; font-weight: bold; }
+        .btn-action { background: #1976D2; border: none; padding: 10px 20px; border-radius: 5px; cursor: pointer; color: white; font-weight: bold; }
+        .btn-danger { background: #d32f2f; border: none; padding: 10px 20px; border-radius: 5px; cursor: pointer; color: white; font-weight: bold; width: 100%; margin-top: 10px; }
+        .btn-outline { background: #E3F2FD; color: #1976D2; border: 1px solid #1976D2; padding: 10px; border-radius: 5px; cursor: pointer; font-weight: bold; width: 100%; margin-bottom: 10px; display: flex; align-items: center; justify-content: flex-start; gap: 15px; }
+        .btn-outline-icon { font-size: 28px; }
+        .gerenciar-item { display: flex; justify-content: space-between; align-items: center; padding: 12px 0; border-bottom: 1px solid #eee; }
+        .gerenciar-info { flex: 1; font-size: 14px; }
+        .gerenciar-actions button { background: none; border: none; cursor: pointer; font-size: 20px; margin-left: 10px; }
+        .color-preview { display: inline-block; padding: 2px 8px; border-radius: 12px; margin-right: 5px; vertical-align: middle; border: 1px solid #ccc; font-weight: bold; font-size: 12px; }
 
-        /* GRID BALCÃO */
-        .grid-produtos { display: grid; grid-template-columns: repeat(auto-fill, minmax(140px, 1fr)); gap: 12px; padding: 15px; }
-        .btn-pedido { 
-            border: none; border-radius: 12px; padding: 20px 10px; font-size: 16px; font-weight: bold;
-            box-shadow: 0 4px 6px rgba(0,0,0,0.1); cursor: pointer; text-transform: uppercase;
-        }
-
-        /* CARDS COZINHA */
-        .card { background: white; margin: 10px; padding: 15px; border-radius: 10px; display: flex; justify-content: space-between; align-items: center; border-left: 10px solid #ccc; }
-        .pendente { border-left-color: #d32f2f; animation: pulse 1.5s infinite; }
-        .fazendo { border-left-color: #fbc02d; }
-        .concluido { border-left-color: #9e9e9e; opacity: 0.4; text-decoration: line-through; }
-        @keyframes pulse { 0% { box-shadow: 0 0 0 rgba(211,47,47,0.4); } 70% { box-shadow: 0 0 15px rgba(211,47,47,1); } 100% { box-shadow: 0 0 0 rgba(211,47,47,0); } }
-
-        /* MODAIS (ESTILO ETIQUETADORA) */
-        .modal-overlay { display: none; position: fixed; inset: 0; background: rgba(0,0,0,0.6); align-items: center; justify-content: center; z-index: 1000; }
-        .modal { background: white; padding: 20px; border-radius: 12px; width: 90%; max-width: 400px; max-height: 85vh; overflow-y: auto; }
-        .modal-title { font-size: 18px; font-weight: bold; margin-bottom: 15px; border-bottom: 2px solid var(--primary); padding-bottom: 8px; }
-        .form-group { margin-bottom: 12px; }
-        .form-group label { display: block; font-size: 13px; font-weight: bold; color: #555; margin-bottom: 5px; }
-        .form-group input, .form-group select { width: 100%; padding: 10px; border: 1px solid #ccc; border-radius: 6px; box-sizing: border-box; font-size: 16px; }
+        /* ESTILOS ESPECÍFICOS PARA A COZINHA (STATUS E ANIMAÇÕES) */
+        .status-pendente { border-left: 8px solid #d32f2f; background-color: #ffebee; }
+        .status-fazendo { border-left: 8px solid #fbc02d; background-color: #fffde7; }
+        .status-concluido { border-left: 8px solid #9e9e9e; opacity: 0.6; text-decoration: line-through; }
         
-        .btn-action { background: var(--primary); color: white; border: none; padding: 12px; border-radius: 6px; width: 100%; font-weight: bold; cursor: pointer; margin-top: 10px; }
-        .btn-cancel { background: #eee; color: #333; border: none; padding: 10px; border-radius: 6px; width: 100%; margin-top: 5px; cursor: pointer; }
+        .swipe-hint { color: #1976D2; font-size: 24px; font-weight: bold; pointer-events: none; }
         
-        .item-gestao { display: flex; justify-content: space-between; padding: 10px 0; border-bottom: 1px solid #eee; }
+        /* Indicação visual de piscar para alerta */
+        .alerta-pisca { animation: bg-pisca 1s infinite; }
+        @keyframes bg-pisca { 0% { background-color: #1565C0; } 50% { background-color: #d32f2f; } 100% { background-color: #1565C0; } }
     </style>
 </head>
 <body>
 
-<div id="setup" class="modal-overlay" style="display: flex;">
-    <div class="modal">
-        <div class="modal-title">Configuração de Função</div>
-        <button class="btn-action" onclick="definirModo('balcao')">MODO BALCÃO (SOLICITAR)</button>
-        <button class="btn-action" style="background:#2e7d32" onclick="definirModo('cozinha')">MODO COZINHA (RECEBER)</button>
-    </div>
-</div>
-
-<div id="app" style="display:none;">
-    <header>
-        <span id="labelModo">Pedidos Cozinha</span>
-        <button onclick="abrirLoginAdmin()" style="background:none; border:none; color:white; font-size:22px;">⚙️</button>
-    </header>
-
-    <div id="view-balcao" style="display:none;">
-        <div class="filters" id="filtros-categorias"></div>
-        <div class="grid-produtos" id="grid-pedidos"></div>
-    </div>
-
-    <div id="view-cozinha" style="display:none;">
-        <div id="lista-kds"></div>
+<div class="app-container">
+    <div class="header" id="mainHeader">
+        <div class="header-title" id="appTitle">Pedidos Cozinha</div>
+        <div class="header-actions">
+            <button onclick="abrirLoginAdmin()" title="Painel e Configurações">⚙️</button>
+        </div>
     </div>
     
-    <div class="version-tag">Pedidos Cozinha v1.1</div>
+    <div class="operator-bar">
+        <span>Modo atual:</span>
+        <select id="seletorModo" onchange="verificarTrocaModo(this)">
+            <option value="balcao">Balcão (Solicitar)</option>
+            <option value="cozinha">Cozinha (Receber)</option>
+        </select>
+    </div>
+
+    <div id="area-balcao">
+        <div class="filters" id="containerFiltros"></div>
+        <ul class="list" id="listaProdutosBalcao"></ul>
+    </div>
+
+    <div id="area-cozinha" style="display: none;">
+        <ul class="list" id="listaPedidosCozinha"></ul>
+    </div>
 </div>
 
-<div id="modalLogin" class="modal-overlay">
+<div class="modal-overlay" id="modalLoginAdmin">
     <div class="modal">
         <div class="modal-title">Acesso Restrito</div>
         <div class="form-group">
             <label>Senha do Administrador:</label>
-            <input type="password" id="senhaAdmin" inputmode="numeric" pattern="[0-9]*" placeholder="****">
+            <input type="password" id="senhaAdmin" placeholder="Digite a senha" inputmode="numeric" pattern="[0-9]*">
         </div>
-        <button class="btn-action" onclick="validarAdmin()">ENTRAR</button>
-        <button class="btn-cancel" onclick="fecharModal('modalLogin')">CANCELAR</button>
+        <div class="modal-actions">
+            <button class="btn-cancel" onclick="fecharModal('modalLoginAdmin')">Cancelar</button>
+            <button class="btn-action" onclick="validarSenhaAdmin()">Entrar</button>
+        </div>
     </div>
 </div>
 
-<div id="modalPainel" class="modal-overlay">
+<div class="modal-overlay" id="modalPainelUnificado">
     <div class="modal">
-        <div class="modal-title">Painel de Gestão</div>
+        <div style="text-align: center; color: #666; font-size: 13px; font-weight: bold; margin-bottom: 20px;">
+            Pedidos Cozinha - v1.2
+        </div>
+
+        <h3 style="font-size: 16px; color: #555; margin-bottom: 10px;">Painel de Gestão</h3>
+        <button class="btn-outline" onclick="abrirGerenciar('produtos')">
+            <span class="btn-outline-icon">📦</span> Gerenciar Produtos
+        </button>
+        <button class="btn-outline" onclick="abrirGerenciar('categorias')">
+            <span class="btn-outline-icon">🏷️</span> Gerenciar Categorias
+        </button>
+
+        <h3 style="font-size: 16px; color: #555; margin-top: 25px; margin-bottom: 10px;">Configurações de Sincronização</h3>
         <div class="form-group">
-            <label>URL do Google Script:</label>
-            <input type="text" id="cfgUrl" placeholder="https://script.google.com/...">
+            <label>URL do Google Apps Script:</label>
+            <input type="text" id="configUrlApp" placeholder="https://script.google.com/macros/s/..." onchange="salvarUrlGeral()">
         </div>
-        <hr>
-        <button class="btn-action" style="background:#555" onclick="abrirGestao('categorias')">📦 GERENCIAR CATEGORIAS</button>
-        <button class="btn-action" style="background:#555" onclick="abrirGestao('produtos')">🍎 GERENCIAR PRODUTOS</button>
-        <button class="btn-action" onclick="salvarGeral()">SALVAR TUDO</button>
-        <button class="btn-cancel" onclick="localStorage.clear(); location.reload();">REINICIAR APP (TROCAR MODO)</button>
-        <button class="btn-cancel" onclick="fecharModal('modalPainel')">FECHAR</button>
+
+        <div class="modal-actions">
+            <button class="btn-cancel" onclick="fecharModal('modalPainelUnificado')">Fechar Painel</button>
+        </div>
     </div>
 </div>
 
-<div id="modalLista" class="modal-overlay">
+<div class="modal-overlay" id="modalListagem">
     <div class="modal">
-        <div class="modal-title" id="listaTitulo">Gerenciar</div>
-        <button class="btn-action" id="btnNovoItem">+ NOVO</button>
-        <div id="listaConteudo" style="margin-top:15px"></div>
-        <button class="btn-cancel" onclick="fecharModal('modalLista'); document.getElementById('modalPainel').style.display='flex';">VOLTAR</button>
+        <div class="modal-title" id="tituloListagem">Gerenciar</div>
+        <button class="btn-action" id="btnNovoListagem" style="width: 100%; margin-bottom: 15px;">+ Novo</button>
+        <div id="conteudoListagem" style="max-height: 50vh; overflow-y: auto; padding-right: 5px;"></div>
+        <div class="modal-actions">
+            <button class="btn-cancel" onclick="voltarPainelUnificado()">Voltar</button>
+        </div>
+    </div>
+</div>
+
+<div class="modal-overlay" id="modalFormProduto">
+    <div class="modal">
+        <div class="modal-title">Produto do Balcão</div>
+        <input type="hidden" id="prodIndexOriginal">
+        <div class="form-group">
+            <label>Nome do Produto:</label>
+            <input type="text" id="prodNome">
+        </div>
+        <div class="form-group">
+            <label>Categoria:</label>
+            <select id="prodCategoria"></select>
+        </div>
+        <div class="modal-actions">
+            <button class="btn-cancel" onclick="fecharModal('modalFormProduto'); abrirGerenciar('produtos')">Cancelar</button>
+            <button class="btn-action" onclick="salvarProduto()">Salvar</button>
+        </div>
+    </div>
+</div>
+
+<div class="modal-overlay" id="modalFormCategoria">
+    <div class="modal">
+        <div class="modal-title">Categoria</div>
+        <input type="hidden" id="catNomeOriginal">
+        <div class="form-group">
+            <label>Nome da Categoria:</label>
+            <input type="text" id="catNome">
+        </div>
+        <div style="display: flex; gap: 10px;">
+            <div class="form-group" style="flex: 1;">
+                <label>Cor do Fundo:</label>
+                <input type="color" id="catCor" value="#1976D2">
+            </div>
+            <div class="form-group" style="flex: 1;">
+                <label>Cor do Texto:</label>
+                <input type="color" id="catCorTexto" value="#ffffff">
+            </div>
+        </div>
+        <div class="modal-actions">
+            <button class="btn-cancel" onclick="fecharModal('modalFormCategoria'); abrirGerenciar('categorias')">Cancelar</button>
+            <button class="btn-action" onclick="salvarCategoria()">Salvar</button>
+        </div>
     </div>
 </div>
 
 <audio id="audioAlerta" loop src="https://actions.google.com/sounds/v1/alarms/beep_short.ogg"></audio>
 
 <script>
-    let db = JSON.parse(localStorage.getItem('kds_v1_db')) || {
-        url: '',
-        modo: '',
-        categorias: [{nome: 'Geral', cor: '#1565C0', txt: '#ffffff'}],
-        produtos: []
-    };
+    // --- BANCO DE DADOS LOCAL ---
+    let db = carregarBanco();
+    let categoriaAtual = null;
     let pedidosServidor = [];
-    let catAtiva = 'TODOS';
+    let loopCozinha = null;
+    let alarmeTocando = false;
 
-    function salvarDB() { localStorage.setItem('kds_v1_db', JSON.stringify(db)); }
-
-    function definirModo(m) {
-        db.modo = m; salvarDB();
-        location.reload();
+    function carregarBanco() {
+        let defaultDB = {
+            produtos: [
+                { nome: "Arroz Branco", categoria: "Guarnições" },
+                { nome: "Feijão", categoria: "Guarnições" },
+                { nome: "Carne de Sol", categoria: "Carnes" }
+            ],
+            categorias: [
+                { nome: "Guarnições", cor: "#fff0b3", corTexto: "#000000" },
+                { nome: "Carnes", cor: "#ffcccc", corTexto: "#000000" }
+            ],
+            configs: { 
+                modo: "balcao", 
+                url: ""
+            }
+        };
+        let local = JSON.parse(localStorage.getItem('kds_v1_db'));
+        return local || defaultDB;
     }
 
-    if(db.modo) {
-        document.getElementById('setup').style.display = 'none';
-        document.getElementById('app').style.display = 'block';
-        document.getElementById('labelModo').innerText = db.modo === 'balcao' ? 'BALCÃO - PEDIDOS' : 'COZINHA';
-        if(db.modo === 'balcao') renderBalcao();
-        else {
-            document.getElementById('view-cozinha').style.display = 'block';
-            setInterval(syncCozinha, 5000);
-            syncCozinha();
-        }
+    function salvarBancoLocal() {
+        localStorage.setItem('kds_v1_db', JSON.stringify(db));
     }
 
-    // --- ADMIN & LOGIN ---
-    function abrirLoginAdmin() {
-        document.getElementById('senhaAdmin').value = '';
-        document.getElementById('modalLogin').style.display = 'flex';
-        setTimeout(() => document.getElementById('senhaAdmin').focus(), 200);
-    }
-
-    function validarAdmin() {
-        if(document.getElementById('senhaAdmin').value === '1999') {
-            fecharModal('modalLogin');
-            document.getElementById('cfgUrl').value = db.url;
-            document.getElementById('modalPainel').style.display = 'flex';
-        } else { alert("Senha incorreta!"); }
-    }
-
-    function salvarGeral() {
-        db.url = document.getElementById('cfgUrl').value;
-        salvarDB();
-        alert("Configurações salvas!");
-        location.reload();
-    }
-
-    // --- GESTÃO DE PRODUTOS E CATEGORIAS ---
-    function abrirGestao(tipo) {
-        fecharModal('modalPainel');
-        const tit = document.getElementById('listaTitulo');
-        const cont = document.getElementById('listaConteudo');
-        const btn = document.getElementById('btnNovoItem');
-        cont.innerHTML = '';
+    // --- INICIALIZAÇÃO ---
+    function iniciar() {
+        document.getElementById('seletorModo').value = db.configs.modo;
+        aplicarModoVisual(db.configs.modo);
         
-        if(tipo === 'categorias') {
-            tit.innerText = "Categorias";
-            btn.onclick = () => addCat();
-            db.categorias.forEach((c, idx) => {
-                cont.innerHTML += `<div class="item-gestao"><span>${c.nome}</span> <button onclick="deleteItem('cat', ${idx})">🗑️</button></div>`;
-            });
+        document.getElementById('senhaAdmin').addEventListener('keypress', function (e) {
+            if (e.key === 'Enter') validarSenhaAdmin();
+        });
+    }
+
+    function verificarTrocaModo(selectElement) {
+        db.configs.modo = selectElement.value;
+        salvarBancoLocal();
+        aplicarModoVisual(db.configs.modo);
+    }
+
+    function aplicarModoVisual(modo) {
+        const h = document.getElementById('mainHeader');
+        const t = document.getElementById('appTitle');
+        
+        if(modo === 'balcao') {
+            h.style.backgroundColor = '#1565C0';
+            t.innerText = "Balcão (Pedir)";
+            document.getElementById('area-balcao').style.display = 'block';
+            document.getElementById('area-cozinha').style.display = 'none';
+            if(loopCozinha) clearInterval(loopCozinha);
+            pararAlarme();
+            renderizarFiltros();
+            renderizarListaBalcao();
         } else {
-            tit.innerText = "Produtos";
-            btn.onclick = () => addProd();
-            db.produtos.forEach((p, idx) => {
-                cont.innerHTML += `<div class="item-gestao"><span>${p.nome} (${p.cat})</span> <button onclick="deleteItem('prod', ${idx})">🗑️</button></div>`;
-            });
+            h.style.backgroundColor = '#2e7d32'; // Verde para cozinha
+            t.innerText = "Cozinha (Receber)";
+            document.getElementById('area-balcao').style.display = 'none';
+            document.getElementById('area-cozinha').style.display = 'block';
+            
+            // Inicia sincronização
+            syncCozinha();
+            if(loopCozinha) clearInterval(loopCozinha);
+            loopCozinha = setInterval(syncCozinha, 5000);
         }
-        document.getElementById('modalLista').style.display = 'flex';
     }
 
-    function addCat() {
-        const n = prompt("Nome da Categoria:");
-        if(!n) return;
-        const c = prompt("Cor de fundo (Hex):", "#1565C0");
-        db.categorias.push({nome: n, cor: c, txt: '#ffffff'});
-        salvarDB(); abrirGestao('categorias');
-    }
-
-    function addProd() {
-        const n = prompt("Nome do Produto:");
-        if(!n) return;
-        let cats = db.categorias.map(c => c.nome).join(" | ");
-        const c = prompt("Categoria exata ("+cats+"):");
-        db.produtos.push({nome: n, cat: c});
-        salvarDB(); abrirGestao('produtos');
-    }
-
-    function deleteItem(tipo, idx) {
-        if(tipo === 'cat') db.categorias.splice(idx, 1);
-        else db.produtos.splice(idx, 1);
-        salvarDB(); abrirGestao(tipo === 'cat' ? 'categorias' : 'produtos');
-    }
-
-    // --- BALCÃO ---
-    function renderBalcao() {
-        document.getElementById('view-balcao').style.display = 'block';
-        const f = document.getElementById('filtros-categorias');
-        f.innerHTML = `<div class="chip ${catAtiva==='TODOS'?'active':''}" onclick="filtrar('TODOS')">TODOS</div>`;
-        db.categorias.forEach(c => {
-            f.innerHTML += `<div class="chip ${catAtiva===c.nome?'active':''}" onclick="filtrar('${c.nome}')" style="background:${c.cor}; color:${c.txt}">${c.nome}</div>`;
+    // --- LÓGICA DO BALCÃO ---
+    function renderizarFiltros() {
+        let html = `<div class="chip ${categoriaAtual === null ? 'active' : ''}" style="${categoriaAtual === null ? 'background:#ccc; color:#000;' : ''}" onclick="filtrarCategoria(null)">TODOS</div>`;
+        db.categorias.forEach(cat => { 
+            const isActive = categoriaAtual === cat.nome;
+            html += `<div class="chip ${isActive ? 'active' : ''}" style="background-color: ${cat.cor}; color: ${cat.corTexto};" onclick="filtrarCategoria('${cat.nome}')">${cat.nome}</div>`; 
         });
-
-        const g = document.getElementById('grid-pedidos');
-        g.innerHTML = '';
-        db.produtos.filter(p => catAtiva === 'TODOS' || p.cat === catAtiva).forEach(p => {
-            const catObj = db.categorias.find(c => c.nome === p.cat) || {cor: '#eee', txt: '#000'};
-            g.innerHTML += `<button class="btn-pedido" style="background:${catObj.cor}; color:${catObj.txt}" onclick="pedir('${p.nome}')">${p.nome}</button>`;
-        });
+        document.getElementById('containerFiltros').innerHTML = html;
     }
 
-    function filtrar(c) { catAtiva = c; renderBalcao(); }
+    function filtrarCategoria(cat) { categoriaAtual = cat; renderizarFiltros(); renderizarListaBalcao(); }
 
-    async function pedir(nome) {
-        if(!db.url) return alert("Configure a URL primeiro!");
-        if(!confirm("Solicitar "+nome+"?")) return;
-        await fetch(db.url, { method: 'POST', mode: 'no-cors', body: JSON.stringify({action:'novo_pedido', produto: nome}) });
-        alert("Enviado!");
-    }
-
-    // --- COZINHA ---
-    async function syncCozinha() {
-        if(!db.url) return;
-        const r = await fetch(db.url);
-        pedidosServidor = await r.json();
-        const cont = document.getElementById('lista-kds');
-        const agora = Date.now();
+    function renderizarListaBalcao() {
+        const lista = document.getElementById('listaProdutosBalcao');
+        lista.innerHTML = '';
+        let filtrados = categoriaAtual === null ? db.produtos : db.produtos.filter(p => p.categoria === categoriaAtual);
         
-        cont.innerHTML = pedidosServidor.filter(p => {
-            if(p.status !== 'concluido') return true;
-            return (agora - new Date(p.finalizadoEm).getTime()) < 300000;
-        }).reverse().map(p => `
-            <div class="card ${p.status}">
-                <div><b>${p.produto}</b><br><small>${new Date(p.timestamp).toLocaleTimeString()}</small></div>
-                <div>
-                    ${p.status==='pendente'? `<button class="btn-action" style="background:#d32f2f" onclick="status('${p.id}','fazendo')">ASSUMIR</button>` : ''}
-                    ${p.status==='fazendo'? `<button class="btn-action" style="background:#fbc02d; color:#000" onclick="status('${p.id}','concluido')">CONCLUIR</button>` : ''}
-                    ${p.status==='concluido'? `<span style="color:green; font-weight:bold;">PRONTO</span>` : ''}
-                </div>
-            </div>
-        `).join('');
-
-        const som = document.getElementById('audioAlerta');
-        if(pedidosServidor.some(p => p.status === 'pendente')) som.play().catch(()=>{});
-        else { som.pause(); som.currentTime = 0; }
+        filtrados.forEach(p => {
+            const catObj = db.categorias.find(c => c.nome === p.categoria) || {cor:'#eee', corTexto:'#000'};
+            const primeiraLetra = p.nome.charAt(0).toUpperCase();
+            
+            lista.innerHTML += `
+                <li class="item" onclick="enviarPedidoBalcao('${p.nome}')">
+                    <div class="item-avatar" style="background-color: ${catObj.cor}; color: ${catObj.corTexto};">${primeiraLetra}</div>
+                    <div class="item-info">
+                        <div class="item-title">${p.nome}</div>
+                        <div class="item-subtitle">${p.categoria}</div>
+                    </div>
+                    <div class="swipe-hint">➕</div>
+                </li>
+            `;
+        });
     }
 
-    async function status(id, s) {
-        await fetch(db.url, { method: 'POST', mode: 'no-cors', body: JSON.stringify({action:'atualizar_status', id: id, novoStatus: s}) });
+    async function enviarPedidoBalcao(nome) {
+        if(!db.configs.url) return alert("URL do Google Script não configurada! Vá na engrenagem.");
+        if(!confirm(`Pedir reposição de: ${nome}?`)) return;
+
+        try {
+            await fetch(db.configs.url, {
+                method: 'POST',
+                mode: 'no-cors',
+                body: JSON.stringify({ action: 'novo_pedido', produto: nome })
+            });
+            alert("Pedido enviado para a cozinha!");
+        } catch(e) { alert("Erro ao enviar pedido."); }
+    }
+
+    // --- LÓGICA DA COZINHA (SWIPE E CLIQUES) ---
+    async function syncCozinha() {
+        if(!db.configs.url || db.configs.modo !== 'cozinha') return;
+        
+        try {
+            const resp = await fetch(db.configs.url);
+            pedidosServidor = await resp.json();
+            renderizarListaCozinha();
+            gerenciarAlarme();
+        } catch(e) { console.log("Aguardando conexão..."); }
+    }
+
+    function renderizarListaCozinha() {
+        const lista = document.getElementById('listaPedidosCozinha');
+        const agora = Date.now();
+        lista.innerHTML = '';
+        
+        pedidosServidor.filter(p => {
+            if(p.status !== 'concluido') return true;
+            return (agora - new Date(p.finalizadoEm).getTime()) < 300000; // Oculta após 5 min
+        }).reverse().forEach(p => {
+            
+            let emoji = p.status === 'concluido' ? '✔️' : (p.status === 'fazendo' ? '🔥' : '🔔');
+            let acaoTxt = p.status === 'pendente' ? 'Toque para assumir' : (p.status === 'fazendo' ? '👉 Deslize para concluir' : '👈 Deslize para desfazer');
+            
+            lista.innerHTML += `
+                <li class="item status-${p.status}" id="ped-${p.id}" 
+                    data-id="${p.id}" data-status="${p.status}"
+                    ontouchstart="handleTouchStart(event)" 
+                    ontouchend="handleTouchEnd(event, this)">
+                    <div class="item-avatar" style="background:transparent; font-size:24px;">${emoji}</div>
+                    <div class="item-info">
+                        <div class="item-title">${p.produto}</div>
+                        <div class="item-subtitle">${new Date(p.timestamp).toLocaleTimeString()} - ${acaoTxt}</div>
+                    </div>
+                </li>
+            `;
+        });
+    }
+
+    // GESTOS DA COZINHA
+    let touchStartX = 0;
+    
+    function handleTouchStart(e) {
+        touchStartX = e.changedTouches[0].screenX;
+    }
+
+    function handleTouchEnd(e, elemento) {
+        let touchEndX = e.changedTouches[0].screenX;
+        let diff = touchEndX - touchStartX;
+        
+        const id = elemento.getAttribute('data-id');
+        const statusAtual = elemento.getAttribute('data-status');
+
+        if (Math.abs(diff) < 20) {
+            // É UM CLIQUE SIMPLES
+            if(statusAtual === 'pendente') alterarStatusPedido(id, 'fazendo');
+        } else if (diff > 80) {
+            // SWIPE PARA A DIREITA (RISCAR / CONCLUIR)
+            if(statusAtual === 'fazendo' || statusAtual === 'pendente') alterarStatusPedido(id, 'concluido');
+        } else if (diff < -80) {
+            // SWIPE PARA A ESQUERDA (DESFAZER)
+            if(statusAtual === 'concluido') alterarStatusPedido(id, 'fazendo');
+        }
+    }
+
+    async function alterarStatusPedido(id, novoStatus) {
+        // Atualiza a tela imediatamente para UX rápida
+        const el = document.getElementById(`ped-${id}`);
+        if(el) {
+            el.className = `item status-${novoStatus}`;
+            el.querySelector('.item-subtitle').innerText = "Atualizando...";
+        }
+
+        await fetch(db.configs.url, {
+            method: 'POST',
+            mode: 'no-cors',
+            body: JSON.stringify({ action: 'atualizar_status', id: id, novoStatus: novoStatus })
+        });
         syncCozinha();
     }
 
+    function gerenciarAlarme() {
+        const temPendente = pedidosServidor.some(p => p.status === 'pendente');
+        const h = document.getElementById('mainHeader');
+        
+        if (temPendente) {
+            h.classList.add('alerta-pisca');
+            if(!alarmeTocando) { document.getElementById('audioAlerta').play().catch(()=>{}); alarmeTocando = true; }
+        } else {
+            pararAlarme();
+        }
+    }
+    
+    function pararAlarme() {
+        document.getElementById('mainHeader').classList.remove('alerta-pisca');
+        document.getElementById('audioAlerta').pause();
+        document.getElementById('audioAlerta').currentTime = 0;
+        alarmeTocando = false;
+    }
+
+    // --- FUNÇÕES DE ADMINISTRAÇÃO ---
     function fecharModal(id) { document.getElementById(id).style.display = 'none'; }
+
+    function abrirLoginAdmin() {
+        document.getElementById('senhaAdmin').value = '';
+        document.getElementById('modalLoginAdmin').style.display = 'flex';
+        setTimeout(function() { document.getElementById('senhaAdmin').focus(); }, 100);
+    }
+
+    function validarSenhaAdmin() {
+        if(document.getElementById('senhaAdmin').value === "1999") {
+            fecharModal('modalLoginAdmin');
+            document.getElementById('configUrlApp').value = db.configs.url;
+            document.getElementById('modalPainelUnificado').style.display = 'flex';
+        } else {
+            alert("Senha incorreta!");
+            document.getElementById('senhaAdmin').value = '';
+            document.getElementById('senhaAdmin').focus();
+        }
+    }
+
+    function salvarUrlGeral() {
+        db.configs.url = document.getElementById('configUrlApp').value;
+        salvarBancoLocal();
+    }
+
+    function voltarPainelUnificado() {
+        fecharModal('modalListagem');
+        document.getElementById('modalPainelUnificado').style.display = 'flex';
+    }
+
+    function abrirGerenciar(tipo) {
+        fecharModal('modalPainelUnificado');
+        fecharModal('modalFormProduto');
+        fecharModal('modalFormCategoria');
+        
+        const lista = document.getElementById('conteudoListagem');
+        const btnNovo = document.getElementById('btnNovoListagem');
+        const titulo = document.getElementById('tituloListagem');
+        lista.innerHTML = '';
+
+        if(tipo === 'produtos') {
+            titulo.innerText = "Gerenciar Produtos";
+            btnNovo.onclick = () => abrirFormProduto(-1);
+            db.produtos.forEach((p, idx) => {
+                lista.innerHTML += `<div class="gerenciar-item"><div class="gerenciar-info"><strong>${p.nome}</strong><br><span style="color:#666">${p.categoria}</span></div><div class="gerenciar-actions"><button onclick="abrirFormProduto(${idx})">✏️</button><button onclick="excluirItem('produtos', ${idx})">🗑️</button></div></div>`;
+            });
+        } else if (tipo === 'categorias') {
+            titulo.innerText = "Gerenciar Categorias";
+            btnNovo.onclick = () => abrirFormCategoria(null);
+            db.categorias.forEach((c) => {
+                lista.innerHTML += `<div class="gerenciar-item"><div class="gerenciar-info"><span class="color-preview" style="background:${c.cor}; color:${c.corTexto}">${c.nome}</span></div><div class="gerenciar-actions"><button onclick="abrirFormCategoria('${c.nome}')">✏️</button><button onclick="excluirItem('categorias', '${c.nome}')">🗑️</button></div></div>`;
+            });
+        }
+        document.getElementById('modalListagem').style.display = 'flex';
+    }
+
+    function excluirItem(tipo, id) {
+        if(!confirm("Certeza que deseja excluir?")) return;
+        if(tipo === 'produtos') db.produtos.splice(id, 1);
+        if(tipo === 'categorias') db.categorias = db.categorias.filter(i => i.nome !== id);
+        salvarBancoLocal(); iniciar(); abrirGerenciar(tipo);
+    }
+
+    function abrirFormProduto(idx) {
+        fecharModal('modalListagem');
+        const combo = document.getElementById('prodCategoria');
+        combo.innerHTML = '';
+        db.categorias.forEach(c => combo.innerHTML += `<option value="${c.nome}">${c.nome}</option>`);
+
+        if(idx >= 0) {
+            const p = db.produtos[idx];
+            document.getElementById('prodIndexOriginal').value = idx;
+            document.getElementById('prodNome').value = p.nome;
+            document.getElementById('prodCategoria').value = p.categoria;
+        } else {
+            document.getElementById('prodIndexOriginal').value = '-1';
+            document.getElementById('prodNome').value = '';
+        }
+        document.getElementById('modalFormProduto').style.display = 'flex';
+    }
+
+    function salvarProduto() {
+        const idx = parseInt(document.getElementById('prodIndexOriginal').value);
+        const nome = document.getElementById('prodNome').value.trim();
+        const cat = document.getElementById('prodCategoria').value;
+
+        if(!nome || !cat) return alert("Preencha tudo!");
+
+        let obj = { nome: nome, categoria: cat };
+        if(idx >= 0) { db.produtos[idx] = obj; } 
+        else { db.produtos.push(obj); }
+        
+        salvarBancoLocal(); iniciar(); abrirGerenciar('produtos');
+    }
+
+    function abrirFormCategoria(nomeOriginal) {
+        fecharModal('modalListagem');
+        if(nomeOriginal) {
+            const c = db.categorias.find(x => x.nome === nomeOriginal);
+            document.getElementById('catNomeOriginal').value = c.nome;
+            document.getElementById('catNome').value = c.nome;
+            document.getElementById('catCor').value = c.cor;
+            document.getElementById('catCorTexto').value = c.corTexto || '#000000';
+        } else {
+            document.getElementById('catNomeOriginal').value = '';
+            document.getElementById('catNome').value = '';
+            document.getElementById('catCor').value = '#1976D2';
+            document.getElementById('catCorTexto').value = '#ffffff';
+        }
+        document.getElementById('modalFormCategoria').style.display = 'flex';
+    }
+
+    function salvarCategoria() {
+        const nomeOrig = document.getElementById('catNomeOriginal').value;
+        const nome = document.getElementById('catNome').value.trim();
+        const cor = document.getElementById('catCor').value;
+        const corTexto = document.getElementById('catCorTexto').value;
+
+        if(!nome) return alert("Preencha o nome!");
+
+        if(nomeOrig !== "") {
+            const idx = db.categorias.findIndex(c => c.nome === nomeOrig);
+            db.categorias[idx] = { nome, cor, corTexto };
+            db.produtos.forEach(p => { if(p.categoria === nomeOrig) p.categoria = nome; });
+        } else { db.categorias.push({ nome, cor, corTexto }); }
+        
+        salvarBancoLocal(); iniciar(); abrirGerenciar('categorias');
+    }
+
+    // DISPARO INICIAL
+    iniciar();
 </script>
 </body>
 </html>
