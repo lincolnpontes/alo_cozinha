@@ -2,11 +2,12 @@
 <html lang="pt-BR">
 <head>
     <meta charset="UTF-8">
+    <link rel="icon" href="icon.png">
     <link rel="manifest" href="manifest.json">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
     <meta name="mobile-web-app-capable" content="yes">
     <meta name="theme-color" content="#1565C0" id="metaThemeColor">
-    <title>Pedidos Cozinha v1.4</title>
+    <title>Alô Cozinha v1.0</title>
 
     <style>
         body { font-family: Arial, sans-serif; background-color: #f0f2f5; margin: 0; padding: 0; display: flex; justify-content: center; user-select: none; }
@@ -43,6 +44,7 @@
         .painel-titulo { padding: 10px; background: #eee; font-weight: bold; color: #333; border-bottom: 1px solid #ddd; flex-shrink: 0; display: flex; justify-content: space-between; align-items: center; }
 
         .swipe-hint { color: #1976D2; font-size: 24px; font-weight: bold; pointer-events: none; }
+        
         .alerta-pisca { animation: bg-pisca 1s infinite; }
         @keyframes bg-pisca { 0% { opacity: 1; } 50% { opacity: 0.6; } 100% { opacity: 1; } }
 
@@ -57,6 +59,12 @@
         .form-group { margin-bottom: 15px; }
         .form-group label { display: block; margin-bottom: 5px; color: #555; font-weight: bold; font-size: 14px; }
         .form-group input, .form-group select { width: 100%; padding: 10px; border: 1px solid #ccc; border-radius: 5px; box-sizing: border-box; font-size: 16px; }
+        
+        /* CORREÇÃO DO BLOCO DE COR */
+        .form-group input[type="color"] { height: 45px; padding: 0; cursor: pointer; width: 100%; border: 1px solid #ccc; border-radius: 5px; }
+        .form-group input[type="color"]::-webkit-color-swatch-wrapper { padding: 0; }
+        .form-group input[type="color"]::-webkit-color-swatch { border: none; border-radius: 4px; }
+
         .modal-actions { display: flex; justify-content: flex-end; gap: 10px; margin-top: 20px; }
         .btn-cancel { background: #eee; border: none; padding: 10px 20px; border-radius: 5px; cursor: pointer; color: #333; font-weight: bold; }
         .btn-action { background: #1976D2; border: none; padding: 10px 20px; border-radius: 5px; cursor: pointer; color: white; font-weight: bold; }
@@ -72,7 +80,7 @@
 
 <div class="app-container">
     <div class="header" id="mainHeader">
-        <select class="header-select" id="seletorModo" onchange="verificarTrocaModo(this)">
+        <select class="header-select" id="seletorModo" onchange="iniciarTrocaModo(this)">
             <option value="panelas">🥘 Panelas</option>
             <option value="cozinha">🧑‍🍳 Cozinha</option>
         </select>
@@ -104,11 +112,24 @@
     </div>
 </div>
 
+<div class="modal-overlay" id="modalSenhaModo">
+    <div class="modal">
+        <div class="modal-title">Alternar Modo</div>
+        <div class="form-group">
+            <label>Digite a senha de acesso:</label>
+            <input type="password" id="inputSenhaModo" placeholder="Senha do modo" inputmode="numeric" pattern="[0-9]*">
+        </div>
+        <div class="modal-actions">
+            <button class="btn-cancel" onclick="cancelarTrocaModo()">Cancelar</button>
+            <button class="btn-action" onclick="confirmarTrocaModo()">Acessar</button>
+        </div>
+    </div>
+</div>
+
 <div class="modal-overlay" id="modalFazerPedido">
     <div class="modal">
         <div class="modal-title" id="tituloModalPedido">Pedir Produto</div>
         <input type="hidden" id="pedidoItemNome">
-        
         <div class="form-group">
             <label>Observações Rápidas (Toque para adicionar):</label>
             <div id="obsChipsContainer" style="display: flex; flex-wrap: wrap; gap: 8px; margin-bottom: 10px;"></div>
@@ -128,7 +149,6 @@
     <div class="modal">
         <div class="modal-title" id="tituloModalCancelar">Cancelar Item</div>
         <input type="hidden" id="cancelarItemId">
-        
         <div class="form-group">
             <label>Motivo do Cancelamento (Obrigatório):</label>
             <div id="obsCancelChipsContainer" style="display: flex; flex-wrap: wrap; gap: 8px; margin-bottom: 10px;"></div>
@@ -157,7 +177,7 @@
 
 <div class="modal-overlay" id="modalLoginAdmin">
     <div class="modal">
-        <div class="modal-title">Acesso Restrito</div>
+        <div class="modal-title">Acesso Admin</div>
         <div class="form-group">
             <label>Senha do Administrador:</label>
             <input type="password" id="senhaAdmin" placeholder="digite a senha" inputmode="numeric" pattern="[0-9]*">
@@ -171,19 +191,53 @@
 <div class="modal-overlay" id="modalPainelUnificado">
     <div class="modal">
         <div style="text-align: center; color: #666; font-size: 13px; font-weight: bold; margin-bottom: 20px;">
-            Pedidos Cozinha - v1.4
+            Alô Cozinha - v1.0
         </div>
 
         <button class="btn-outline" onclick="abrirGerenciar('produtos')">📦 Gerenciar Produtos</button>
         <button class="btn-outline" onclick="abrirGerenciar('categorias')">🏷️ Gerenciar Categorias</button>
-        
         <button class="btn-outline" onclick="abrirGerenciar('obsPedidos')">💬 Obs. de Pedidos</button>
         <button class="btn-outline" onclick="abrirGerenciar('obsCancelamentos')" style="border-color:#d32f2f; color:#d32f2f;">🗑️ Motivos Cancelamento</button>
 
-        <h3 style="font-size: 16px; color: #555; margin-top: 25px; margin-bottom: 10px;">Conexão e Sincronização</h3>
+        <h3 style="font-size: 16px; color: #555; margin-top: 25px; margin-bottom: 10px;">Configurações</h3>
+        
         <div class="form-group">
+            <label>Senha para Trocar de Modo (opcional):</label>
+            <input type="text" id="configSenhaModo" placeholder="Deixe em branco para livre">
+        </div>
+
+        <div class="form-group">
+            <label>Som Cozinha (Novo Pedido):</label>
+            <div style="display:flex; gap:10px;">
+                <select id="configSomCozinha" style="flex:1;">
+                    <option value="1">1. Beep Clássico</option>
+                    <option value="2">2. Toque Bugle</option>
+                    <option value="3">3. Relógio Digital</option>
+                    <option value="4">4. Sino Mecânico</option>
+                    <option value="5">5. Campainha</option>
+                </select>
+                <button class="btn-cancel" style="padding: 10px;" onclick="tocarPreview('configSomCozinha')">▶️</button>
+            </div>
+        </div>
+
+        <div class="form-group">
+            <label>Som Panelas (Atenção/Cancelado):</label>
+            <div style="display:flex; gap:10px;">
+                <select id="configSomPanelas" style="flex:1;">
+                    <option value="1">1. Beep Clássico</option>
+                    <option value="2">2. Toque Bugle</option>
+                    <option value="3">3. Relógio Digital</option>
+                    <option value="4">4. Sino Mecânico</option>
+                    <option value="5">5. Campainha</option>
+                </select>
+                <button class="btn-cancel" style="padding: 10px;" onclick="tocarPreview('configSomPanelas')">▶️</button>
+            </div>
+        </div>
+
+        <div class="form-group">
+            <label>URL Google Script:</label>
             <input type="text" id="configUrlApp" placeholder="https://script.google.com/macros/s/...">
-            <button class="btn-action" style="width: 100%; margin-top: 10px; background-color: #4CAF50;" onclick="salvarUrlGeral()">💾 Salvar URL</button>
+            <button class="btn-action" style="width: 100%; margin-top: 10px; background-color: #4CAF50;" onclick="salvarConfigGerais()">💾 Salvar Configurações</button>
         </div>
 
         <div style="display: flex; gap: 10px; margin-bottom: 10px; margin-top: 15px;">
@@ -252,8 +306,6 @@
     </div>
 </div>
 
-<audio id="audioAlerta" loop src="https://actions.google.com/sounds/v1/alarms/beep_short.ogg"></audio>
-
 <script>
     let db = carregarBanco();
     let categoriaAtual = null;
@@ -261,7 +313,24 @@
     let pedidosBloqueados = new Set();
     let pedidosCientes = new Set(); 
     let loopSync = null;
+
+    // --- GERENCIAMENTO DE ÁUDIO ---
+    const sonsDisponiveis = {
+        "1": "https://actions.google.com/sounds/v1/alarms/beep_short.ogg",
+        "2": "https://actions.google.com/sounds/v1/alarms/bugle_tune.ogg",
+        "3": "https://actions.google.com/sounds/v1/alarms/digital_watch_alarm_long.ogg",
+        "4": "https://actions.google.com/sounds/v1/alarms/mechanical_clock_ring.ogg",
+        "5": "https://actions.google.com/sounds/v1/doors/doorbell_chime.ogg"
+    };
+    let playerAlarme = new Audio();
+    playerAlarme.loop = true;
     let alarmeTocando = false;
+
+    function tocarPreview(selectId) {
+        let val = document.getElementById(selectId).value;
+        let p = new Audio(sonsDisponiveis[val]);
+        p.play().catch(()=>{});
+    }
 
     function carregarBanco() {
         let defaultDB = {
@@ -269,14 +338,17 @@
             categorias: [{ nome: "Geral", cor: "#fff0b3", corTexto: "#000000" }],
             obsPedidos: ["Sem sal", "Pouco óleo", "Urgente"],
             obsCancelamentos: ["Falta de insumo", "Queimou", "Erro no pedido"],
-            configs: { modo: "panelas", url: "" }
+            configs: { modo: "panelas", url: "", senhaModo: "", somCozinha: "1", somPanelas: "1" }
         };
         let local = JSON.parse(localStorage.getItem('kds_v1_db'));
         if(local) {
             if(local.observacoes) { local.obsPedidos = local.observacoes; delete local.observacoes; }
             if(!local.obsPedidos) local.obsPedidos = ["Sem sal", "Pouco óleo", "Urgente"];
             if(!local.obsCancelamentos) local.obsCancelamentos = ["Falta de insumo", "Queimou", "Erro no pedido"];
-            if(local.configs && local.configs.modo === 'balcao') local.configs.modo = 'panelas';
+            if(!local.configs) local.configs = defaultDB.configs;
+            if(!local.configs.somCozinha) local.configs.somCozinha = "1";
+            if(!local.configs.somPanelas) local.configs.somPanelas = "1";
+            if(local.configs.modo === 'balcao') local.configs.modo = 'panelas';
         }
         return local || defaultDB;
     }
@@ -285,54 +357,55 @@
         localStorage.setItem('kds_v1_db', JSON.stringify(db));
     }
 
-    // --- NUVEM ---
-    async function sincronizarSalvarNuvem() {
-        if(!db.configs.url) return alert("Salve a URL do Google Script primeiro!");
-        try {
-            document.querySelector('#modalPainelUnificado .btn-action').innerText = "Salvando...";
-            await fetch(db.configs.url, { 
-                method: 'POST', mode: 'no-cors', 
-                body: JSON.stringify({ action: 'salvar_banco', dados: { produtos: db.produtos, categorias: db.categorias, obsPedidos: db.obsPedidos, obsCancelamentos: db.obsCancelamentos } }) 
-            });
-            alert("Dados salvos na Nuvem com sucesso!");
-        } catch(e) { alert("Erro ao enviar para a nuvem."); }
-        document.querySelector('#modalPainelUnificado .btn-action').innerText = "💾 Salvar URL";
-    }
+    // --- ALTERNAR MODO COM SENHA ---
+    let modoPendente = null;
+    let seletorGlobal = null;
 
-    async function sincronizarPuxarNuvem(pedirConfirmacao) {
-        if(!db.configs.url) return;
-        if(pedirConfirmacao && !confirm("Você irá sobrepor os dados atuais. Deseja continuar?")) return; 
-        
-        try {
-            let res = await fetch(db.configs.url + "?action=carregar_banco");
-            let nuvemDB = await res.json();
-            if(nuvemDB.produtos) {
-                db.produtos = nuvemDB.produtos;
-                db.categorias = nuvemDB.categorias || [];
-                db.obsPedidos = nuvemDB.obsPedidos || ["Sem sal", "Pouco óleo"];
-                db.obsCancelamentos = nuvemDB.obsCancelamentos || ["Falta de insumo", "Queimou"];
-                salvarBancoLocal();
-                if(pedirConfirmacao) { alert("Dados puxados com sucesso!"); location.reload(); } else { iniciar(); }
-            } else if(pedirConfirmacao) { alert("Nenhum dado encontrado na nuvem ainda."); }
-        } catch(e) { if(pedirConfirmacao) alert("Erro ao puxar dados da nuvem."); }
-    }
+    function iniciarTrocaModo(selectElement) {
+        const novoModo = selectElement.value;
+        const senhaDefinida = db.configs.senhaModo;
 
-    document.getElementById('senhaAdmin').addEventListener('input', function(e) {
-        if(this.value === "1999") {
-            this.blur(); document.getElementById('modalLoginAdmin').style.display = 'none';
-            document.getElementById('configUrlApp').value = db.configs.url || '';
-            document.getElementById('modalPainelUnificado').style.display = 'flex'; this.value = ''; 
+        if (senhaDefinida && senhaDefinida.trim() !== "") {
+            modoPendente = novoModo;
+            seletorGlobal = selectElement;
+            document.getElementById('inputSenhaModo').value = '';
+            document.getElementById('modalSenhaModo').style.display = 'flex';
+            setTimeout(() => document.getElementById('inputSenhaModo').focus(), 100);
+            
+            // Volta visualmente para o antigo até confirmar a senha
+            selectElement.value = db.configs.modo; 
+        } else {
+            efetivarTrocaModo(novoModo);
         }
-    });
+    }
+
+    function confirmarTrocaModo() {
+        const senhaDigitada = document.getElementById('inputSenhaModo').value;
+        if (senhaDigitada === db.configs.senhaModo) {
+            document.getElementById('modalSenhaModo').style.display = 'none';
+            seletorGlobal.value = modoPendente;
+            efetivarTrocaModo(modoPendente);
+        } else {
+            alert("Senha incorreta!");
+            document.getElementById('inputSenhaModo').value = '';
+        }
+    }
+
+    function cancelarTrocaModo() {
+        document.getElementById('modalSenhaModo').style.display = 'none';
+        seletorGlobal.value = db.configs.modo;
+        modoPendente = null;
+    }
+
+    function efetivarTrocaModo(modo) {
+        db.configs.modo = modo;
+        salvarBancoLocal(); 
+        aplicarModoVisual(modo);
+    }
 
     function iniciar() {
         document.getElementById('seletorModo').value = db.configs.modo || 'panelas';
         aplicarModoVisual(db.configs.modo || 'panelas');
-    }
-
-    function verificarTrocaModo(selectElement) {
-        db.configs.modo = selectElement.value;
-        salvarBancoLocal(); aplicarModoVisual(db.configs.modo);
     }
 
     function aplicarModoVisual(modo) {
@@ -348,7 +421,7 @@
         } else {
             if(themeColor) themeColor.content = '#2e7d32';
             document.getElementById('area-panelas').style.display = 'none'; document.getElementById('area-cozinha').style.display = 'flex';
-            syncGeral(); loopSync = setInterval(syncGeral, 5000);
+            pararAlarme(); syncGeral(); loopSync = setInterval(syncGeral, 5000);
         }
     }
 
@@ -465,17 +538,19 @@
                 return pServ;
             });
             
-            if(db.configs.modo === 'cozinha') { renderizarListaCozinha(); gerenciarAlarme(); } 
+            if(db.configs.modo === 'cozinha') { renderizarListaCozinha(); } 
             else { renderizarUltimosPedidos(); }
+            
+            gerenciarAlarme(); // Centralizei a gestão de alarme para ambos os lados
         } catch(e) { console.log("Aguardando conexão..."); }
     }
 
     function darCiencia(id) {
         pedidosCientes.add(id.toString());
         renderizarUltimosPedidos();
+        gerenciarAlarme(); // Checa se pode desligar o alarme
     }
 
-    // --- ABA ÚLTIMOS PEDIDOS (TEXTO QUEBRADO NATURALMENTE) ---
     function renderizarUltimosPedidos() {
         const lista = document.getElementById('listaUltimosPedidosPanelas');
         const agora = Date.now();
@@ -522,7 +597,6 @@
         });
     }
 
-    // --- COZINHA ---
     function renderizarListaCozinha() {
         const lista = document.getElementById('listaPedidosCozinha');
         const agora = Date.now();
@@ -542,7 +616,7 @@
             }
             else if (p.status === 'fazendo') { 
                 emoji = '🔥'; 
-                acaoTxt = '👉 Deslize: Enviado<br>👆 Segure: Pedir para Buscar<br>🖱️ Toque 2x: Cancelar'; 
+                acaoTxt = '👉 Deslize: Enviado<br>👆 Segure: Pedir para Buscar<br>✌️ Toque 2x: Cancelar'; 
             }
             else if (p.status === 'enviado') { 
                 emoji = '✔️'; acaoTxt = '👈 Deslize para desfazer'; isFinal = true;
@@ -637,7 +711,52 @@
           .catch(() => pedidosBloqueados.delete(id.toString()));
     }
 
-    // --- HISTÓRICO ---
+    // --- ALARMES UNIFICADOS ---
+    function gerenciarAlarme() {
+        let deveTocar = false;
+        let configSom = "1";
+        const h = document.getElementById('mainHeader');
+        h.classList.remove('alerta-pisca', 'alerta-pisca-buscar');
+
+        if (db.configs.modo === 'cozinha') {
+            const temPendente = pedidosServidor.some(p => p.status === 'pendente');
+            if(temPendente) {
+                deveTocar = true;
+                configSom = db.configs.somCozinha || "1";
+                h.classList.add('alerta-pisca');
+            }
+        } else if (db.configs.modo === 'panelas') {
+            const temAlertaPanelas = pedidosServidor.some(p => {
+                if(p.status === 'buscar' || p.status === 'cancelado') {
+                    return !pedidosCientes.has(p.id.toString());
+                }
+                return false;
+            });
+            if(temAlertaPanelas) {
+                deveTocar = true;
+                configSom = db.configs.somPanelas || "1";
+                h.classList.add('alerta-pisca-buscar');
+            }
+        }
+
+        if (deveTocar) {
+            // Se já não estiver tocando OU se for preciso trocar a música do alarme em tempo real
+            if (!alarmeTocando || playerAlarme.src !== sonsDisponiveis[configSom]) {
+                playerAlarme.src = sonsDisponiveis[configSom];
+                playerAlarme.play().catch(()=>{});
+                alarmeTocando = true;
+            }
+        } else {
+            pararAlarme();
+        }
+    }
+    
+    function pararAlarme() { 
+        document.getElementById('mainHeader').classList.remove('alerta-pisca', 'alerta-pisca-buscar'); 
+        playerAlarme.pause(); 
+        alarmeTocando = false; 
+    }
+
     function abrirHistorico() {
         const lista = document.getElementById('listaHistorico'); lista.innerHTML = '';
         const dataHoje = new Date().toDateString(); 
@@ -662,26 +781,36 @@
         document.getElementById('modalHistorico').style.display = 'flex';
     }
 
-    function gerenciarAlarme() {
-        const temPendente = pedidosServidor.some(p => p.status === 'pendente');
-        const h = document.getElementById('mainHeader');
-        if (temPendente) {
-            h.classList.add('alerta-pisca');
-            if(!alarmeTocando) { document.getElementById('audioAlerta').play().catch(()=>{}); alarmeTocando = true; }
-        } else { pararAlarme(); }
+    function fecharModal(id) { document.getElementById(id).style.display = 'none'; }
+    
+    function abrirLoginAdmin() { 
+        document.getElementById('senhaAdmin').value = ''; 
+        document.getElementById('modalLoginAdmin').style.display = 'flex'; 
+        setTimeout(()=>document.getElementById('senhaAdmin').focus(), 100); 
     }
     
-    function pararAlarme() { document.getElementById('mainHeader').classList.remove('alerta-pisca'); document.getElementById('audioAlerta').pause(); document.getElementById('audioAlerta').currentTime = 0; alarmeTocando = false; }
-
-    function fecharModal(id) { document.getElementById(id).style.display = 'none'; }
-    function abrirLoginAdmin() { document.getElementById('senhaAdmin').value = ''; document.getElementById('modalLoginAdmin').style.display = 'flex'; setTimeout(()=>document.getElementById('senhaAdmin').focus(), 100); }
-    
-    function salvarUrlGeral() {
+    // --- SALVAR CONFIGS DO PAINEL ADMIN ---
+    function salvarConfigGerais() {
         const urlInput = document.getElementById('configUrlApp').value.trim();
+        const senhaInput = document.getElementById('configSenhaModo').value;
+        const somCozinha = document.getElementById('configSomCozinha').value;
+        const somPanelas = document.getElementById('configSomPanelas').value;
+
         if(urlInput === "") return alert("A URL não pode estar vazia.");
+        
         let primeiraVez = (db.configs.url === "");
-        db.configs.url = urlInput; salvarBancoLocal(); 
-        if(primeiraVez) { sincronizarPuxarNuvem(false); } else { alert("✅ URL salva com sucesso!"); }
+        db.configs.url = urlInput; 
+        db.configs.senhaModo = senhaInput;
+        db.configs.somCozinha = somCozinha;
+        db.configs.somPanelas = somPanelas;
+
+        salvarBancoLocal(); 
+        
+        if(primeiraVez) { 
+            sincronizarPuxarNuvem(false); 
+        } else { 
+            alert("✅ Configurações salvas com sucesso!"); 
+        }
     }
     
     function voltarPainelUnificado() { fecharModal('modalListagem'); document.getElementById('modalPainelUnificado').style.display = 'flex'; }
@@ -765,7 +894,22 @@
         salvarBancoLocal(); iniciar(); abrirGerenciar('categorias');
     }
 
+    // Ao carregar a página do Admin, também carrega as configs nos inputs
+    document.getElementById('senhaAdmin').addEventListener('input', function(e) {
+        if(this.value === "1999") {
+            this.blur(); document.getElementById('modalLoginAdmin').style.display = 'none';
+            document.getElementById('configUrlApp').value = db.configs.url || '';
+            document.getElementById('configSenhaModo').value = db.configs.senhaModo || '';
+            document.getElementById('configSomCozinha').value = db.configs.somCozinha || '1';
+            document.getElementById('configSomPanelas').value = db.configs.somPanelas || '1';
+            document.getElementById('modalPainelUnificado').style.display = 'flex'; this.value = ''; 
+        }
+    });
+
+    // Iniciar a aplicação
     iniciar();
 </script>
+<script async src="https://www.googletagmanager.com/gtag/js?id=G-XXXXX"></script>
+<script>window.dataLayer = window.dataLayer || []; function gtag(){dataLayer.push(arguments);} gtag('js', new Date()); gtag('config', 'G-XXXXX');</script>
 </body>
 </html>
