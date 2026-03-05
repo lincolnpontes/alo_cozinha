@@ -211,7 +211,7 @@
                 <select id="configSomCozinha" style="flex:1;">
                     <option value="sem_som">Sem som</option>
                     <option value="beep">Beep Clássico</option>
-                    <option value="sino">Sino de Balcão</option>
+                    <option value="sino">Sino de Jantar</option>
                     <option value="sino_forte">Sino Forte</option>
                     <option value="alarme">Alarme Curto</option>
                 </select>
@@ -225,7 +225,7 @@
                 <select id="configSomPanelas" style="flex:1;">
                     <option value="sem_som">Sem som</option>
                     <option value="beep">Beep Clássico</option>
-                    <option value="sino">Sino de Balcão</option>
+                    <option value="sino">Sino de Jantar</option>
                     <option value="sino_forte">Sino Forte</option>
                     <option value="alarme">Alarme Curto</option>
                 </select>
@@ -316,7 +316,7 @@
     const sonsDisponiveis = {
         "sem_som": "",
         "beep": "https://actions.google.com/sounds/v1/alarms/beep_short.ogg",
-        "sino": "https://actions.google.com/sounds/v1/doors/store_door_chime.ogg", 
+        "sino": "https://actions.google.com/sounds/v1/alarms/dinner_bell_triangle.ogg", // SINO DE JANTAR ATUALIZADO E INFALÍVEL
         "sino_forte": "https://actions.google.com/sounds/v1/alarms/medium_bell_ringing_near.ogg",
         "alarme": "https://actions.google.com/sounds/v1/alarms/alarm_clock.ogg"
     };
@@ -505,16 +505,43 @@
         input.focus();
     }
 
+    // --- NOVIDADE: UI OTIMISTA (Aparece na hora) ---
     async function enviarPedidoConfirmado() {
         const nome = document.getElementById('pedidoItemNome').value;
         const obsText = document.getElementById('pedidoObsText').value.trim();
         let nomeParaEnviar = obsText ? `${nome} (Obs: ${obsText})` : nome;
+        
         document.getElementById('modalFazerPedido').style.display = 'none';
 
+        // 1. Cria um ID temporário e joga na lista na mesma hora
+        const tempId = Date.now().toString();
+        const pedidoTemporario = {
+            id: tempId,
+            produto: nomeParaEnviar,
+            status: 'pendente',
+            timestamp: new Date().toISOString(),
+            finalizadoEm: '',
+            motivo: ''
+        };
+        
+        pedidosServidor.push(pedidoTemporario);
+        renderizarUltimosPedidos(); // Atualiza a tela sem esperar a internet
+
+        // 2. Envia para o Google Sheets silenciosamente
         try {
-            await fetch(db.configs.url, { method: 'POST', mode: 'no-cors', body: JSON.stringify({ action: 'novo_pedido', produto: nomeParaEnviar }) });
+            await fetch(db.configs.url, { 
+                method: 'POST', 
+                mode: 'no-cors', 
+                body: JSON.stringify({ action: 'novo_pedido', produto: nomeParaEnviar }) 
+            });
+            // 3. Deu certo? Puxa a lista real para substituir o temporário pelo oficial
             setTimeout(syncGeral, 1000); 
-        } catch(e) { alert("Erro ao enviar pedido."); }
+        } catch(e) { 
+            // 4. Deu erro? Avisa o operador e tira o pedido fantasma da tela
+            pedidosServidor = pedidosServidor.filter(p => p.id !== tempId);
+            renderizarUltimosPedidos();
+            alert("⚠️ Falha na conexão: Seu pedido não foi enviado. Verifique a internet e tente novamente."); 
+        }
     }
 
     async function confirmarCancelamento() {
@@ -849,19 +876,18 @@
         
         db.configs.url = urlInput; 
         salvarBancoLocal(); 
-        sincronizarPuxarNuvem(false); // Puxa automático
+        sincronizarPuxarNuvem(false); 
         alert("✅ URL salva e dados sincronizados!");
     }
 
     // --- AUTO-SAVE SILENCIOSO AO FECHAR ---
     function fecharPainelUnificado() {
-        // Pega os valores atuais dos inputs e salva direto, sem perguntar
         db.configs.senhaModo = document.getElementById('configSenhaModo').value;
         db.configs.somCozinha = document.getElementById('configSomCozinha').value;
         db.configs.somPanelas = document.getElementById('configSomPanelas').value;
         
         salvarBancoLocal();
-        gerenciarAlarme(); // Se mudou o som, já reflete no alarme
+        gerenciarAlarme(); 
         
         if(previewAudio) { previewAudio.pause(); } 
         fecharModal('modalPainelUnificado');
