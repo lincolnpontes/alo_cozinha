@@ -193,7 +193,7 @@
             Alô Cozinha - v1.0
         </div>
 
-        <button class="btn-outline" onclick="abrirGerenciar('produtos')">📦 Gerenciar Produtos</button>
+        <button class="btn-outline" onclick="abrirGerenciar('produtos')">🍔 Gerenciar Produtos</button>
         <button class="btn-outline" onclick="abrirGerenciar('categorias')">🏷️ Gerenciar Categorias</button>
         <button class="btn-outline" onclick="abrirGerenciar('obsPedidos')">💬 Obs. de Pedidos</button>
         <button class="btn-outline" onclick="abrirGerenciar('obsCancelamentos')" style="border-color:#d32f2f; color:#d32f2f;">🗑️ Motivos Cancelamento</button>
@@ -316,7 +316,7 @@
     const sonsDisponiveis = {
         "sem_som": "",
         "beep": "https://actions.google.com/sounds/v1/alarms/beep_short.ogg",
-        "sino": "https://actions.google.com/sounds/v1/alarms/dinner_bell_triangle.ogg", // SINO DE JANTAR ATUALIZADO E INFALÍVEL
+        "sino": "https://actions.google.com/sounds/v1/alarms/dinner_bell_triangle.ogg",
         "sino_forte": "https://actions.google.com/sounds/v1/alarms/medium_bell_ringing_near.ogg",
         "alarme": "https://actions.google.com/sounds/v1/alarms/alarm_clock.ogg"
     };
@@ -505,7 +505,6 @@
         input.focus();
     }
 
-    // --- NOVIDADE: UI OTIMISTA (Aparece na hora) ---
     async function enviarPedidoConfirmado() {
         const nome = document.getElementById('pedidoItemNome').value;
         const obsText = document.getElementById('pedidoObsText').value.trim();
@@ -513,7 +512,6 @@
         
         document.getElementById('modalFazerPedido').style.display = 'none';
 
-        // 1. Cria um ID temporário e joga na lista na mesma hora
         const tempId = Date.now().toString();
         const pedidoTemporario = {
             id: tempId,
@@ -525,19 +523,16 @@
         };
         
         pedidosServidor.push(pedidoTemporario);
-        renderizarUltimosPedidos(); // Atualiza a tela sem esperar a internet
+        renderizarUltimosPedidos(); 
 
-        // 2. Envia para o Google Sheets silenciosamente
         try {
             await fetch(db.configs.url, { 
                 method: 'POST', 
                 mode: 'no-cors', 
                 body: JSON.stringify({ action: 'novo_pedido', produto: nomeParaEnviar }) 
             });
-            // 3. Deu certo? Puxa a lista real para substituir o temporário pelo oficial
             setTimeout(syncGeral, 1000); 
         } catch(e) { 
-            // 4. Deu erro? Avisa o operador e tira o pedido fantasma da tela
             pedidosServidor = pedidosServidor.filter(p => p.id !== tempId);
             renderizarUltimosPedidos();
             alert("⚠️ Falha na conexão: Seu pedido não foi enviado. Verifique a internet e tente novamente."); 
@@ -594,15 +589,32 @@
         gerenciarAlarme(); 
     }
 
+    // --- LÓGICA DE ORDENAÇÃO: PRIORIDADES NO TOPO ---
     function renderizarUltimosPedidos() {
         const lista = document.getElementById('listaUltimosPedidosPanelas');
         const agora = Date.now();
         lista.innerHTML = '';
         
-        let recentes = pedidosServidor.filter(p => {
+        let todosRecentes = pedidosServidor.filter(p => {
             if(p.status !== 'concluido' && p.status !== 'enviado' && p.status !== 'buscar' && p.status !== 'cancelado') return true;
             return (agora - new Date(p.finalizadoEm).getTime()) < 300000;
-        }).reverse().slice(0, 15);
+        }).reverse();
+
+        // Separa os itens que precisam de atenção (piscando) dos itens normais
+        let itensAtencao = [];
+        let itensNormais = [];
+
+        todosRecentes.forEach(p => {
+            let precisaAtencao = (p.status === 'buscar' || p.status === 'cancelado') && !pedidosCientes.has(p.id.toString());
+            if(precisaAtencao) {
+                itensAtencao.push(p);
+            } else {
+                itensNormais.push(p);
+            }
+        });
+
+        // Junta tudo, colocando a atenção sempre no topo
+        let recentes = [...itensAtencao, ...itensNormais].slice(0, 15);
         
         if(recentes.length === 0) {
             lista.innerHTML = `<li style="padding: 15px; text-align: center; color: #999;">Nenhum pedido recente.</li>`; return;
@@ -754,7 +766,6 @@
           .catch(() => pedidosBloqueados.delete(id.toString()));
     }
 
-    // --- ALARMES UNIFICADOS E INTELIGENTES ---
     function gerenciarAlarme() {
         let deveTocar = false;
         let configSom = "sem_som";
@@ -838,7 +849,6 @@
         setTimeout(()=>document.getElementById('senhaAdmin').focus(), 100); 
     }
     
-    // --- LÓGICA DE SALVAR URL E AUTO-FETCH ---
     async function sincronizarPuxarNuvem(pedirConfirmacao) {
         if(!db.configs.url) return;
         if(pedirConfirmacao && !confirm("Você irá sobrepor os dados locais. Deseja puxar da nuvem?")) return; 
@@ -860,14 +870,14 @@
     async function sincronizarSalvarNuvem() {
         if(!db.configs.url) return alert("Salve a URL primeiro!");
         try {
-            document.querySelector('#modalPainelUnificado .btn-outline').innerText = "Salvando...";
+            document.querySelector('#modalPainelUnificado .btn-outline:last-child').innerText = "Salvando...";
             await fetch(db.configs.url, { 
                 method: 'POST', mode: 'no-cors', 
                 body: JSON.stringify({ action: 'salvar_banco', dados: { produtos: db.produtos, categorias: db.categorias, obsPedidos: db.obsPedidos, obsCancelamentos: db.obsCancelamentos } }) 
             });
             alert("Dados salvos na Nuvem com sucesso!");
         } catch(e) { alert("Erro ao enviar para a nuvem."); }
-        document.querySelector('#modalPainelUnificado .btn-outline').innerText = "⬆️ Salvar na Nuvem";
+        document.querySelector('#modalPainelUnificado .btn-outline:last-child').innerText = "⬆️ Salvar na Nuvem";
     }
 
     function salvarURL() {
@@ -880,7 +890,6 @@
         alert("✅ URL salva e dados sincronizados!");
     }
 
-    // --- AUTO-SAVE SILENCIOSO AO FECHAR ---
     function fecharPainelUnificado() {
         db.configs.senhaModo = document.getElementById('configSenhaModo').value;
         db.configs.somCozinha = document.getElementById('configSomCozinha').value;
