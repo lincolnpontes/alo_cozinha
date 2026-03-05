@@ -211,10 +211,9 @@
                 <select id="configSomCozinha" style="flex:1;">
                     <option value="sem_som">Sem som</option>
                     <option value="beep">Beep Clássico</option>
-                    <option value="bugle">Toque Bugle</option>
-                    <option value="relogio">Relógio Digital</option>
+                    <option value="sino">Sino de Balcão</option>
+                    <option value="sino_forte">Sino Forte</option>
                     <option value="alarme">Alarme Curto</option>
-                    <option value="campainha">Campainha</option>
                 </select>
                 <button class="btn-cancel" style="padding: 10px;" onclick="tocarPreview('configSomCozinha')">▶️</button>
             </div>
@@ -226,10 +225,9 @@
                 <select id="configSomPanelas" style="flex:1;">
                     <option value="sem_som">Sem som</option>
                     <option value="beep">Beep Clássico</option>
-                    <option value="bugle">Toque Bugle</option>
-                    <option value="relogio">Relógio Digital</option>
+                    <option value="sino">Sino de Balcão</option>
+                    <option value="sino_forte">Sino Forte</option>
                     <option value="alarme">Alarme Curto</option>
-                    <option value="campainha">Campainha</option>
                 </select>
                 <button class="btn-cancel" style="padding: 10px;" onclick="tocarPreview('configSomPanelas')">▶️</button>
             </div>
@@ -319,10 +317,9 @@
     const sonsDisponiveis = {
         "sem_som": "",
         "beep": "https://actions.google.com/sounds/v1/alarms/beep_short.ogg",
-        "bugle": "https://actions.google.com/sounds/v1/alarms/bugle_tune.ogg",
-        "relogio": "https://actions.google.com/sounds/v1/alarms/digital_watch_alarm_long.ogg",
-        "alarme": "https://actions.google.com/sounds/v1/alarms/alarm_clock.ogg",
-        "campainha": "https://actions.google.com/sounds/v1/doors/front_doorbell_ring.ogg"
+        "sino": "https://actions.google.com/sounds/v1/doors/desk_bell.ogg",
+        "sino_forte": "https://actions.google.com/sounds/v1/alarms/medium_bell_ringing_near.ogg",
+        "alarme": "https://actions.google.com/sounds/v1/alarms/alarm_clock.ogg"
     };
     
     let playerAlarme = new Audio();
@@ -341,7 +338,6 @@
         previewAudio = new Audio(sonsDisponiveis[val]);
         previewAudio.play().catch(()=>{});
         
-        // Desliga o preview à força depois de 3 segundos
         previewTimeout = setTimeout(() => {
             if(previewAudio) { previewAudio.pause(); }
         }, 3000);
@@ -349,8 +345,8 @@
 
     function carregarBanco() {
         let defaultDB = {
-            produtos: [{ nome: "Arroz", categoria: "Geral" }],
-            categorias: [{ nome: "Geral", cor: "#fff0b3", corTexto: "#000000" }],
+            produtos: [],
+            categorias: [],
             obsPedidos: ["Sem sal", "Pouco óleo", "Urgente"],
             obsCancelamentos: ["Falta de insumo", "Queimou", "Erro no pedido"],
             configs: { modo: "panelas", url: "", senhaModo: "", somCozinha: "sem_som", somPanelas: "sem_som" }
@@ -361,14 +357,15 @@
             if(!local.obsPedidos) local.obsPedidos = ["Sem sal", "Pouco óleo", "Urgente"];
             if(!local.obsCancelamentos) local.obsCancelamentos = ["Falta de insumo", "Queimou", "Erro no pedido"];
             if(!local.configs) local.configs = defaultDB.configs;
-            // Migração de números para os novos nomes
-            if(["1","2","3","4","5"].includes(local.configs.somCozinha)) local.configs.somCozinha = "sem_som";
-            if(["1","2","3","4","5"].includes(local.configs.somPanelas)) local.configs.somPanelas = "sem_som";
-            if(!local.configs.somCozinha) local.configs.somCozinha = "sem_som";
-            if(!local.configs.somPanelas) local.configs.somPanelas = "sem_som";
+            
+            // Corrige se a config de áudio antiga estava com número
+            if(!["sem_som", "beep", "sino", "sino_forte", "alarme"].includes(local.configs.somCozinha)) local.configs.somCozinha = "sem_som";
+            if(!["sem_som", "beep", "sino", "sino_forte", "alarme"].includes(local.configs.somPanelas)) local.configs.somPanelas = "sem_som";
+            
             if(local.configs.modo === 'balcao') local.configs.modo = 'panelas';
+            return local;
         }
-        return local || defaultDB;
+        return defaultDB;
     }
 
     function salvarBancoLocal() {
@@ -457,6 +454,11 @@
         lista.innerHTML = '';
         let filtrados = categoriaAtual === null ? db.produtos : db.produtos.filter(p => p.categoria === categoriaAtual);
         
+        if(filtrados.length === 0) {
+            lista.innerHTML = '<li style="padding: 20px; text-align: center; color: #666;">Nenhum produto cadastrado ou puxado da nuvem.</li>';
+            return;
+        }
+
         filtrados.forEach(p => {
             const catObj = db.categorias.find(c => c.nome === p.categoria) || {cor:'#eee', corTexto:'#000'};
             const primeiraLetra = p.nome.charAt(0).toUpperCase();
@@ -812,6 +814,37 @@
     }
     
     // --- LÓGICA DE SALVAR E FECHAR O PAINEL ---
+    async function sincronizarPuxarNuvem(pedirConfirmacao) {
+        if(!db.configs.url) return;
+        if(pedirConfirmacao && !confirm("Você irá sobrepor os dados atuais. Deseja continuar?")) return; 
+        
+        try {
+            let res = await fetch(db.configs.url + "?action=carregar_banco");
+            let nuvemDB = await res.json();
+            if(nuvemDB.produtos) {
+                db.produtos = nuvemDB.produtos;
+                db.categorias = nuvemDB.categorias || [];
+                db.obsPedidos = nuvemDB.obsPedidos || ["Sem sal", "Pouco óleo"];
+                db.obsCancelamentos = nuvemDB.obsCancelamentos || ["Falta de insumo", "Queimou"];
+                salvarBancoLocal();
+                if(pedirConfirmacao) { alert("Dados puxados com sucesso!"); location.reload(); } else { iniciar(); }
+            } else if(pedirConfirmacao) { alert("Nenhum dado encontrado na nuvem ainda."); }
+        } catch(e) { if(pedirConfirmacao) alert("Erro ao puxar dados da nuvem."); }
+    }
+
+    async function sincronizarSalvarNuvem() {
+        if(!db.configs.url) return alert("Salve a URL do Google Script primeiro!");
+        try {
+            document.querySelector('#modalPainelUnificado .btn-action').innerText = "Salvando...";
+            await fetch(db.configs.url, { 
+                method: 'POST', mode: 'no-cors', 
+                body: JSON.stringify({ action: 'salvar_banco', dados: { produtos: db.produtos, categorias: db.categorias, obsPedidos: db.obsPedidos, obsCancelamentos: db.obsCancelamentos } }) 
+            });
+            alert("Dados salvos na Nuvem com sucesso!");
+        } catch(e) { alert("Erro ao enviar para a nuvem."); }
+        document.querySelector('#modalPainelUnificado .btn-action').innerText = "💾 Salvar Configurações";
+    }
+
     function salvarConfigGerais() {
         const urlInput = document.getElementById('configUrlApp').value.trim();
         const senhaInput = document.getElementById('configSenhaModo').value;
@@ -827,7 +860,7 @@
 
         salvarBancoLocal(); 
         alert("✅ Configurações salvas com sucesso!");
-        gerenciarAlarme(); // Atualiza em tempo real se o som foi removido
+        gerenciarAlarme(); 
     }
 
     function fecharPainelUnificado() {
@@ -850,7 +883,6 @@
                 salvarBancoLocal();
                 gerenciarAlarme();
             } else {
-                // Reverte visualmente para o antigo se ele não salvou
                 document.getElementById('configUrlApp').value = db.configs.url || '';
                 document.getElementById('configSenhaModo').value = db.configs.senhaModo || '';
                 document.getElementById('configSomCozinha').value = db.configs.somCozinha || 'sem_som';
@@ -858,7 +890,7 @@
             }
         }
         
-        if(previewAudio) { previewAudio.pause(); } // Garante que o preview pare ao sair
+        if(previewAudio) { previewAudio.pause(); } 
         fecharModal('modalPainelUnificado');
     }
     
