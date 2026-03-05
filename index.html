@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <link rel="icon" href="icon.png">
-    <link rel="manifest" href="manifest.json">
+    <link rel="apple-touch-icon" href="icon.png"> <link rel="manifest" href="manifest.json">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
     <meta name="mobile-web-app-capable" content="yes">
     <meta name="theme-color" content="#1565C0" id="metaThemeColor">
@@ -589,7 +589,6 @@
         gerenciarAlarme(); 
     }
 
-    // --- LÓGICA DE ORDENAÇÃO: PRIORIDADES NO TOPO ---
     function renderizarUltimosPedidos() {
         const lista = document.getElementById('listaUltimosPedidosPanelas');
         const agora = Date.now();
@@ -600,7 +599,6 @@
             return (agora - new Date(p.finalizadoEm).getTime()) < 300000;
         }).reverse();
 
-        // Separa os itens que precisam de atenção (piscando) dos itens normais
         let itensAtencao = [];
         let itensNormais = [];
 
@@ -613,7 +611,6 @@
             }
         });
 
-        // Junta tudo, colocando a atenção sempre no topo
         let recentes = [...itensAtencao, ...itensNormais].slice(0, 15);
         
         if(recentes.length === 0) {
