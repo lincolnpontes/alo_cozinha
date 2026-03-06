@@ -3,20 +3,31 @@
 <head>
     <meta charset="UTF-8">
     <link rel="icon" href="icon.png">
-    <link rel="apple-touch-icon" href="icon.png"> <link rel="manifest" href="manifest.json">
+    <link rel="apple-touch-icon" href="icon.png">
+    <link rel="manifest" href="manifest.json">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
     <meta name="mobile-web-app-capable" content="yes">
     <meta name="theme-color" content="#1565C0" id="metaThemeColor">
-    <title>Alô Cozinha v1.0</title>
+    <title>Alô Cozinha v1.1</title>
 
     <style>
         body { font-family: Arial, sans-serif; background-color: #f0f2f5; margin: 0; padding: 0; display: flex; justify-content: center; user-select: none; }
         .app-container { width: 100%; max-width: 500px; background-color: #ffffff; height: 100vh; display: flex; flex-direction: column; box-shadow: 0 0 10px rgba(0,0,0,0.1); position: relative; overflow: hidden; }
         
+        /* TELA DE CARREGAMENTO */
+        #splashScreen { position: fixed; top: 0; left: 0; width: 100%; height: 100%; background-color: #1565C0; z-index: 9999; display: flex; flex-direction: column; align-items: center; justify-content: center; color: white; transition: opacity 0.5s ease; }
+        .splash-icone { font-size: 80px; margin-bottom: 20px; }
+        .splash-titulo { font-size: 32px; font-weight: bold; margin-bottom: 5px; }
+        .splash-versao { font-size: 16px; opacity: 0.8; }
+
         .header { padding: 15px; display: flex; justify-content: space-between; align-items: center; color: white; background-color: #1565C0; }
-        .header-select { background: transparent; color: white; border: none; font-size: 20px; font-weight: bold; outline: none; -webkit-appearance: none; appearance: none; padding-right: 15px; }
+        .header-select { background: transparent; color: white; border: none; font-size: 20px; font-weight: bold; outline: none; -webkit-appearance: none; appearance: none; padding-right: 5px; }
         .header-select option { color: black; font-size: 16px; }
-        .header-actions button { background: none; border: none; color: white; font-size: 24px; cursor: pointer; margin-left: 10px; }
+        
+        /* TEXTO DE DICAS COZINHA NO HEADER */
+        .dicas-cozinha { display: none; font-size: 10px; line-height: 1.3; text-align: right; flex: 1; opacity: 0.9; margin-right: 10px; white-space: nowrap; }
+
+        .header-actions button { background: none; border: none; color: white; font-size: 24px; cursor: pointer; }
         
         body.theme-panelas .header { background-color: #1565C0 !important; }
         body.theme-cozinha .header { background-color: #2e7d32 !important; }
@@ -27,12 +38,14 @@
         .filters { padding: 10px 15px; display: flex; gap: 10px; overflow-x: auto; white-space: nowrap; border-bottom: 1px solid #eee; background: white; flex-shrink: 0; }
         .chip { background-color: #e0e0e0; color: #333; padding: 8px 16px; border-radius: 20px; cursor: pointer; font-size: 14px; font-weight: bold; border: 2px solid transparent; }
         .chip.active { border: 2px solid #333; opacity: 0.9; }
+        
         .list { padding: 0; margin: 0; list-style: none; padding-bottom: 20px; }
-        .item { display: flex; align-items: center; padding: 15px; border-bottom: 1px solid #eee; cursor: pointer; transition: transform 0.2s; overflow: hidden; }
+        /* ITEM REDUZIDO NA ALTURA */
+        .item { display: flex; align-items: center; padding: 12px 15px; border-bottom: 1px solid #eee; cursor: pointer; transition: transform 0.2s; overflow: hidden; }
         .item:active { background-color: #e3f2fd; }
         .item-avatar { background-color: #BBDEFB; color: #1565C0; width: 40px; height: 40px; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-weight: bold; margin-right: 15px; min-width: 40px; flex-shrink: 0; }
         .item-info { flex: 1; pointer-events: none; }
-        .item-title { font-weight: bold; font-size: 18px; margin-bottom: 4px; }
+        .item-title { font-weight: bold; font-size: 18px; margin-bottom: 2px; }
         .item-subtitle { color: #666; font-size: 14px; line-height: 1.4; }
 
         .status-pendente { border-left: 8px solid #d32f2f; background-color: #ffebee; }
@@ -77,12 +90,23 @@
 </head>
 <body class="theme-panelas">
 
+<div id="splashScreen">
+    <div class="splash-icone">🍲</div>
+    <div class="splash-titulo">Alô Cozinha</div>
+    <div class="splash-versao">v1.1</div>
+</div>
+
 <div class="app-container">
     <div class="header" id="mainHeader">
         <select class="header-select" id="seletorModo" onchange="iniciarTrocaModo(this)">
             <option value="panelas">🥘 Panelas</option>
             <option value="cozinha">🧑‍🍳 Cozinha</option>
         </select>
+        
+        <div id="dicasCozinha" class="dicas-cozinha">
+            👉 Deslize: Enviado<br>👆 Segure: Buscar<br>✌️ 2x: Cancelar
+        </div>
+
         <div class="header-actions">
             <button onclick="abrirLoginAdmin()">⚙️</button>
         </div>
@@ -190,7 +214,7 @@
 <div class="modal-overlay" id="modalPainelUnificado">
     <div class="modal">
         <div style="text-align: center; color: #666; font-size: 13px; font-weight: bold; margin-bottom: 20px;">
-            Alô Cozinha - v1.0
+            Alô Cozinha - v1.1
         </div>
 
         <button class="btn-outline" onclick="abrirGerenciar('produtos')">🍔 Gerenciar Produtos</button>
@@ -370,6 +394,16 @@
         localStorage.setItem('kds_v1_db', JSON.stringify(db));
     }
 
+    // --- FUNÇÃO TEMPO RELATIVO ---
+    function getTempoRelativo(timestamp) {
+        const diffEmMs = Date.now() - new Date(timestamp).getTime();
+        const minutos = Math.floor(diffEmMs / 60000);
+        
+        if (minutos < 1) return "há menos de 1 minuto";
+        if (minutos === 1) return "há 1 minuto";
+        return `há ${minutos} minutos`;
+    }
+
     // --- ALTERNAR MODO COM SENHA ---
     let modoPendente = null;
     let seletorGlobal = null;
@@ -417,11 +451,29 @@
     function iniciar() {
         document.getElementById('seletorModo').value = db.configs.modo || 'panelas';
         aplicarModoVisual(db.configs.modo || 'panelas');
+        
+        // SPLASH SCREEN LOGIC (APENAS 1 VEZ POR SESSÃO)
+        const splash = document.getElementById('splashScreen');
+        if (!sessionStorage.getItem('splash_v11_shown')) {
+            setTimeout(() => {
+                splash.style.opacity = '0';
+                setTimeout(() => {
+                    splash.style.display = 'none';
+                    sessionStorage.setItem('splash_v11_shown', 'true');
+                }, 500); // tempo do fade
+            }, 2000); // 2 segundos segurando a logo
+        } else {
+            splash.style.display = 'none';
+        }
     }
 
     function aplicarModoVisual(modo) {
         const themeColor = document.getElementById('metaThemeColor');
         document.body.className = modo === 'panelas' ? 'theme-panelas' : 'theme-cozinha';
+        
+        // Traz ou esconde dicas da cozinha
+        document.getElementById('dicasCozinha').style.display = modo === 'cozinha' ? 'block' : 'none';
+
         if(loopSync) clearInterval(loopSync);
         
         if(modo === 'panelas') {
@@ -589,6 +641,7 @@
         gerenciarAlarme(); 
     }
 
+    // --- PAINEL ÚLTIMOS PEDIDOS ---
     function renderizarUltimosPedidos() {
         const lista = document.getElementById('listaUltimosPedidosPanelas');
         const agora = Date.now();
@@ -619,11 +672,13 @@
 
         recentes.forEach(p => {
             let statusTraduzido = ''; let corStatus = ''; let piscaClass = ''; let onclickHtml = '';
+            let exibirTempo = true;
             
             if (p.status === 'pendente') { statusTraduzido = 'Pendente'; corStatus = '#d32f2f'; }
             else if (p.status === 'fazendo') { statusTraduzido = 'Em preparo'; corStatus = '#fbc02d'; }
-            else if (p.status === 'enviado') { statusTraduzido = 'Enviado'; corStatus = '#9e9e9e'; }
+            else if (p.status === 'enviado') { statusTraduzido = 'Enviado'; corStatus = '#9e9e9e'; exibirTempo = false; }
             else if (p.status === 'cancelado') { 
+                exibirTempo = false;
                 let motivoTxt = p.motivo ? ` (Motivo: ${p.motivo})` : '';
                 if(!pedidosCientes.has(p.id.toString())) {
                     statusTraduzido = 'Cancelado' + motivoTxt; corStatus = '#000000'; piscaClass = 'alerta-pisca-buscar'; onclickHtml = `onclick="darCiencia('${p.id}')"`;
@@ -632,23 +687,28 @@
                 }
             }
             else if (p.status === 'buscar') { 
+                exibirTempo = false;
                 if(!pedidosCientes.has(p.id.toString())) {
                     statusTraduzido = 'Pode ir buscar'; corStatus = '#d32f2f'; piscaClass = 'alerta-pisca-buscar'; onclickHtml = `onclick="darCiencia('${p.id}')"`;
                 } else {
                     statusTraduzido = 'Pode ir buscar'; corStatus = '#9e9e9e'; 
                 }
-            } else { statusTraduzido = 'Finalizado'; corStatus = '#9e9e9e'; }
+            } else { statusTraduzido = 'Finalizado'; corStatus = '#9e9e9e'; exibirTempo = false; }
+
+            // Lógica do tempo relativo (se aplicável)
+            let textoTempo = exibirTempo ? ` - ${getTempoRelativo(p.timestamp)}` : '';
 
             lista.innerHTML += `
                 <li class="item ${piscaClass}" style="border-left: 5px solid ${corStatus}; padding: 10px 15px;" ${onclickHtml}>
                     <div class="item-info" style="font-size: 14px; white-space: normal; word-break: break-word; line-height: 1.4;">
-                        <strong>${p.produto}</strong> - ${new Date(p.timestamp).toLocaleTimeString()} - <strong style="color:${corStatus}">${statusTraduzido}</strong>
+                        <strong>${p.produto}</strong> - <strong style="color:${corStatus}">${statusTraduzido}</strong><span style="color:#666;">${textoTempo}</span>
                     </div>
                 </li>
             `;
         });
     }
 
+    // --- LISTA COZINHA OTIMIZADA ---
     function renderizarListaCozinha() {
         const lista = document.getElementById('listaPedidosCozinha');
         const agora = Date.now();
@@ -659,31 +719,24 @@
             return (agora - new Date(p.finalizadoEm).getTime()) < 300000;
         }).reverse().forEach(p => {
             
-            let emoji = '🔔'; let acaoTxt = ''; let isFinal = false; let titleClass = "item-title";
-            let horaTxt = new Date(p.timestamp).toLocaleTimeString();
+            let emoji = '🔔'; let isFinal = false; 
             let formatProduto = `<strong>${p.produto}</strong>`;
 
-            if (p.status === 'pendente') { 
-                emoji = '🔔'; acaoTxt = 'Toque para aceitar'; 
-            }
-            else if (p.status === 'fazendo') { 
-                emoji = '🔥'; 
-                acaoTxt = '👉 Deslize: Enviado<br>👆 Segure: Pedir para Buscar<br>✌️ Toque 2x: Cancelar'; 
-            }
-            else if (p.status === 'enviado') { 
-                emoji = '✔️'; acaoTxt = '👈 Deslize para desfazer'; isFinal = true;
-                horaTxt = `${horaTxt} - Enviado`; 
-            }
-            else if (p.status === 'buscar') { 
-                emoji = '✔️'; acaoTxt = '👈 Deslize para desfazer'; isFinal = true;
-                horaTxt = `${horaTxt} - Pediu para Buscar`; 
-            }
-            else if (p.status === 'cancelado') {
-                emoji = '❌'; isFinal = true;
-                acaoTxt = p.motivo ? `Motivo: ${p.motivo}<br>👈 Deslize para desfazer` : '👈 Deslize para desfazer';
-            }
+            if (p.status === 'pendente') { emoji = '🔔'; }
+            else if (p.status === 'fazendo') { emoji = '🔥'; }
+            else if (p.status === 'enviado') { emoji = '✔️'; isFinal = true; }
+            else if (p.status === 'buscar') { emoji = '✔️'; isFinal = true; }
+            else if (p.status === 'cancelado') { emoji = '❌'; isFinal = true; }
             
             let cssStatus = isFinal ? (p.status==='cancelado' ? 'cancelado' : 'concluido') : p.status;
+            
+            // Lógica de exibir tempo apenas se não for finalizado
+            let tempoStr = "";
+            if (!isFinal) {
+                tempoStr = getTempoRelativo(p.timestamp);
+            } else if (p.status === 'cancelado' && p.motivo) {
+                tempoStr = `Motivo: ${p.motivo}`;
+            }
 
             lista.innerHTML += `
                 <li class="item status-${cssStatus}" id="ped-${p.id}" 
@@ -691,10 +744,10 @@
                     ontouchstart="handleTouchStart(event, this)" 
                     ontouchmove="handleTouchMove(event)"
                     ontouchend="handleTouchEnd(event, this)">
-                    <div class="item-avatar" style="background:transparent; font-size:24px;">${emoji}</div>
-                    <div class="item-info">
-                        <div class="${titleClass}" style="margin-bottom: 2px;">${formatProduto} <span style="font-size:14px; color:#555; font-weight:normal;">(${horaTxt})</span></div>
-                        <div class="item-subtitle">${acaoTxt}</div>
+                    <div class="item-avatar" style="background:transparent; font-size:24px; margin-right: 10px;">${emoji}</div>
+                    <div class="item-info" style="display:flex; justify-content:space-between; align-items:center;">
+                        <div class="item-title" style="margin: 0;">${formatProduto}</div>
+                        <div style="font-size:13px; color:#888;">${tempoStr}</div>
                     </div>
                 </li>
             `;
@@ -736,8 +789,7 @@
         } else if (diff > 80) { 
             if(statusAtual === 'fazendo') alterarStatusPedido(id, 'enviado');
             else if (statusAtual === 'pendente') {
-                elemento.querySelector('.item-subtitle').innerText = "⚠️ Toque para aceitar primeiro!";
-                setTimeout(() => renderizarListaCozinha(), 2000);
+                alert("⚠️ Toque para aceitar primeiro!");
             }
         } else if (diff < -80) { 
             if(statusAtual === 'enviado' || statusAtual === 'buscar' || statusAtual === 'cancelado' || statusAtual === 'concluido') {
@@ -826,6 +878,7 @@
                 let statusTxt = p.status === 'pendente' ? 'Pendente' : (p.status === 'fazendo' ? 'Em preparo' : (p.status === 'enviado' ? 'Enviado' : (p.status === 'buscar' ? 'Buscar' : (p.status === 'cancelado' ? 'Cancelado' : 'Finalizado'))));
                 if(p.status === 'cancelado' && p.motivo) statusTxt += ` (Motivo: ${p.motivo})`;
                 
+                // No histórico mantemos a hora exata para fins de auditoria
                 lista.innerHTML += `
                     <li class="item" style="padding: 10px; border-bottom: 1px solid #eee;">
                         <div class="item-info">
