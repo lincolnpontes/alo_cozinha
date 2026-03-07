@@ -237,7 +237,10 @@
         <div class="form-group"><label>Som Cozinha (Novo Pedido):</label><div style="display:flex; gap:10px;"><select id="configSomCozinha" style="flex:1;"><option value="sem_som">Sem som</option><option value="beep">Beep Clássico</option><option value="sino">Sino de Jantar</option><option value="sino_forte">Sino Forte</option><option value="alarme">Alarme Curto</option></select><button class="btn-cancel" style="padding: 10px;" onclick="tocarPreview('configSomCozinha')">▶️</button></div></div>
         <div class="form-group"><label>Som Panelas (Atenção/Cancelado):</label><div style="display:flex; gap:10px;"><select id="configSomPanelas" style="flex:1;"><option value="sem_som">Sem som</option><option value="beep">Beep Clássico</option><option value="sino">Sino de Jantar</option><option value="sino_forte">Sino Forte</option><option value="alarme">Alarme Curto</option></select><button class="btn-cancel" style="padding: 10px;" onclick="tocarPreview('configSomPanelas')">▶️</button></div></div>
         <div class="form-group"><label>URL Google Script:</label><input type="text" id="configUrlApp" placeholder="https://script.google.com/macros/s/..."><button class="btn-action" style="width: 100%; margin-top: 10px; background-color: #4CAF50;" onclick="salvarURL()">💾 Salvar URL e Puxar Dados</button></div>
-        <div style="display: flex; gap: 10px; margin-bottom: 10px; margin-top: 15px;"><button class="btn-outline" style="margin: 0; flex: 1; justify-content: center; font-size: 13px;" onclick="sincronizarSalvarNuvem()">⬆️ Salvar na Nuvem</button></div>
+        
+        <div style="display: flex; gap: 10px; margin-bottom: 10px; margin-top: 15px;">
+            <button id="btnSalvarNuvem" class="btn-outline" style="margin: 0; flex: 1; justify-content: center; font-size: 13px;" onclick="sincronizarSalvarNuvem()">⬆️ Salvar na Nuvem</button>
+        </div>
 
         <h3 style="font-size: 16px; color: #d32f2f; margin-top: 25px; margin-bottom: 10px;">Avançado</h3>
         <button class="btn-danger" onclick="solicitarAcessoAvancado()">⚠️ Configurações Avançadas</button>
@@ -536,7 +539,6 @@
             
             let cssStatus = isFinal ? (p.status==='cancelado' ? 'cancelado' : 'concluido') : p.status;
             
-            // Calculando o "Entregue em X minutos"
             if (isFinal && p.finalizadoEm && p.status !== 'cancelado') {
                 let minEntrega = Math.floor((new Date(p.finalizadoEm).getTime() - new Date(p.timestamp).getTime()) / 60000);
                 tempoStr = minEntrega < 1 ? "Entregue &lt; 1 min" : `Entregue em ${minEntrega} min`;
@@ -678,7 +680,6 @@
             if (periodo === 'semana' && dataPed.getTime() >= seteDiasAtras) incluir = true;
 
             if (incluir) {
-                // Remove a observação do nome para agrupar corretamente o produto "Feijão (Obs: sem sal)" -> conta como "Feijão"
                 let nomeBase = p.produto.split(" (Obs:")[0]; 
                 
                 if (!stats[nomeBase]) stats[nomeBase] = { qtd: 0, tempoTotal: 0, countTempo: 0 };
@@ -724,18 +725,20 @@
         });
     }
 
-    async function sincronizarPuxarNuvem(pedirConfirmacao) {
-        if(!db.configs.url) return;
-        if(pedirConfirmacao && !confirm("Deseja puxar dados da nuvem?")) return; 
-        try {
-            let res = await fetch(db.configs.url + "?action=carregar_banco"); let nuvemDB = await res.json();
-            if(nuvemDB.produtos) { db.produtos = nuvemDB.produtos; db.categorias = nuvemDB.categorias || []; db.obsPedidos = nuvemDB.obsPedidos || ["Sem sal", "Pouco óleo"]; db.obsCancelamentos = nuvemDB.obsCancelamentos || ["Falta de insumo", "Queimou"]; salvarBancoLocal(); if(pedirConfirmacao) { alert("Sucesso!"); location.reload(); } else { iniciar(); } }
-        } catch(e) { console.log("Erro nuvem."); }
-    }
-
+    // --- FUNÇÃO CORRIGIDA DO BOTÃO DE SALVAR ---
     async function sincronizarSalvarNuvem() {
         if(!db.configs.url) return alert("Salve a URL!");
-        try { document.querySelector('#modalPainelUnificado .btn-outline:nth-last-child(3)').innerText = "Salvando..."; await fetch(db.configs.url, { method: 'POST', mode: 'no-cors', body: JSON.stringify({ action: 'salvar_banco', dados: { produtos: db.produtos, categorias: db.categorias, obsPedidos: db.obsPedidos, obsCancelamentos: db.obsCancelamentos } }) }); alert("Salvo na Nuvem!"); } catch(e) { alert("Erro nuvem."); } document.querySelector('#modalPainelUnificado .btn-outline:nth-last-child(3)').innerText = "⬆️ Salvar na Nuvem";
+        try { 
+            const btn = document.getElementById('btnSalvarNuvem');
+            if(btn) btn.innerText = "Salvando..."; 
+            await fetch(db.configs.url, { method: 'POST', mode: 'no-cors', body: JSON.stringify({ action: 'salvar_banco', dados: { produtos: db.produtos, categorias: db.categorias, obsPedidos: db.obsPedidos, obsCancelamentos: db.obsCancelamentos } }) }); 
+            alert("Salvo na Nuvem com sucesso!"); 
+            if(btn) btn.innerText = "⬆️ Salvar na Nuvem";
+        } catch(e) { 
+            alert("Erro de conexão ao salvar."); 
+            const btn = document.getElementById('btnSalvarNuvem');
+            if(btn) btn.innerText = "⬆️ Salvar na Nuvem";
+        } 
     }
 
     function salvarURL() { const urlInput = document.getElementById('configUrlApp').value.trim(); if(urlInput === "") return alert("Vazio."); db.configs.url = urlInput; salvarBancoLocal(); sincronizarPuxarNuvem(false); alert("URL salva e sincronizada!"); }
