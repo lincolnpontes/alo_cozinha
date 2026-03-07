@@ -126,8 +126,7 @@
         <div class="painel-ultimos">
             <div class="painel-titulo">
                 <span style="flex:1; text-align:center; padding-left: 30px;">Últimos Pedidos</span>
-                <button onclick="limparHistoricoHoje()" style="background:none; border:none; font-size:20px; cursor:pointer;" title="Zerar Expediente">🧹</button>
-                <button onclick="abrirHistorico()" style="background:none; border:none; font-size:20px; cursor:pointer; margin-left:10px;" title="Histórico Completo">📋</button>
+                <button onclick="abrirHistorico()" style="background:none; border:none; font-size:20px; cursor:pointer;" title="Histórico Completo">📋</button>
             </div>
             <div class="scroll-area" style="background-color: #fafafa;">
                 <ul class="list" id="listaUltimosPedidosPanelas"></ul>
@@ -667,7 +666,6 @@
 
     let histLastTap = 0; let histTapTimer;
 
-    // ACIONA A MODAL CORINGA DE SENHA PARA EXCLUIR ITEM
     function acaoDuploCliqueHistorico(id) {
         let currentTime = new Date().getTime(); let tapLength = currentTime - histLastTap;
         if (tapLength < 400 && tapLength > 0) {
@@ -683,7 +681,6 @@
         histLastTap = currentTime;
     }
 
-    // ACIONA A MODAL CORINGA DE SENHA PARA ZERAR EXPEDIENTE
     function limparHistoricoHoje() {
         acaoPendente = 'zerar_expediente';
         document.getElementById('tituloModalAcao').innerText = "Zerar Expediente?";
@@ -843,11 +840,9 @@
         });
     }
 
-    // TRAVA DE SEGURANÇA NA NUVEM AQUI
     async function sincronizarSalvarNuvem() {
         if(!db.configs.url) return alert("Salve a URL primeiro!");
         
-        // Só permite salvar se o aplicativo tiver a "marca de confiaça" de já ter baixado dados alguma vez
         if(!db.configs.dadosBaixados) {
             return alert("⚠️ AÇÃO BLOQUEADA:\n\nVocê precisa primeiro clicar em 'Salvar URL e Puxar Dados' para sincronizar com o servidor.\n\nEssa trava impede que você salve um banco de dados vazio por cima do seu cardápio oficial na nuvem!");
         }
@@ -876,7 +871,6 @@
                 db.obsPedidos = nuvemDB.obsPedidos || ["Sem sal", "Pouco óleo"]; 
                 db.obsCancelamentos = nuvemDB.obsCancelamentos || ["Falta de insumo", "Queimou"]; 
                 
-                // Marca registrada de que esse dispositivo já conversou com a nuvem
                 db.configs.dadosBaixados = true; 
                 
                 salvarBancoLocal(); 
@@ -923,7 +917,6 @@
         }
     });
 
-    // LISTENER DA MODAL CORINGA DE SENHA (EXECUTA AÇÕES)
     document.getElementById('inputSenhaAcao').addEventListener('input', function(e) {
         if(this.value === "1999") { 
             this.blur(); 
