@@ -126,7 +126,8 @@
         <div class="painel-ultimos">
             <div class="painel-titulo">
                 <span style="flex:1; text-align:center; padding-left: 30px;">Últimos Pedidos</span>
-                <button onclick="abrirHistorico()" style="background:none; border:none; font-size:20px; cursor:pointer;" title="Histórico Completo">📋</button>
+                <button onclick="limparHistoricoHoje()" style="background:none; border:none; font-size:20px; cursor:pointer;" title="Zerar Expediente">🧹</button>
+                <button onclick="abrirHistorico()" style="background:none; border:none; font-size:20px; cursor:pointer; margin-left:10px;" title="Histórico Completo">📋</button>
             </div>
             <div class="scroll-area" style="background-color: #fafafa;">
                 <ul class="list" id="listaUltimosPedidosPanelas"></ul>
@@ -230,6 +231,20 @@
         </div>
         <div class="modal-actions">
             <button class="btn-cancel" onclick="fecharModal('modalSenhaAvancada')">Cancelar</button>
+        </div>
+    </div>
+</div>
+
+<div class="modal-overlay" id="modalSenhaAcao">
+    <div class="modal">
+        <div class="modal-title" style="color:#d32f2f;" id="tituloModalAcao">Confirmação</div>
+        <p id="descModalAcao" style="font-size: 13px; color: #555; margin-top: 0;"></p>
+        <div class="form-group">
+            <label>Senha do Administrador:</label>
+            <input type="password" id="inputSenhaAcao" placeholder="digite a senha" inputmode="numeric" pattern="[0-9]*" oninput="this.value = this.value.replace(/[^0-9]/g, '')">
+        </div>
+        <div class="modal-actions">
+            <button class="btn-cancel" onclick="fecharModal('modalSenhaAcao')">Cancelar</button>
         </div>
     </div>
 </div>
@@ -349,6 +364,8 @@
     let pedidosPendentesLocais = []; 
     let loopSync = null;
     let wakeLock = null; 
+    let acaoPendente = null;
+    let parametroAcao = null;
 
     const hierarquiaStatus = { 'pendente': 1, 'fazendo': 2, 'enviado': 3, 'buscar': 3, 'cancelado': 4, 'concluido': 5 };
 
@@ -368,9 +385,13 @@
     }
 
     function carregarBanco() {
-        let defaultDB = { produtos: [], categorias: [], obsPedidos: ["Sem sal", "Pouco óleo"], obsCancelamentos: ["Falta de insumo", "Queimou"], configs: { modo: "panelas", url: "", senhaModo: "", somCozinha: "sem_som", somPanelas: "sem_som" } };
+        let defaultDB = { produtos: [], categorias: [], obsPedidos: ["Sem sal", "Pouco óleo"], obsCancelamentos: ["Falta de insumo", "Queimou"], configs: { modo: "panelas", url: "", senhaModo: "", somCozinha: "sem_som", somPanelas: "sem_som", dadosBaixados: false } };
         let local = JSON.parse(localStorage.getItem('kds_v1_db'));
-        if(local) { if(!local.configs) local.configs = defaultDB.configs; return local; }
+        if(local) { 
+            if(!local.configs) local.configs = defaultDB.configs; 
+            if(typeof local.configs.dadosBaixados === 'undefined') local.configs.dadosBaixados = false;
+            return local; 
+        }
         return defaultDB;
     }
     function salvarBancoLocal() { localStorage.setItem('kds_v1_db', JSON.stringify(db)); }
@@ -645,17 +666,31 @@
     function pararAlarme() { document.getElementById('mainHeader').classList.remove('alerta-pisca', 'alerta-pisca-buscar'); playerAlarme.pause(); alarmeTocando = false; }
 
     let histLastTap = 0; let histTapTimer;
+
+    // ACIONA A MODAL CORINGA DE SENHA PARA EXCLUIR ITEM
     function acaoDuploCliqueHistorico(id) {
         let currentTime = new Date().getTime(); let tapLength = currentTime - histLastTap;
         if (tapLength < 400 && tapLength > 0) {
             clearTimeout(histTapTimer);
-            let senha = prompt("⚠️ EXCLUIR ITEM DEFINITIVAMENTE?\nIsso apagará do sistema.\n\nDigite a senha ADM:");
-            if (senha === "1999") {
-                pedidosServidor = pedidosServidor.filter(p => p.id != id); abrirHistorico();
-                fetch(db.configs.url, { method: 'POST', mode: 'no-cors', body: JSON.stringify({ action: 'excluir_pedido', id: id }) });
-            } else if(senha) { alert("Senha incorreta!"); }
+            acaoPendente = 'excluir_item';
+            parametroAcao = id;
+            document.getElementById('tituloModalAcao').innerText = "Excluir Pedido?";
+            document.getElementById('descModalAcao').innerText = "Isso apagará este pedido do sistema para sempre.";
+            document.getElementById('inputSenhaAcao').value = '';
+            document.getElementById('modalSenhaAcao').style.display = 'flex';
+            setTimeout(() => document.getElementById('inputSenhaAcao').focus(), 100);
         } else { histTapTimer = setTimeout(() => { }, 400); }
         histLastTap = currentTime;
+    }
+
+    // ACIONA A MODAL CORINGA DE SENHA PARA ZERAR EXPEDIENTE
+    function limparHistoricoHoje() {
+        acaoPendente = 'zerar_expediente';
+        document.getElementById('tituloModalAcao').innerText = "Zerar Expediente?";
+        document.getElementById('descModalAcao').innerText = "Isso apagará os pedidos de hoje da tela e do servidor.";
+        document.getElementById('inputSenhaAcao').value = '';
+        document.getElementById('modalSenhaAcao').style.display = 'flex';
+        setTimeout(() => document.getElementById('inputSenhaAcao').focus(), 100);
     }
 
     function abrirHistorico() {
@@ -669,17 +704,6 @@
             });
         }
         document.getElementById('modalHistorico').style.display = 'flex';
-    }
-
-    function limparHistoricoHoje() {
-        let senha = prompt("⚠️ ZERAR O EXPEDIENTE DE HOJE?\nIsso apagará os testes/pedidos de hoje da tela e do servidor.\n\nDigite a senha ADM:");
-        if (senha === "1999") {
-            const dataHoje = new Date().toDateString();
-            pedidosServidor = pedidosServidor.filter(p => new Date(p.timestamp).toDateString() !== dataHoje);
-            abrirHistorico(); renderizarUltimosPedidos(); renderizarListaCozinha();
-            fetch(db.configs.url, { method: 'POST', mode: 'no-cors', body: JSON.stringify({ action: 'excluir_hoje' }) });
-            alert("Expediente zerado com sucesso!");
-        } else if(senha) { alert("Senha incorreta!"); }
     }
 
     function fecharModal(id) { document.getElementById(id).style.display = 'none'; }
@@ -819,8 +843,15 @@
         });
     }
 
+    // TRAVA DE SEGURANÇA NA NUVEM AQUI
     async function sincronizarSalvarNuvem() {
-        if(!db.configs.url) return alert("Salve a URL!");
+        if(!db.configs.url) return alert("Salve a URL primeiro!");
+        
+        // Só permite salvar se o aplicativo tiver a "marca de confiaça" de já ter baixado dados alguma vez
+        if(!db.configs.dadosBaixados) {
+            return alert("⚠️ AÇÃO BLOQUEADA:\n\nVocê precisa primeiro clicar em 'Salvar URL e Puxar Dados' para sincronizar com o servidor.\n\nEssa trava impede que você salve um banco de dados vazio por cima do seu cardápio oficial na nuvem!");
+        }
+
         try { 
             const btn = document.getElementById('btnSalvarNuvem');
             if(btn) btn.innerText = "Salvando..."; 
@@ -839,7 +870,18 @@
         if(pedirConfirmacao && !confirm("Deseja puxar dados da nuvem?")) return; 
         try {
             let res = await fetch(db.configs.url + "?action=carregar_banco"); let nuvemDB = await res.json();
-            if(nuvemDB.produtos) { db.produtos = nuvemDB.produtos; db.categorias = nuvemDB.categorias || []; db.obsPedidos = nuvemDB.obsPedidos || ["Sem sal", "Pouco óleo"]; db.obsCancelamentos = nuvemDB.obsCancelamentos || ["Falta de insumo", "Queimou"]; salvarBancoLocal(); if(pedirConfirmacao) { alert("Sucesso!"); location.reload(); } else { iniciar(); } }
+            if(nuvemDB.produtos) { 
+                db.produtos = nuvemDB.produtos; 
+                db.categorias = nuvemDB.categorias || []; 
+                db.obsPedidos = nuvemDB.obsPedidos || ["Sem sal", "Pouco óleo"]; 
+                db.obsCancelamentos = nuvemDB.obsCancelamentos || ["Falta de insumo", "Queimou"]; 
+                
+                // Marca registrada de que esse dispositivo já conversou com a nuvem
+                db.configs.dadosBaixados = true; 
+                
+                salvarBancoLocal(); 
+                if(pedirConfirmacao) { alert("Sucesso!"); location.reload(); } else { iniciar(); } 
+            }
         } catch(e) { console.log("Erro nuvem."); }
     }
 
@@ -871,7 +913,6 @@
         if(this.value === "1999") { this.blur(); document.getElementById('modalLoginAdmin').style.display = 'none'; document.getElementById('configUrlApp').value = db.configs.url || ''; document.getElementById('configSenhaModo').value = db.configs.senhaModo || ''; document.getElementById('configSomCozinha').value = db.configs.somCozinha || 'sem_som'; document.getElementById('configSomPanelas').value = db.configs.somPanelas || 'sem_som'; document.getElementById('modalPainelUnificado').style.display = 'flex'; this.value = ''; }
     });
 
-    // MÁGICA DA SENHA DA ZONA DE RISCO
     document.getElementById('senhaAvancada').addEventListener('input', function(e) {
         if(this.value === "1999") { 
             this.blur(); 
@@ -879,6 +920,30 @@
             document.getElementById('inputExcluirTudo').value = ''; 
             document.getElementById('modalConfigAvancadas').style.display = 'flex'; 
             this.value = ''; 
+        }
+    });
+
+    // LISTENER DA MODAL CORINGA DE SENHA (EXECUTA AÇÕES)
+    document.getElementById('inputSenhaAcao').addEventListener('input', function(e) {
+        if(this.value === "1999") { 
+            this.blur(); 
+            fecharModal('modalSenhaAcao');
+            this.value = ''; 
+            
+            if (acaoPendente === 'zerar_expediente') {
+                const dataHoje = new Date().toDateString();
+                pedidosServidor = pedidosServidor.filter(p => new Date(p.timestamp).toDateString() !== dataHoje);
+                abrirHistorico(); renderizarUltimosPedidos(); renderizarListaCozinha();
+                fetch(db.configs.url, { method: 'POST', mode: 'no-cors', body: JSON.stringify({ action: 'excluir_hoje' }) });
+                alert("Expediente zerado com sucesso!");
+            } else if (acaoPendente === 'excluir_item') {
+                pedidosServidor = pedidosServidor.filter(p => p.id != parametroAcao); 
+                abrirHistorico();
+                fetch(db.configs.url, { method: 'POST', mode: 'no-cors', body: JSON.stringify({ action: 'excluir_pedido', id: parametroAcao }) });
+            }
+            
+            acaoPendente = null;
+            parametroAcao = null;
         }
     });
 
