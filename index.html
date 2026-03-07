@@ -8,13 +8,12 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
     <meta name="mobile-web-app-capable" content="yes">
     <meta name="theme-color" content="#1565C0" id="metaThemeColor">
-    <title>Alô Cozinha v1.1</title>
+    <title>Alô Cozinha v1.0</title>
 
     <style>
         body { font-family: Arial, sans-serif; background-color: #f0f2f5; margin: 0; padding: 0; display: flex; justify-content: center; user-select: none; }
         .app-container { width: 100%; max-width: 500px; background-color: #ffffff; height: 100vh; display: flex; flex-direction: column; box-shadow: 0 0 10px rgba(0,0,0,0.1); position: relative; overflow: hidden; }
         
-        /* TELA DE CARREGAMENTO COM IMAGEM */
         #splashScreen { position: fixed; top: 0; left: 0; width: 100%; height: 100%; background-color: #1565C0; z-index: 9999; display: flex; flex-direction: column; align-items: center; justify-content: center; color: white; transition: opacity 0.5s ease; }
         .splash-icone { width: 120px; height: 120px; margin-bottom: 20px; border-radius: 25%; object-fit: cover; box-shadow: 0 4px 15px rgba(0,0,0,0.3); background-color: #fff; }
         .splash-titulo { font-size: 32px; font-weight: bold; margin-bottom: 5px; }
@@ -24,8 +23,8 @@
         .header-select { background: transparent; color: white; border: none; font-size: 20px; font-weight: bold; outline: none; -webkit-appearance: none; appearance: none; padding-right: 5px; }
         .header-select option { color: black; font-size: 16px; }
         
-        /* TEXTO DE DICAS COZINHA NO HEADER MAIOR */
         .dicas-cozinha { display: none; font-size: 12px; line-height: 1.4; text-align: right; flex: 1; opacity: 0.95; margin-right: 10px; white-space: nowrap; }
+        .status-conexao { font-size: 12px; display: flex; align-items: center; margin-right: 15px; background: rgba(0,0,0,0.2); padding: 4px 8px; border-radius: 12px; }
 
         .header-actions button { background: none; border: none; color: white; font-size: 24px; cursor: pointer; }
         
@@ -59,7 +58,6 @@
         
         .alerta-pisca { animation: bg-pisca 1s infinite; }
         @keyframes bg-pisca { 0% { opacity: 1; } 50% { opacity: 0.6; } 100% { opacity: 1; } }
-
         .alerta-pisca-buscar { animation: bg-pisca-red 1s infinite; cursor: pointer; }
         @keyframes bg-pisca-red { 0% { background-color: #ffffff; } 50% { background-color: #ffcdd2; } 100% { background-color: #ffffff; } }
 
@@ -67,24 +65,28 @@
 
         .modal-overlay { display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.6); align-items: center; justify-content: center; z-index: 1000; }
         .modal { background: white; padding: 20px; border-radius: 10px; width: 90%; max-width: 400px; max-height: 90vh; overflow-y: auto; }
-        .modal-title { font-size: 20px; font-weight: bold; margin-bottom: 20px; color: #333; border-bottom: 2px solid #1976D2; padding-bottom: 10px; }
+        .modal-title { font-size: 20px; font-weight: bold; margin-bottom: 20px; color: #333; border-bottom: 2px solid #1976D2; padding-bottom: 10px; display: flex; justify-content: space-between; }
         .form-group { margin-bottom: 15px; }
         .form-group label { display: block; margin-bottom: 5px; color: #555; font-weight: bold; font-size: 14px; }
         .form-group input, .form-group select { width: 100%; padding: 10px; border: 1px solid #ccc; border-radius: 5px; box-sizing: border-box; font-size: 16px; }
-        
-        .form-group input[type="color"] { height: 45px; padding: 0; cursor: pointer; width: 100%; border: 1px solid #ccc; border-radius: 5px; }
+        .form-group input[type="color"] { height: 45px; padding: 0; cursor: pointer; }
         .form-group input[type="color"]::-webkit-color-swatch-wrapper { padding: 0; }
         .form-group input[type="color"]::-webkit-color-swatch { border: none; border-radius: 4px; }
 
         .modal-actions { display: flex; justify-content: flex-end; gap: 10px; margin-top: 20px; }
         .btn-cancel { background: #eee; border: none; padding: 10px 20px; border-radius: 5px; cursor: pointer; color: #333; font-weight: bold; }
         .btn-action { background: #1976D2; border: none; padding: 10px 20px; border-radius: 5px; cursor: pointer; color: white; font-weight: bold; }
+        .btn-danger { background: #d32f2f; color: white; border: none; padding: 10px; border-radius: 5px; cursor: pointer; font-weight: bold; width: 100%; margin-bottom: 10px; }
         .btn-outline { background: #E3F2FD; color: #1976D2; border: 1px solid #1976D2; padding: 10px; border-radius: 5px; cursor: pointer; font-weight: bold; width: 100%; margin-bottom: 10px; display: flex; align-items: center; justify-content: flex-start; gap: 15px; }
         
         .gerenciar-item { display: flex; justify-content: space-between; align-items: center; padding: 10px 0; border-bottom: 1px solid #eee; }
         .gerenciar-info { flex: 1; font-size: 14px; }
         .gerenciar-actions button { background: #eee; border: none; cursor: pointer; font-size: 16px; margin-left: 5px; padding: 8px; border-radius: 4px; }
         .color-preview { display: inline-block; padding: 2px 8px; border-radius: 12px; margin-right: 5px; vertical-align: middle; border: 1px solid #ccc; font-weight: bold; font-size: 12px; }
+
+        .metrica-card { background: #f5f5f5; border: 1px solid #ddd; padding: 15px; border-radius: 8px; margin-bottom: 15px; text-align: center; }
+        .metrica-valor { font-size: 24px; font-weight: bold; color: #1976D2; margin: 10px 0; }
+        .metrica-titulo { font-size: 14px; color: #666; font-weight: bold; text-transform: uppercase; }
     </style>
 </head>
 <body class="theme-panelas">
@@ -92,7 +94,7 @@
 <div id="splashScreen">
     <img src="icon.png" alt="Logo" class="splash-icone" onerror="this.src='data:image/svg+xml;utf8,<svg xmlns=\'http://www.w3.org/2000/svg\' viewBox=\'0 0 100 100\'><text y=\'50\' font-size=\'40\'>🍲</text></svg>'">
     <div class="splash-titulo">Alô Cozinha</div>
-    <div class="splash-versao">v1.1</div>
+    <div class="splash-versao">v1.0</div>
 </div>
 
 <div class="app-container">
@@ -106,8 +108,11 @@
             👉 Deslize: Enviado<br>👆 Segure: Buscar<br>✌️ Toque 2x: Cancelar
         </div>
 
-        <div class="header-actions">
-            <button onclick="abrirLoginAdmin()">⚙️</button>
+        <div style="display: flex; align-items: center;">
+            <div id="indicadorConexao" class="status-conexao">🟢</div>
+            <div class="header-actions">
+                <button onclick="abrirLoginAdmin()">⚙️</button>
+            </div>
         </div>
     </div>
 
@@ -119,7 +124,7 @@
         <div class="painel-ultimos">
             <div class="painel-titulo">
                 <span style="flex:1; text-align:center; padding-left: 30px;">Últimos Pedidos</span>
-                <button onclick="abrirHistorico()" style="background:none; border:none; font-size:20px; cursor:pointer;" title="Histórico Completo do Dia">📋</button>
+                <button onclick="abrirHistorico()" style="background:none; border:none; font-size:20px; cursor:pointer;" title="Histórico Completo">📋</button>
             </div>
             <div class="scroll-area" style="background-color: #fafafa;">
                 <ul class="list" id="listaUltimosPedidosPanelas"></ul>
@@ -138,8 +143,8 @@
     <div class="modal">
         <div class="modal-title">Alternar Modo</div>
         <div class="form-group">
-            <label>Digite a senha de acesso:</label>
-            <input type="password" id="inputSenhaModo" placeholder="Senha do modo" inputmode="numeric" pattern="[0-9]*" oninput="this.value = this.value.replace(/[^0-9]/g, '')">
+            <label>Senha de acesso:</label>
+            <input type="password" id="inputSenhaModo" placeholder="Senha" inputmode="numeric" pattern="[0-9]*" oninput="this.value = this.value.replace(/[^0-9]/g, '')">
         </div>
         <div class="modal-actions">
             <button class="btn-cancel" onclick="cancelarTrocaModo()">Cancelar</button>
@@ -153,7 +158,7 @@
         <div class="modal-title" id="tituloModalPedido">Pedir Produto</div>
         <input type="hidden" id="pedidoItemNome">
         <div class="form-group">
-            <label>Observações Rápidas (Toque para adicionar):</label>
+            <label>Observações Rápidas:</label>
             <div id="obsChipsContainer" style="display: flex; flex-wrap: wrap; gap: 8px; margin-bottom: 10px;"></div>
         </div>
         <div class="form-group">
@@ -172,7 +177,7 @@
         <div class="modal-title" id="tituloModalCancelar">Cancelar Item</div>
         <input type="hidden" id="cancelarItemId">
         <div class="form-group">
-            <label>Motivo do Cancelamento (Obrigatório):</label>
+            <label>Motivo do Cancelamento:</label>
             <div id="obsCancelChipsContainer" style="display: flex; flex-wrap: wrap; gap: 8px; margin-bottom: 10px;"></div>
         </div>
         <div class="form-group">
@@ -187,7 +192,11 @@
 
 <div class="modal-overlay" id="modalHistorico">
     <div class="modal" style="max-height: 90vh; display: flex; flex-direction: column;">
-        <div class="modal-title">Histórico de Hoje</div>
+        <div class="modal-title">
+            <span>Histórico de Hoje</span>
+            <button onclick="limparHistoricoHoje()" style="background:none; border:none; font-size:20px; cursor:pointer;" title="Zerar Expediente">🧹</button>
+        </div>
+        <div style="font-size: 11px; color:#666; text-align:center; margin-bottom: 10px;">(2 toques no item para excluí-lo)</div>
         <div class="scroll-area" style="flex: 1; border: 1px solid #eee; border-radius: 5px; padding: 5px;">
             <ul class="list" id="listaHistorico" style="padding-bottom: 0;"></ul>
         </div>
@@ -212,59 +221,25 @@
 
 <div class="modal-overlay" id="modalPainelUnificado">
     <div class="modal">
-        <div style="text-align: center; color: #666; font-size: 13px; font-weight: bold; margin-bottom: 20px;">
-            Alô Cozinha - v1.1
-        </div>
+        <div style="text-align: center; color: #666; font-size: 13px; font-weight: bold; margin-bottom: 20px;">Alô Cozinha - v1.0</div>
 
         <button class="btn-outline" onclick="abrirGerenciar('produtos')">🍔 Gerenciar Produtos</button>
         <button class="btn-outline" onclick="abrirGerenciar('categorias')">🏷️ Gerenciar Categorias</button>
         <button class="btn-outline" onclick="abrirGerenciar('obsPedidos')">💬 Obs. de Pedidos</button>
         <button class="btn-outline" onclick="abrirGerenciar('obsCancelamentos')" style="border-color:#d32f2f; color:#d32f2f;">🗑️ Motivos Cancelamento</button>
-
-        <h3 style="font-size: 16px; color: #555; margin-top: 25px; margin-bottom: 10px;">Configurações</h3>
         
-        <div class="form-group">
-            <label>Senha para Trocar de Modo:</label>
-            <input type="password" id="configSenhaModo" placeholder="Deixe em branco para livre" inputmode="numeric" pattern="[0-9]*" oninput="this.value = this.value.replace(/[^0-9]/g, '')">
-        </div>
+        <button class="btn-outline" onclick="abrirModalMetricas()" style="border-color:#2e7d32; color:#2e7d32; margin-top: 15px;">📊 Relatórios e Métricas</button>
 
-        <div class="form-group">
-            <label>Som Cozinha (Novo Pedido):</label>
-            <div style="display:flex; gap:10px;">
-                <select id="configSomCozinha" style="flex:1;">
-                    <option value="sem_som">Sem som</option>
-                    <option value="beep">Beep Clássico</option>
-                    <option value="sino">Sino de Jantar</option>
-                    <option value="sino_forte">Sino Forte</option>
-                    <option value="alarme">Alarme Curto</option>
-                </select>
-                <button class="btn-cancel" style="padding: 10px;" onclick="tocarPreview('configSomCozinha')">▶️</button>
-            </div>
-        </div>
+        <h3 style="font-size: 16px; color: #555; margin-top: 25px; margin-bottom: 10px;">Configurações Básicas</h3>
+        
+        <div class="form-group"><label>Senha para Trocar de Modo:</label><input type="password" id="configSenhaModo" placeholder="Deixe em branco para livre" inputmode="numeric" pattern="[0-9]*" oninput="this.value = this.value.replace(/[^0-9]/g, '')"></div>
+        <div class="form-group"><label>Som Cozinha (Novo Pedido):</label><div style="display:flex; gap:10px;"><select id="configSomCozinha" style="flex:1;"><option value="sem_som">Sem som</option><option value="beep">Beep Clássico</option><option value="sino">Sino de Jantar</option><option value="sino_forte">Sino Forte</option><option value="alarme">Alarme Curto</option></select><button class="btn-cancel" style="padding: 10px;" onclick="tocarPreview('configSomCozinha')">▶️</button></div></div>
+        <div class="form-group"><label>Som Panelas (Atenção/Cancelado):</label><div style="display:flex; gap:10px;"><select id="configSomPanelas" style="flex:1;"><option value="sem_som">Sem som</option><option value="beep">Beep Clássico</option><option value="sino">Sino de Jantar</option><option value="sino_forte">Sino Forte</option><option value="alarme">Alarme Curto</option></select><button class="btn-cancel" style="padding: 10px;" onclick="tocarPreview('configSomPanelas')">▶️</button></div></div>
+        <div class="form-group"><label>URL Google Script:</label><input type="text" id="configUrlApp" placeholder="https://script.google.com/macros/s/..."><button class="btn-action" style="width: 100%; margin-top: 10px; background-color: #4CAF50;" onclick="salvarURL()">💾 Salvar URL e Puxar Dados</button></div>
+        <div style="display: flex; gap: 10px; margin-bottom: 10px; margin-top: 15px;"><button class="btn-outline" style="margin: 0; flex: 1; justify-content: center; font-size: 13px;" onclick="sincronizarSalvarNuvem()">⬆️ Salvar na Nuvem</button></div>
 
-        <div class="form-group">
-            <label>Som Panelas (Atenção/Cancelado):</label>
-            <div style="display:flex; gap:10px;">
-                <select id="configSomPanelas" style="flex:1;">
-                    <option value="sem_som">Sem som</option>
-                    <option value="beep">Beep Clássico</option>
-                    <option value="sino">Sino de Jantar</option>
-                    <option value="sino_forte">Sino Forte</option>
-                    <option value="alarme">Alarme Curto</option>
-                </select>
-                <button class="btn-cancel" style="padding: 10px;" onclick="tocarPreview('configSomPanelas')">▶️</button>
-            </div>
-        </div>
-
-        <div class="form-group">
-            <label>URL Google Script:</label>
-            <input type="text" id="configUrlApp" placeholder="https://script.google.com/macros/s/...">
-            <button class="btn-action" style="width: 100%; margin-top: 10px; background-color: #4CAF50;" onclick="salvarURL()">💾 Salvar URL e Puxar Dados</button>
-        </div>
-
-        <div style="display: flex; gap: 10px; margin-bottom: 10px; margin-top: 15px;">
-            <button class="btn-outline" style="margin: 0; flex: 1; justify-content: center; font-size: 13px;" onclick="sincronizarSalvarNuvem()">⬆️ Salvar na Nuvem</button>
-        </div>
+        <h3 style="font-size: 16px; color: #d32f2f; margin-top: 25px; margin-bottom: 10px;">Avançado</h3>
+        <button class="btn-danger" onclick="solicitarAcessoAvancado()">⚠️ Configurações Avançadas</button>
 
         <div class="modal-actions">
             <button class="btn-cancel" onclick="fecharPainelUnificado()">Fechar Painel</button>
@@ -272,60 +247,59 @@
     </div>
 </div>
 
-<div class="modal-overlay" id="modalListagem">
+<div class="modal-overlay" id="modalConfigAvancadas">
     <div class="modal">
-        <div class="modal-title" id="tituloListagem">Gerenciar</div>
-        <button class="btn-action" id="btnNovoListagem" style="width: 100%; margin-bottom: 15px;">+ Novo</button>
-        <div id="conteudoListagem" style="max-height: 50vh; overflow-y: auto; padding-right: 5px;"></div>
+        <div class="modal-title" style="color:#d32f2f;">Zona de Risco</div>
+        <p style="font-size: 14px; color: #555;">Atenção: As ações aqui são irreversíveis e afetam o servidor.</p>
+        
+        <div class="form-group" style="margin-top: 20px;">
+            <label>Para apagar tudo, digite abaixo: <b>quero excluir todo o histórico</b></label>
+            <input type="text" id="inputExcluirTudo" placeholder="digite a frase exata">
+            <button class="btn-danger" style="margin-top: 10px;" onclick="excluirTodoHistorico()">🗑️ Apagar Todo o Histórico</button>
+        </div>
+
+        <hr style="border: 0; border-top: 1px solid #eee; margin: 20px 0;">
+
+        <div class="form-group">
+            <label>Problemas de Cache ou Atualização?</label>
+            <button class="btn-outline" style="border-color:#fbc02d; color:#fbc02d; justify-content:center;" onclick="forcarAtualizacao()">🔄 Forçar Atualização (Limpar Cache)</button>
+        </div>
+
         <div class="modal-actions">
-            <button class="btn-cancel" onclick="voltarParaPainelGeral()">Voltar</button>
+            <button class="btn-cancel" onclick="fecharModal('modalConfigAvancadas')">Voltar</button>
         </div>
     </div>
 </div>
 
-<div class="modal-overlay" id="modalFormProduto">
+<div class="modal-overlay" id="modalMetricas">
     <div class="modal">
-        <div class="modal-title">Produto</div>
-        <input type="hidden" id="prodIndexOriginal">
-        <div class="form-group">
-            <label>Nome do Produto:</label>
-            <input type="text" id="prodNome">
+        <div class="modal-title">Relatórios e Métricas</div>
+        
+        <div class="metrica-titulo">Desempenho de Hoje</div>
+        <div class="metrica-card">
+            <div id="metricaHojeQtd" class="metrica-valor">0</div>
+            <div style="font-size: 13px; color: #666;">Total de Pedidos</div>
+            <div id="metricaHojeTempo" class="metrica-valor" style="color: #2e7d32;">0 min</div>
+            <div style="font-size: 13px; color: #666;">Tempo Médio de Preparo</div>
         </div>
-        <div class="form-group">
-            <label>Categoria:</label>
-            <select id="prodCategoria"></select>
+
+        <div class="metrica-titulo">Últimos 7 Dias</div>
+        <div class="metrica-card">
+            <div id="metricaSemanaQtd" class="metrica-valor">0</div>
+            <div style="font-size: 13px; color: #666;">Total de Pedidos</div>
+            <div id="metricaSemanaTempo" class="metrica-valor" style="color: #2e7d32;">0 min</div>
+            <div style="font-size: 13px; color: #666;">Tempo Médio de Preparo</div>
         </div>
+
         <div class="modal-actions">
-            <button class="btn-cancel" onclick="fecharModal('modalFormProduto'); abrirGerenciar('produtos')">Cancelar</button>
-            <button class="btn-action" onclick="salvarProduto()">Salvar</button>
+            <button class="btn-cancel" onclick="fecharModal('modalMetricas')">Fechar</button>
         </div>
     </div>
 </div>
 
-<div class="modal-overlay" id="modalFormCategoria">
-    <div class="modal">
-        <div class="modal-title">Categoria</div>
-        <input type="hidden" id="catIndexOriginal">
-        <div class="form-group">
-            <label>Nome da Categoria:</label>
-            <input type="text" id="catNome">
-        </div>
-        <div style="display: flex; gap: 10px;">
-            <div class="form-group" style="flex: 1;">
-                <label>Cor do Fundo:</label>
-                <input type="color" id="catCor" value="#1976D2">
-            </div>
-            <div class="form-group" style="flex: 1;">
-                <label>Cor do Texto:</label>
-                <input type="color" id="catCorTexto" value="#ffffff">
-            </div>
-        </div>
-        <div class="modal-actions">
-            <button class="btn-cancel" onclick="fecharModal('modalFormCategoria'); abrirGerenciar('categorias')">Cancelar</button>
-            <button class="btn-action" onclick="salvarCategoria()">Salvar</button>
-        </div>
-    </div>
-</div>
+<div class="modal-overlay" id="modalListagem"><div class="modal"><div class="modal-title" id="tituloListagem">Gerenciar</div><button class="btn-action" id="btnNovoListagem" style="width: 100%; margin-bottom: 15px;">+ Novo</button><div id="conteudoListagem" style="max-height: 50vh; overflow-y: auto; padding-right: 5px;"></div><div class="modal-actions"><button class="btn-cancel" onclick="voltarParaPainelGeral()">Voltar</button></div></div></div>
+<div class="modal-overlay" id="modalFormProduto"><div class="modal"><div class="modal-title">Produto</div><input type="hidden" id="prodIndexOriginal"><div class="form-group"><label>Nome do Produto:</label><input type="text" id="prodNome"></div><div class="form-group"><label>Categoria:</label><select id="prodCategoria"></select></div><div class="modal-actions"><button class="btn-cancel" onclick="fecharModal('modalFormProduto'); abrirGerenciar('produtos')">Cancelar</button><button class="btn-action" onclick="salvarProduto()">Salvar</button></div></div></div>
+<div class="modal-overlay" id="modalFormCategoria"><div class="modal"><div class="modal-title">Categoria</div><input type="hidden" id="catIndexOriginal"><div class="form-group"><label>Nome da Categoria:</label><input type="text" id="catNome"></div><div style="display: flex; gap: 10px;"><div class="form-group" style="flex: 1;"><label>Cor do Fundo:</label><input type="color" id="catCor" value="#1976D2"></div><div class="form-group" style="flex: 1;"><label>Cor do Texto:</label><input type="color" id="catCorTexto" value="#ffffff"></div></div><div class="modal-actions"><button class="btn-cancel" onclick="fecharModal('modalFormCategoria'); abrirGerenciar('categorias')">Cancelar</button><button class="btn-action" onclick="salvarCategoria()">Salvar</button></div></div></div>
 
 <script>
     let db = carregarBanco();
@@ -333,285 +307,146 @@
     let pedidosServidor = [];
     let pedidosBloqueados = new Set();
     let pedidosCientes = new Set(); 
+    let pedidosPendentesLocais = []; // NOVO: Resolve o pisca-pisca
     let loopSync = null;
+    let wakeLock = null; // NOVO: Manter tela acesa
 
-    // --- GERENCIAMENTO DE ÁUDIO ---
-    const sonsDisponiveis = {
-        "sem_som": "",
-        "beep": "https://actions.google.com/sounds/v1/alarms/beep_short.ogg",
-        "sino": "https://actions.google.com/sounds/v1/alarms/dinner_bell_triangle.ogg",
-        "sino_forte": "https://actions.google.com/sounds/v1/alarms/medium_bell_ringing_near.ogg",
-        "alarme": "https://actions.google.com/sounds/v1/alarms/alarm_clock.ogg"
-    };
-    
-    let playerAlarme = new Audio();
-    playerAlarme.loop = true;
-    let alarmeTocando = false;
-    let previewAudio = null;
-    let previewTimeout = null;
+    const sonsDisponiveis = { "sem_som": "", "beep": "https://actions.google.com/sounds/v1/alarms/beep_short.ogg", "sino": "https://actions.google.com/sounds/v1/alarms/dinner_bell_triangle.ogg", "sino_forte": "https://actions.google.com/sounds/v1/alarms/medium_bell_ringing_near.ogg", "alarme": "https://actions.google.com/sounds/v1/alarms/alarm_clock.ogg" };
+    let playerAlarme = new Audio(); playerAlarme.loop = true; let alarmeTocando = false; let previewAudio = null; let previewTimeout = null;
+
+    // --- MANTER TELA ACESA (WAKE LOCK) ---
+    async function solicitarWakeLock() {
+        try {
+            if ('wakeLock' in navigator) { wakeLock = await navigator.wakeLock.request('screen'); }
+        } catch (err) { console.log('Wake Lock falhou:', err); }
+    }
+    document.addEventListener('visibilitychange', async () => { if (wakeLock !== null && document.visibilityState === 'visible') solicitarWakeLock(); });
 
     function tocarPreview(selectId) {
         if(previewAudio) { previewAudio.pause(); previewAudio.currentTime = 0; }
         if(previewTimeout) { clearTimeout(previewTimeout); }
-        
         let val = document.getElementById(selectId).value;
         if(val === "sem_som") return;
-        
-        previewAudio = new Audio(sonsDisponiveis[val]);
-        previewAudio.play().catch(()=>{});
-        
-        previewTimeout = setTimeout(() => {
-            if(previewAudio) { previewAudio.pause(); }
-        }, 3000);
+        previewAudio = new Audio(sonsDisponiveis[val]); previewAudio.play().catch(()=>{});
+        previewTimeout = setTimeout(() => { if(previewAudio) previewAudio.pause(); }, 3000);
     }
 
     function carregarBanco() {
-        let defaultDB = {
-            produtos: [],
-            categorias: [],
-            obsPedidos: ["Sem sal", "Pouco óleo", "Urgente"],
-            obsCancelamentos: ["Falta de insumo", "Queimou", "Erro no pedido"],
-            configs: { modo: "panelas", url: "", senhaModo: "", somCozinha: "sem_som", somPanelas: "sem_som" }
-        };
+        let defaultDB = { produtos: [], categorias: [], obsPedidos: ["Sem sal", "Pouco óleo"], obsCancelamentos: ["Falta de insumo", "Queimou"], configs: { modo: "panelas", url: "", senhaModo: "", somCozinha: "sem_som", somPanelas: "sem_som" } };
         let local = JSON.parse(localStorage.getItem('kds_v1_db'));
         if(local) {
-            if(local.observacoes) { local.obsPedidos = local.observacoes; delete local.observacoes; }
-            if(!local.obsPedidos) local.obsPedidos = ["Sem sal", "Pouco óleo", "Urgente"];
-            if(!local.obsCancelamentos) local.obsCancelamentos = ["Falta de insumo", "Queimou", "Erro no pedido"];
             if(!local.configs) local.configs = defaultDB.configs;
-            
-            if(!["sem_som", "beep", "sino", "sino_forte", "alarme"].includes(local.configs.somCozinha)) local.configs.somCozinha = "sem_som";
-            if(!["sem_som", "beep", "sino", "sino_forte", "alarme"].includes(local.configs.somPanelas)) local.configs.somPanelas = "sem_som";
-            
-            if(local.configs.modo === 'balcao') local.configs.modo = 'panelas';
             return local;
         }
         return defaultDB;
     }
 
-    function salvarBancoLocal() {
-        localStorage.setItem('kds_v1_db', JSON.stringify(db));
-    }
+    function salvarBancoLocal() { localStorage.setItem('kds_v1_db', JSON.stringify(db)); }
 
-    // --- FUNÇÃO TEMPO RELATIVO COM &lt; PARA NÃO BUGAR O HTML ---
     function getTempoRelativo(timestamp) {
         const diffEmMs = Date.now() - new Date(timestamp).getTime();
         const minutos = Math.floor(diffEmMs / 60000);
-        
-        // Usando &lt; ao invés de < para não quebrar a injeção do HTML
         if (minutos < 1) return "&lt; 1 minuto";
         if (minutos === 1) return "há 1 minuto";
         return `há ${minutos} minutos`;
     }
 
-    // --- ALTERNAR MODO COM SENHA ---
-    let modoPendente = null;
-    let seletorGlobal = null;
-
+    let modoPendente = null; let seletorGlobal = null;
     function iniciarTrocaModo(selectElement) {
         const novoModo = selectElement.value;
-        const senhaDefinida = db.configs.senhaModo;
-
-        if (senhaDefinida && senhaDefinida.trim() !== "") {
-            modoPendente = novoModo;
-            seletorGlobal = selectElement;
-            document.getElementById('inputSenhaModo').value = '';
-            document.getElementById('modalSenhaModo').style.display = 'flex';
-            setTimeout(() => document.getElementById('inputSenhaModo').focus(), 100);
-            selectElement.value = db.configs.modo; 
-        } else {
-            efetivarTrocaModo(novoModo);
-        }
+        if (db.configs.senhaModo && db.configs.senhaModo.trim() !== "") {
+            modoPendente = novoModo; seletorGlobal = selectElement; document.getElementById('inputSenhaModo').value = ''; document.getElementById('modalSenhaModo').style.display = 'flex'; setTimeout(() => document.getElementById('inputSenhaModo').focus(), 100); selectElement.value = db.configs.modo; 
+        } else { efetivarTrocaModo(novoModo); }
     }
-
     function confirmarTrocaModo() {
-        const senhaDigitada = document.getElementById('inputSenhaModo').value;
-        if (senhaDigitada === db.configs.senhaModo) {
-            document.getElementById('modalSenhaModo').style.display = 'none';
-            seletorGlobal.value = modoPendente;
-            efetivarTrocaModo(modoPendente);
-        } else {
-            alert("Senha incorreta!");
-            document.getElementById('inputSenhaModo').value = '';
-        }
+        if (document.getElementById('inputSenhaModo').value === db.configs.senhaModo) { document.getElementById('modalSenhaModo').style.display = 'none'; seletorGlobal.value = modoPendente; efetivarTrocaModo(modoPendente); } else { alert("Senha incorreta!"); document.getElementById('inputSenhaModo').value = ''; }
     }
-
-    function cancelarTrocaModo() {
-        document.getElementById('modalSenhaModo').style.display = 'none';
-        seletorGlobal.value = db.configs.modo;
-        modoPendente = null;
-    }
-
-    function efetivarTrocaModo(modo) {
-        db.configs.modo = modo;
-        salvarBancoLocal(); 
-        aplicarModoVisual(modo);
-    }
+    function cancelarTrocaModo() { document.getElementById('modalSenhaModo').style.display = 'none'; seletorGlobal.value = db.configs.modo; modoPendente = null; }
+    function efetivarTrocaModo(modo) { db.configs.modo = modo; salvarBancoLocal(); aplicarModoVisual(modo); }
 
     function iniciar() {
         document.getElementById('seletorModo').value = db.configs.modo || 'panelas';
         aplicarModoVisual(db.configs.modo || 'panelas');
-        
-        // SPLASH SCREEN LOGIC
+        solicitarWakeLock(); // Liga a tela infinita
+
         const splash = document.getElementById('splashScreen');
-        if (!sessionStorage.getItem('splash_v11_shown')) {
-            setTimeout(() => {
-                splash.style.opacity = '0';
-                setTimeout(() => {
-                    splash.style.display = 'none';
-                    sessionStorage.setItem('splash_v11_shown', 'true');
-                }, 500); 
-            }, 2000); 
-        } else {
-            splash.style.display = 'none';
-        }
+        if (!sessionStorage.getItem('splash_v1_shown')) {
+            setTimeout(() => { splash.style.opacity = '0'; setTimeout(() => { splash.style.display = 'none'; sessionStorage.setItem('splash_v1_shown', 'true'); }, 500); }, 2000); 
+        } else { splash.style.display = 'none'; }
     }
 
     function aplicarModoVisual(modo) {
-        const themeColor = document.getElementById('metaThemeColor');
-        document.body.className = modo === 'panelas' ? 'theme-panelas' : 'theme-cozinha';
-        
-        // Traz ou esconde dicas da cozinha
+        const themeColor = document.getElementById('metaThemeColor'); document.body.className = modo === 'panelas' ? 'theme-panelas' : 'theme-cozinha';
         document.getElementById('dicasCozinha').style.display = modo === 'cozinha' ? 'block' : 'none';
-
         if(loopSync) clearInterval(loopSync);
-        
-        if(modo === 'panelas') {
-            if(themeColor) themeColor.content = '#1565C0';
-            document.getElementById('area-panelas').style.display = 'flex'; document.getElementById('area-cozinha').style.display = 'none';
-            pararAlarme(); renderizarFiltros(); renderizarListaPanelas(); syncGeral();
-            loopSync = setInterval(syncGeral, 5000);
-        } else {
-            if(themeColor) themeColor.content = '#2e7d32';
-            document.getElementById('area-panelas').style.display = 'none'; document.getElementById('area-cozinha').style.display = 'flex';
-            pararAlarme(); syncGeral(); loopSync = setInterval(syncGeral, 5000);
-        }
+        if(modo === 'panelas') { if(themeColor) themeColor.content = '#1565C0'; document.getElementById('area-panelas').style.display = 'flex'; document.getElementById('area-cozinha').style.display = 'none'; pararAlarme(); renderizarFiltros(); renderizarListaPanelas(); syncGeral(); loopSync = setInterval(syncGeral, 5000); } else { if(themeColor) themeColor.content = '#2e7d32'; document.getElementById('area-panelas').style.display = 'none'; document.getElementById('area-cozinha').style.display = 'flex'; pararAlarme(); syncGeral(); loopSync = setInterval(syncGeral, 5000); }
     }
 
     function renderizarFiltros() {
         let html = `<div class="chip ${categoriaAtual === null ? 'active' : ''}" style="${categoriaAtual === null ? 'background:#ccc; color:#000;' : ''}" onclick="filtrarCategoria(null)">TODOS</div>`;
-        db.categorias.forEach(cat => { 
-            const isActive = categoriaAtual === cat.nome;
-            html += `<div class="chip ${isActive ? 'active' : ''}" style="background-color: ${cat.cor}; color: ${cat.corTexto};" onclick="filtrarCategoria('${cat.nome}')">${cat.nome}</div>`; 
-        });
+        db.categorias.forEach(cat => { const isActive = categoriaAtual === cat.nome; html += `<div class="chip ${isActive ? 'active' : ''}" style="background-color: ${cat.cor}; color: ${cat.corTexto};" onclick="filtrarCategoria('${cat.nome}')">${cat.nome}</div>`; });
         document.getElementById('containerFiltros').innerHTML = html;
     }
-
     function filtrarCategoria(cat) { categoriaAtual = cat; renderizarFiltros(); renderizarListaPanelas(); }
 
     function renderizarListaPanelas() {
-        const lista = document.getElementById('listaProdutosPanelas');
-        lista.innerHTML = '';
+        const lista = document.getElementById('listaProdutosPanelas'); lista.innerHTML = '';
         let filtrados = categoriaAtual === null ? db.produtos : db.produtos.filter(p => p.categoria === categoriaAtual);
-        
-        if(filtrados.length === 0) {
-            lista.innerHTML = '<li style="padding: 20px; text-align: center; color: #666;">Nenhum produto cadastrado ou puxado da nuvem.</li>';
-            return;
-        }
-
-        filtrados.forEach(p => {
-            const catObj = db.categorias.find(c => c.nome === p.categoria) || {cor:'#eee', corTexto:'#000'};
-            const primeiraLetra = p.nome.charAt(0).toUpperCase();
-            
-            lista.innerHTML += `
-                <li class="item" onclick="abrirModalPedido('${p.nome}')">
-                    <div class="item-avatar" style="background-color: ${catObj.cor}; color: ${catObj.corTexto};">${primeiraLetra}</div>
-                    <div class="item-info">
-                        <div class="item-title">${p.nome}</div>
-                        <div class="item-subtitle">${p.categoria}</div>
-                    </div>
-                    <div class="swipe-hint">➕</div>
-                </li>
-            `;
-        });
+        if(filtrados.length === 0) { lista.innerHTML = '<li style="padding: 20px; text-align: center; color: #666;">Nenhum produto cadastrado.</li>'; return; }
+        filtrados.forEach(p => { const catObj = db.categorias.find(c => c.nome === p.categoria) || {cor:'#eee', corTexto:'#000'}; const primeiraLetra = p.nome.charAt(0).toUpperCase(); lista.innerHTML += `<li class="item" onclick="abrirModalPedido('${p.nome}')"><div class="item-avatar" style="background-color: ${catObj.cor}; color: ${catObj.corTexto};">${primeiraLetra}</div><div class="item-info"><div class="item-title">${p.nome}</div><div class="item-subtitle">${p.categoria}</div></div><div class="swipe-hint">➕</div></li>`; });
     }
 
     function abrirModalPedido(nomeProduto) {
         if(!db.configs.url) return alert("URL não configurada! Vá na engrenagem ⚙️");
-        document.getElementById('tituloModalPedido').innerText = `Pedir: ${nomeProduto}`;
-        document.getElementById('pedidoItemNome').value = nomeProduto;
-        document.getElementById('pedidoObsText').value = '';
-        const container = document.getElementById('obsChipsContainer');
-        container.innerHTML = '';
-        db.obsPedidos.forEach(obs => {
-            container.innerHTML += `<div class="chip" style="font-weight: normal; background-color:#E3F2FD; color:#1565C0; border-color:#1565C0;" onclick="addObsToText('pedidoObsText', '${obs}')">${obs}</div>`;
-        });
+        document.getElementById('tituloModalPedido').innerText = `Pedir: ${nomeProduto}`; document.getElementById('pedidoItemNome').value = nomeProduto; document.getElementById('pedidoObsText').value = '';
+        const container = document.getElementById('obsChipsContainer'); container.innerHTML = '';
+        db.obsPedidos.forEach(obs => { container.innerHTML += `<div class="chip" style="font-weight: normal; background-color:#E3F2FD; color:#1565C0; border-color:#1565C0;" onclick="addObsToText('pedidoObsText', '${obs}')">${obs}</div>`; });
         document.getElementById('modalFazerPedido').style.display = 'flex';
     }
 
     function abrirModalCancelamento(id, nomeProduto) {
-        document.getElementById('tituloModalCancelar').innerText = `Cancelar: ${nomeProduto}`;
-        document.getElementById('cancelarItemId').value = id;
-        document.getElementById('cancelarObsText').value = '';
-        const container = document.getElementById('obsCancelChipsContainer');
-        container.innerHTML = '';
-        db.obsCancelamentos.forEach(obs => {
-            container.innerHTML += `<div class="chip" style="font-weight: normal; background-color:#ffebee; color:#d32f2f; border-color:#d32f2f;" onclick="addObsToText('cancelarObsText', '${obs}')">${obs}</div>`;
-        });
+        document.getElementById('tituloModalCancelar').innerText = `Cancelar: ${nomeProduto}`; document.getElementById('cancelarItemId').value = id; document.getElementById('cancelarObsText').value = '';
+        const container = document.getElementById('obsCancelChipsContainer'); container.innerHTML = '';
+        db.obsCancelamentos.forEach(obs => { container.innerHTML += `<div class="chip" style="font-weight: normal; background-color:#ffebee; color:#d32f2f; border-color:#d32f2f;" onclick="addObsToText('cancelarObsText', '${obs}')">${obs}</div>`; });
         document.getElementById('modalCancelarPedido').style.display = 'flex';
     }
 
-    function addObsToText(inputID, obsStr) {
-        const input = document.getElementById(inputID);
-        if(input.value.trim() === '') input.value = obsStr; else input.value += ', ' + obsStr;
-        input.focus();
-    }
+    function addObsToText(inputID, obsStr) { const input = document.getElementById(inputID); if(input.value.trim() === '') input.value = obsStr; else input.value += ', ' + obsStr; input.focus(); }
 
     async function enviarPedidoConfirmado() {
-        const nome = document.getElementById('pedidoItemNome').value;
-        const obsText = document.getElementById('pedidoObsText').value.trim();
+        const nome = document.getElementById('pedidoItemNome').value; const obsText = document.getElementById('pedidoObsText').value.trim();
         let nomeParaEnviar = obsText ? `${nome} (Obs: ${obsText})` : nome;
-        
         document.getElementById('modalFazerPedido').style.display = 'none';
 
         const tempId = Date.now().toString();
-        const pedidoTemporario = {
-            id: tempId,
-            produto: nomeParaEnviar,
-            status: 'pendente',
-            timestamp: new Date().toISOString(),
-            finalizadoEm: '',
-            motivo: ''
-        };
+        const pedidoTemporario = { id: tempId, produto: nomeParaEnviar, status: 'pendente', timestamp: new Date().toISOString(), finalizadoEm: '', motivo: '', isTemp: true, localTime: Date.now() };
         
+        pedidosPendentesLocais.push(pedidoTemporario); // Salva na memória de curto prazo
         pedidosServidor.push(pedidoTemporario);
         renderizarUltimosPedidos(); 
 
         try {
-            await fetch(db.configs.url, { 
-                method: 'POST', 
-                mode: 'no-cors', 
-                body: JSON.stringify({ action: 'novo_pedido', produto: nomeParaEnviar }) 
-            });
+            await fetch(db.configs.url, { method: 'POST', mode: 'no-cors', body: JSON.stringify({ action: 'novo_pedido', produto: nomeParaEnviar }) });
             setTimeout(syncGeral, 1000); 
         } catch(e) { 
+            pedidosPendentesLocais = pedidosPendentesLocais.filter(p => p.id !== tempId);
             pedidosServidor = pedidosServidor.filter(p => p.id !== tempId);
             renderizarUltimosPedidos();
-            alert("⚠️ Falha na conexão: Seu pedido não foi enviado. Verifique a internet e tente novamente."); 
+            alert("⚠️ Falha na conexão: Seu pedido não foi enviado."); 
         }
     }
 
     async function confirmarCancelamento() {
-        const id = document.getElementById('cancelarItemId').value;
-        const motivo = document.getElementById('cancelarObsText').value.trim();
-        
-        if(!motivo) return alert("Atenção: É obrigatório informar o motivo do cancelamento!");
+        const id = document.getElementById('cancelarItemId').value; const motivo = document.getElementById('cancelarObsText').value.trim();
+        if(!motivo) return alert("Obrigatório informar o motivo!");
         document.getElementById('modalCancelarPedido').style.display = 'none';
         
         pedidosBloqueados.add(id.toString());
         let pedidoLocal = pedidosServidor.find(x => x.id == id);
-        if(pedidoLocal) {
-            pedidoLocal.status = 'cancelado';
-            pedidoLocal.motivo = motivo;
-            pedidoLocal.finalizadoEm = new Date().toISOString();
-        }
+        if(pedidoLocal) { pedidoLocal.status = 'cancelado'; pedidoLocal.motivo = motivo; pedidoLocal.finalizadoEm = new Date().toISOString(); }
         renderizarListaCozinha();
 
-        fetch(db.configs.url, { 
-            method: 'POST', mode: 'no-cors', 
-            body: JSON.stringify({ action: 'cancelar_pedido', id: id, motivo: motivo }) 
-        }).then(() => setTimeout(() => pedidosBloqueados.delete(id.toString()), 2000))
-          .catch(() => pedidosBloqueados.delete(id.toString()));
+        fetch(db.configs.url, { method: 'POST', mode: 'no-cors', body: JSON.stringify({ action: 'cancelar_pedido', id: id, motivo: motivo }) }).then(() => setTimeout(() => pedidosBloqueados.delete(id.toString()), 2000)).catch(() => pedidosBloqueados.delete(id.toString()));
     }
 
     async function syncGeral() {
@@ -619,8 +454,20 @@
         try {
             const resp = await fetch(db.configs.url);
             const dadosServidor = await resp.json();
+            document.getElementById('indicadorConexao').innerHTML = '🟢'; // Online
             
-            pedidosServidor = dadosServidor.map(pServ => {
+            // Lógica Antirreflexo (Pisca-Pisca)
+            // Remove pedidos temporários que já tem mais de 20 segundos (tempo limite para o Google salvar)
+            pedidosPendentesLocais = pedidosPendentesLocais.filter(p => (Date.now() - p.localTime) < 20000);
+            // Filtra os temporários que já chegaram no servidor (nome igual e status pendente nos ultimos 20s)
+            pedidosPendentesLocais = pedidosPendentesLocais.filter(pTemp => {
+                return !dadosServidor.some(pServ => pServ.produto === pTemp.produto && pServ.status === 'pendente' && Math.abs(new Date(pServ.timestamp).getTime() - pTemp.localTime) < 25000);
+            });
+
+            // Junta servidor + temporários
+            let mixPedidos = dadosServidor.concat(pedidosPendentesLocais);
+
+            pedidosServidor = mixPedidos.map(pServ => {
                 if(pedidosBloqueados.has(pServ.id.toString())) {
                     let pLocal = pedidosServidor.find(x => x.id == pServ.id);
                     return pLocal ? pLocal : pServ;
@@ -628,417 +475,240 @@
                 return pServ;
             });
             
-            if(db.configs.modo === 'cozinha') { renderizarListaCozinha(); } 
-            else { renderizarUltimosPedidos(); }
-            
+            if(db.configs.modo === 'cozinha') { renderizarListaCozinha(); } else { renderizarUltimosPedidos(); }
             gerenciarAlarme();
-        } catch(e) { console.log("Aguardando conexão..."); }
+        } catch(e) { 
+            document.getElementById('indicadorConexao').innerHTML = '🔴'; // Offline
+        }
     }
 
-    function darCiencia(id) {
-        pedidosCientes.add(id.toString());
-        renderizarUltimosPedidos();
-        gerenciarAlarme(); 
-    }
+    function darCiencia(id) { pedidosCientes.add(id.toString()); renderizarUltimosPedidos(); gerenciarAlarme(); }
 
-    // --- PAINEL ÚLTIMOS PEDIDOS ---
     function renderizarUltimosPedidos() {
-        const lista = document.getElementById('listaUltimosPedidosPanelas');
-        const agora = Date.now();
-        lista.innerHTML = '';
+        const lista = document.getElementById('listaUltimosPedidosPanelas'); const agora = Date.now(); lista.innerHTML = '';
         
-        let todosRecentes = pedidosServidor.filter(p => {
+        // Exibe apenas o dia de hoje nos últimos pedidos
+        const dataHoje = new Date().toDateString();
+        let todosRecentes = pedidosServidor.filter(p => new Date(p.timestamp).toDateString() === dataHoje).filter(p => {
             if(p.status !== 'concluido' && p.status !== 'enviado' && p.status !== 'buscar' && p.status !== 'cancelado') return true;
             return (agora - new Date(p.finalizadoEm).getTime()) < 300000;
         }).reverse();
 
-        let itensAtencao = [];
-        let itensNormais = [];
-
+        let itensAtencao = []; let itensNormais = [];
         todosRecentes.forEach(p => {
-            let precisaAtencao = (p.status === 'buscar' || p.status === 'cancelado') && !pedidosCientes.has(p.id.toString());
-            if(precisaAtencao) {
-                itensAtencao.push(p);
-            } else {
-                itensNormais.push(p);
-            }
+            if((p.status === 'buscar' || p.status === 'cancelado') && !pedidosCientes.has(p.id.toString())) { itensAtencao.push(p); } else { itensNormais.push(p); }
         });
 
         let recentes = [...itensAtencao, ...itensNormais].slice(0, 15);
-        
-        if(recentes.length === 0) {
-            lista.innerHTML = `<li style="padding: 15px; text-align: center; color: #999;">Nenhum pedido recente.</li>`; return;
-        }
+        if(recentes.length === 0) { lista.innerHTML = `<li style="padding: 15px; text-align: center; color: #999;">Nenhum pedido recente.</li>`; return; }
 
         recentes.forEach(p => {
-            let statusTraduzido = ''; let corStatus = ''; let piscaClass = ''; let onclickHtml = '';
-            let exibirTempo = true;
-            
+            let statusTraduzido = ''; let corStatus = ''; let piscaClass = ''; let onclickHtml = ''; let exibirTempo = true;
             if (p.status === 'pendente') { statusTraduzido = 'Pendente'; corStatus = '#d32f2f'; }
             else if (p.status === 'fazendo') { statusTraduzido = 'Em preparo'; corStatus = '#fbc02d'; }
             else if (p.status === 'enviado') { statusTraduzido = 'Enviado'; corStatus = '#9e9e9e'; exibirTempo = false; }
             else if (p.status === 'cancelado') { 
-                exibirTempo = false;
-                let motivoTxt = p.motivo ? ` (Motivo: ${p.motivo})` : '';
-                if(!pedidosCientes.has(p.id.toString())) {
-                    statusTraduzido = 'Cancelado' + motivoTxt; corStatus = '#000000'; piscaClass = 'alerta-pisca-buscar'; onclickHtml = `onclick="darCiencia('${p.id}')"`;
-                } else {
-                    statusTraduzido = 'Cancelado' + motivoTxt; corStatus = '#9e9e9e'; 
-                }
+                exibirTempo = false; let motivoTxt = p.motivo ? ` (Motivo: ${p.motivo})` : '';
+                if(!pedidosCientes.has(p.id.toString())) { statusTraduzido = 'Cancelado' + motivoTxt; corStatus = '#000000'; piscaClass = 'alerta-pisca-buscar'; onclickHtml = `onclick="darCiencia('${p.id}')"`; } else { statusTraduzido = 'Cancelado' + motivoTxt; corStatus = '#9e9e9e'; }
             }
             else if (p.status === 'buscar') { 
                 exibirTempo = false;
-                if(!pedidosCientes.has(p.id.toString())) {
-                    statusTraduzido = 'Pode ir buscar'; corStatus = '#d32f2f'; piscaClass = 'alerta-pisca-buscar'; onclickHtml = `onclick="darCiencia('${p.id}')"`;
-                } else {
-                    statusTraduzido = 'Pode ir buscar'; corStatus = '#9e9e9e'; 
-                }
+                if(!pedidosCientes.has(p.id.toString())) { statusTraduzido = 'Pode ir buscar'; corStatus = '#d32f2f'; piscaClass = 'alerta-pisca-buscar'; onclickHtml = `onclick="darCiencia('${p.id}')"`; } else { statusTraduzido = 'Pode ir buscar'; corStatus = '#9e9e9e'; }
             } else { statusTraduzido = 'Finalizado'; corStatus = '#9e9e9e'; exibirTempo = false; }
 
             let textoTempo = exibirTempo ? ` - ${getTempoRelativo(p.timestamp)}` : '';
-
-            lista.innerHTML += `
-                <li class="item ${piscaClass}" style="border-left: 5px solid ${corStatus}; padding: 10px 15px;" ${onclickHtml}>
-                    <div class="item-info" style="font-size: 14px; white-space: normal; word-break: break-word; line-height: 1.4;">
-                        <strong>${p.produto}</strong> - <strong style="color:${corStatus}">${statusTraduzido}</strong><span style="color:#666;">${textoTempo}</span>
-                    </div>
-                </li>
-            `;
+            lista.innerHTML += `<li class="item ${piscaClass}" style="border-left: 5px solid ${corStatus}; padding: 10px 15px;" ${onclickHtml}><div class="item-info" style="font-size: 14px; white-space: normal; word-break: break-word; line-height: 1.4;"><strong>${p.produto}</strong> - <strong style="color:${corStatus}">${statusTraduzido}</strong><span style="color:#666;">${textoTempo}</span></div></li>`;
         });
     }
 
-    // --- LISTA COZINHA OTIMIZADA ---
     function renderizarListaCozinha() {
-        const lista = document.getElementById('listaPedidosCozinha');
-        const agora = Date.now();
-        lista.innerHTML = '';
-        
-        pedidosServidor.filter(p => {
+        const lista = document.getElementById('listaPedidosCozinha'); const agora = Date.now(); lista.innerHTML = '';
+        const dataHoje = new Date().toDateString();
+        pedidosServidor.filter(p => new Date(p.timestamp).toDateString() === dataHoje).filter(p => {
             if(p.status !== 'concluido' && p.status !== 'enviado' && p.status !== 'buscar' && p.status !== 'cancelado') return true;
             return (agora - new Date(p.finalizadoEm).getTime()) < 300000;
         }).reverse().forEach(p => {
-            
-            let emoji = '🔔'; let isFinal = false; 
-            let formatProduto = `<strong>${p.produto}</strong>`;
-
-            if (p.status === 'pendente') { emoji = '🔔'; }
-            else if (p.status === 'fazendo') { emoji = '🔥'; }
-            else if (p.status === 'enviado') { emoji = '✔️'; isFinal = true; }
-            else if (p.status === 'buscar') { emoji = '✔️'; isFinal = true; }
-            else if (p.status === 'cancelado') { emoji = '❌'; isFinal = true; }
-            
+            let emoji = '🔔'; let isFinal = false; let formatProduto = `<strong>${p.produto}</strong>`;
+            if (p.status === 'pendente') { emoji = '🔔'; } else if (p.status === 'fazendo') { emoji = '🔥'; } else if (p.status === 'enviado') { emoji = '✔️'; isFinal = true; } else if (p.status === 'buscar') { emoji = '✔️'; isFinal = true; } else if (p.status === 'cancelado') { emoji = '❌'; isFinal = true; }
             let cssStatus = isFinal ? (p.status==='cancelado' ? 'cancelado' : 'concluido') : p.status;
-            
-            let tempoStr = "";
-            if (!isFinal) {
-                tempoStr = getTempoRelativo(p.timestamp);
-            } else if (p.status === 'cancelado' && p.motivo) {
-                tempoStr = `Motivo: ${p.motivo}`;
-            }
-
-            lista.innerHTML += `
-                <li class="item status-${cssStatus}" id="ped-${p.id}" 
-                    data-id="${p.id}" data-status="${p.status}" data-nome="${p.produto}"
-                    ontouchstart="handleTouchStart(event, this)" 
-                    ontouchmove="handleTouchMove(event)"
-                    ontouchend="handleTouchEnd(event, this)">
-                    <div class="item-avatar" style="background:transparent; font-size:24px; margin-right: 10px;">${emoji}</div>
-                    <div class="item-info" style="display:flex; justify-content:space-between; align-items:center;">
-                        <div class="item-title" style="margin: 0;">${formatProduto}</div>
-                        <div style="font-size:13px; color:#888;">${tempoStr}</div>
-                    </div>
-                </li>
-            `;
+            let tempoStr = ""; if (!isFinal) { tempoStr = getTempoRelativo(p.timestamp); } else if (p.status === 'cancelado' && p.motivo) { tempoStr = `Motivo: ${p.motivo}`; }
+            lista.innerHTML += `<li class="item status-${cssStatus}" id="ped-${p.id}" data-id="${p.id}" data-status="${p.status}" data-nome="${p.produto}" ontouchstart="handleTouchStart(event, this)" ontouchmove="handleTouchMove(event)" ontouchend="handleTouchEnd(event, this)"><div class="item-avatar" style="background:transparent; font-size:24px; margin-right: 10px;">${emoji}</div><div class="item-info" style="display:flex; justify-content:space-between; align-items:center;"><div class="item-title" style="margin: 0;">${formatProduto}</div><div style="font-size:13px; color:#888;">${tempoStr}</div></div></li>`;
         });
     }
 
     let touchStartX = 0; let pressTimer; let isLongPress = false; let lastTap = 0; let tapTimer;
-
-    function handleTouchStart(e, elemento) { 
-        touchStartX = e.changedTouches[0].screenX; isLongPress = false;
-        let statusAtual = elemento.getAttribute('data-status');
-        if(statusAtual === 'fazendo') {
-            pressTimer = setTimeout(() => { isLongPress = true; alterarStatusPedido(elemento.getAttribute('data-id'), 'buscar'); }, 600);
-        }
-    }
-
+    function handleTouchStart(e, elemento) { touchStartX = e.changedTouches[0].screenX; isLongPress = false; let statusAtual = elemento.getAttribute('data-status'); if(statusAtual === 'fazendo') { pressTimer = setTimeout(() => { isLongPress = true; alterarStatusPedido(elemento.getAttribute('data-id'), 'buscar'); }, 600); } }
     function handleTouchMove(e) { clearTimeout(pressTimer); }
-
     function handleTouchEnd(e, elemento) { 
-        clearTimeout(pressTimer);
-        if(isLongPress) return;
-
-        let touchEndX = e.changedTouches[0].screenX;
-        let diff = touchEndX - touchStartX;
-        
-        const id = elemento.getAttribute('data-id');
-        const statusAtual = elemento.getAttribute('data-status');
-        const nomeProd = elemento.getAttribute('data-nome');
-
+        clearTimeout(pressTimer); if(isLongPress) return;
+        let diff = e.changedTouches[0].screenX - touchStartX; const id = elemento.getAttribute('data-id'); const statusAtual = elemento.getAttribute('data-status'); const nomeProd = elemento.getAttribute('data-nome');
         if (Math.abs(diff) < 20) {
             let currentTime = new Date().getTime(); let tapLength = currentTime - lastTap;
-            if (tapLength < 350 && tapLength > 0) {
-                clearTimeout(tapTimer);
-                if(statusAtual === 'fazendo' || statusAtual === 'pendente') abrirModalCancelamento(id, nomeProd);
-            } else {
-                tapTimer = setTimeout(() => { if(statusAtual === 'pendente') alterarStatusPedido(id, 'fazendo'); }, 350); 
-            }
-            lastTap = currentTime;
-        } else if (diff > 80) { 
-            if(statusAtual === 'fazendo') alterarStatusPedido(id, 'enviado');
-            else if (statusAtual === 'pendente') {
-                alert("⚠️ Toque para aceitar primeiro!");
-            }
-        } else if (diff < -80) { 
-            if(statusAtual === 'enviado' || statusAtual === 'buscar' || statusAtual === 'cancelado' || statusAtual === 'concluido') {
-                alterarStatusPedido(id, 'fazendo');
-            }
-        }
+            if (tapLength < 350 && tapLength > 0) { clearTimeout(tapTimer); if(statusAtual === 'fazendo' || statusAtual === 'pendente') abrirModalCancelamento(id, nomeProd); } else { tapTimer = setTimeout(() => { if(statusAtual === 'pendente') alterarStatusPedido(id, 'fazendo'); }, 350); } lastTap = currentTime;
+        } else if (diff > 80) { if(statusAtual === 'fazendo') alterarStatusPedido(id, 'enviado'); else if (statusAtual === 'pendente') alert("⚠️ Toque para aceitar primeiro!"); } else if (diff < -80) { if(statusAtual === 'enviado' || statusAtual === 'buscar' || statusAtual === 'cancelado' || statusAtual === 'concluido') alterarStatusPedido(id, 'fazendo'); }
     }
 
     function alterarStatusPedido(id, novoStatus) {
-        pedidosBloqueados.add(id.toString());
-        let pedidoLocal = pedidosServidor.find(x => x.id == id);
-        if(pedidoLocal) {
-            pedidoLocal.status = novoStatus;
-            if(novoStatus === 'enviado' || novoStatus === 'buscar' || novoStatus === 'concluido') {
-                pedidoLocal.finalizadoEm = new Date().toISOString();
-            }
-        }
+        pedidosBloqueados.add(id.toString()); let pedidoLocal = pedidosServidor.find(x => x.id == id);
+        if(pedidoLocal) { pedidoLocal.status = novoStatus; if(novoStatus === 'enviado' || novoStatus === 'buscar' || novoStatus === 'concluido') pedidoLocal.finalizadoEm = new Date().toISOString(); }
         renderizarListaCozinha();
-        fetch(db.configs.url, { 
-            method: 'POST', mode: 'no-cors', 
-            body: JSON.stringify({ action: 'atualizar_status', id: id, novoStatus: novoStatus }) 
-        }).then(() => setTimeout(() => pedidosBloqueados.delete(id.toString()), 2000))
-          .catch(() => pedidosBloqueados.delete(id.toString()));
+        fetch(db.configs.url, { method: 'POST', mode: 'no-cors', body: JSON.stringify({ action: 'atualizar_status', id: id, novoStatus: novoStatus }) }).then(() => setTimeout(() => pedidosBloqueados.delete(id.toString()), 2000)).catch(() => pedidosBloqueados.delete(id.toString()));
     }
 
     function gerenciarAlarme() {
-        let deveTocar = false;
-        let configSom = "sem_som";
-        const h = document.getElementById('mainHeader');
-        h.classList.remove('alerta-pisca', 'alerta-pisca-buscar');
-
+        let deveTocar = false; let configSom = "sem_som"; const h = document.getElementById('mainHeader'); h.classList.remove('alerta-pisca', 'alerta-pisca-buscar');
         if (db.configs.modo === 'cozinha') {
-            const temPendente = pedidosServidor.some(p => p.status === 'pendente');
-            if(temPendente) {
-                h.classList.add('alerta-pisca');
-                if(db.configs.somCozinha !== "sem_som") {
-                    deveTocar = true;
-                    configSom = db.configs.somCozinha;
-                }
-            }
+            const dataHoje = new Date().toDateString();
+            if(pedidosServidor.some(p => p.status === 'pendente' && new Date(p.timestamp).toDateString() === dataHoje)) { h.classList.add('alerta-pisca'); if(db.configs.somCozinha !== "sem_som") { deveTocar = true; configSom = db.configs.somCozinha; } }
         } else if (db.configs.modo === 'panelas') {
             const agora = Date.now();
-            const temAlertaPanelas = pedidosServidor.some(p => {
-                const ehRecente = (agora - new Date(p.finalizadoEm).getTime()) < 300000;
-                if(ehRecente && (p.status === 'buscar' || p.status === 'cancelado')) {
-                    return !pedidosCientes.has(p.id.toString());
-                }
-                return false;
-            });
-            
-            if(temAlertaPanelas) {
-                h.classList.add('alerta-pisca-buscar');
-                if(db.configs.somPanelas !== "sem_som") {
-                    deveTocar = true;
-                    configSom = db.configs.somPanelas;
-                }
-            }
+            if(pedidosServidor.some(p => { const ehRecente = (agora - new Date(p.finalizadoEm).getTime()) < 300000; return ehRecente && (p.status === 'buscar' || p.status === 'cancelado') && !pedidosCientes.has(p.id.toString()); })) { h.classList.add('alerta-pisca-buscar'); if(db.configs.somPanelas !== "sem_som") { deveTocar = true; configSom = db.configs.somPanelas; } }
         }
-
-        if (deveTocar) {
-            if (!alarmeTocando || playerAlarme.src !== sonsDisponiveis[configSom]) {
-                playerAlarme.src = sonsDisponiveis[configSom];
-                playerAlarme.play().catch(()=>{});
-                alarmeTocando = true;
-            }
-        } else {
-            pararAlarme();
-        }
+        if (deveTocar) { if (!alarmeTocando || playerAlarme.src !== sonsDisponiveis[configSom]) { playerAlarme.src = sonsDisponiveis[configSom]; playerAlarme.play().catch(()=>{}); alarmeTocando = true; } } else { pararAlarme(); }
     }
     
-    function pararAlarme() { 
-        document.getElementById('mainHeader').classList.remove('alerta-pisca', 'alerta-pisca-buscar'); 
-        playerAlarme.pause(); 
-        alarmeTocando = false; 
+    function pararAlarme() { document.getElementById('mainHeader').classList.remove('alerta-pisca', 'alerta-pisca-buscar'); playerAlarme.pause(); alarmeTocando = false; }
+
+    // --- HISTÓRICO COM EXCLUSÃO (DUPLO CLIQUE) ---
+    let histLastTap = 0; let histTapTimer;
+    function acaoDuploCliqueHistorico(id) {
+        let currentTime = new Date().getTime(); let tapLength = currentTime - histLastTap;
+        if (tapLength < 400 && tapLength > 0) {
+            clearTimeout(histTapTimer);
+            let senha = prompt("⚠️ EXCLUIR ITEM DEFINITIVAMENTE?\nIsso apagará do sistema.\n\nDigite a senha ADM:");
+            if (senha === "1999") {
+                pedidosServidor = pedidosServidor.filter(p => p.id != id); abrirHistorico();
+                fetch(db.configs.url, { method: 'POST', mode: 'no-cors', body: JSON.stringify({ action: 'excluir_pedido', id: id }) });
+            } else if(senha) { alert("Senha incorreta!"); }
+        } else { histTapTimer = setTimeout(() => { }, 400); }
+        histLastTap = currentTime;
     }
 
     function abrirHistorico() {
-        const lista = document.getElementById('listaHistorico'); lista.innerHTML = '';
-        const dataHoje = new Date().toDateString(); 
+        const lista = document.getElementById('listaHistorico'); lista.innerHTML = ''; const dataHoje = new Date().toDateString(); 
         const historicoHoje = pedidosServidor.filter(p => new Date(p.timestamp).toDateString() === dataHoje).reverse();
-
-        if(historicoHoje.length === 0) {
-            lista.innerHTML = '<li style="padding: 15px; text-align: center; color: #999;">Nenhum pedido hoje.</li>';
-        } else {
+        if(historicoHoje.length === 0) { lista.innerHTML = '<li style="padding: 15px; text-align: center; color: #999;">Nenhum pedido hoje.</li>'; } else {
             historicoHoje.forEach(p => {
                 let statusTxt = p.status === 'pendente' ? 'Pendente' : (p.status === 'fazendo' ? 'Em preparo' : (p.status === 'enviado' ? 'Enviado' : (p.status === 'buscar' ? 'Buscar' : (p.status === 'cancelado' ? 'Cancelado' : 'Finalizado'))));
                 if(p.status === 'cancelado' && p.motivo) statusTxt += ` (Motivo: ${p.motivo})`;
-                
-                lista.innerHTML += `
-                    <li class="item" style="padding: 10px; border-bottom: 1px solid #eee;">
-                        <div class="item-info">
-                            <div class="item-title" style="font-size: 15px;">${p.produto}</div>
-                            <div class="item-subtitle">${new Date(p.timestamp).toLocaleTimeString()} - ${statusTxt}</div>
-                        </div>
-                    </li>`;
+                lista.innerHTML += `<li class="item" onclick="acaoDuploCliqueHistorico('${p.id}')" style="padding: 10px; border-bottom: 1px solid #eee;"><div class="item-info"><div class="item-title" style="font-size: 15px;">${p.produto}</div><div class="item-subtitle">${new Date(p.timestamp).toLocaleTimeString()} - ${statusTxt}</div></div></li>`;
             });
         }
         document.getElementById('modalHistorico').style.display = 'flex';
     }
 
+    // --- ZERAR O DIA (BOTÃO VASSOURA) ---
+    function limparHistoricoHoje() {
+        let senha = prompt("⚠️ ZERAR O EXPEDIENTE DE HOJE?\nIsso apagará os testes/pedidos de hoje da tela e do servidor.\n\nDigite a senha ADM:");
+        if (senha === "1999") {
+            const dataHoje = new Date().toDateString();
+            pedidosServidor = pedidosServidor.filter(p => new Date(p.timestamp).toDateString() !== dataHoje);
+            abrirHistorico(); renderizarUltimosPedidos(); renderizarListaCozinha();
+            fetch(db.configs.url, { method: 'POST', mode: 'no-cors', body: JSON.stringify({ action: 'excluir_hoje' }) });
+            alert("Expediente zerado com sucesso!");
+        } else if(senha) { alert("Senha incorreta!"); }
+    }
+
     function fecharModal(id) { document.getElementById(id).style.display = 'none'; }
     
-    function abrirLoginAdmin() { 
-        document.getElementById('senhaAdmin').value = ''; 
-        document.getElementById('modalLoginAdmin').style.display = 'flex'; 
-        setTimeout(()=>document.getElementById('senhaAdmin').focus(), 100); 
-    }
+    function abrirLoginAdmin() { document.getElementById('senhaAdmin').value = ''; document.getElementById('modalLoginAdmin').style.display = 'flex'; setTimeout(()=>document.getElementById('senhaAdmin').focus(), 100); }
     
+    // --- FUNÇÕES AVANÇADAS ---
+    function solicitarAcessoAvancado() {
+        let senha = prompt("ZONA DE RISCO. Digite a senha ADM:");
+        if (senha === "1999") { fecharModal('modalPainelUnificado'); document.getElementById('inputExcluirTudo').value = ''; document.getElementById('modalConfigAvancadas').style.display = 'flex'; } else if(senha) { alert("Senha incorreta!"); }
+    }
+
+    function excluirTodoHistorico() {
+        let frase = document.getElementById('inputExcluirTudo').value;
+        if (frase === "quero excluir todo o histórico") {
+            pedidosServidor = [];
+            fetch(db.configs.url, { method: 'POST', mode: 'no-cors', body: JSON.stringify({ action: 'excluir_tudo' }) });
+            alert("Histórico global apagado!");
+            forcarAtualizacao();
+        } else { alert("Frase de segurança incorreta."); }
+    }
+
+    function forcarAtualizacao() {
+        localStorage.removeItem('kds_v1_db'); sessionStorage.clear();
+        window.location.reload(true);
+    }
+
+    // --- CÁLCULO DE MÉTRICAS ---
+    function abrirModalMetricas() {
+        fecharModal('modalPainelUnificado');
+        const dataHoje = new Date().toDateString(); const seteDiasAtras = Date.now() - (7 * 86400000);
+        let qtdHoje = 0; let somaMinHoje = 0; let baseDivisaoHoje = 0;
+        let qtdSemana = 0; let somaMinSemana = 0; let baseDivisaoSemana = 0;
+
+        pedidosServidor.forEach(p => {
+            let dataPed = new Date(p.timestamp);
+            let ehHoje = dataPed.toDateString() === dataHoje;
+            let ehSemana = dataPed.getTime() >= seteDiasAtras;
+            
+            if(ehHoje) qtdHoje++;
+            if(ehSemana) qtdSemana++;
+
+            if(p.status === 'enviado' || p.status === 'buscar' || p.status === 'concluido') {
+                if(p.finalizadoEm) {
+                    let minutos = (new Date(p.finalizadoEm).getTime() - dataPed.getTime()) / 60000;
+                    if(ehHoje) { somaMinHoje += minutos; baseDivisaoHoje++; }
+                    if(ehSemana) { somaMinSemana += minutos; baseDivisaoSemana++; }
+                }
+            }
+        });
+
+        let medHoje = baseDivisaoHoje > 0 ? Math.round(somaMinHoje / baseDivisaoHoje) : 0;
+        let medSemana = baseDivisaoSemana > 0 ? Math.round(somaMinSemana / baseDivisaoSemana) : 0;
+
+        document.getElementById('metricaHojeQtd').innerText = qtdHoje;
+        document.getElementById('metricaHojeTempo').innerText = medHoje + " min";
+        document.getElementById('metricaSemanaQtd').innerText = qtdSemana;
+        document.getElementById('metricaSemanaTempo').innerText = medSemana + " min";
+
+        document.getElementById('modalMetricas').style.display = 'flex';
+    }
+
     async function sincronizarPuxarNuvem(pedirConfirmacao) {
         if(!db.configs.url) return;
-        if(pedirConfirmacao && !confirm("Você irá sobrepor os dados locais. Deseja puxar da nuvem?")) return; 
-        
+        if(pedirConfirmacao && !confirm("Deseja puxar dados da nuvem?")) return; 
         try {
-            let res = await fetch(db.configs.url + "?action=carregar_banco");
-            let nuvemDB = await res.json();
-            if(nuvemDB.produtos) {
-                db.produtos = nuvemDB.produtos;
-                db.categorias = nuvemDB.categorias || [];
-                db.obsPedidos = nuvemDB.obsPedidos || ["Sem sal", "Pouco óleo"];
-                db.obsCancelamentos = nuvemDB.obsCancelamentos || ["Falta de insumo", "Queimou"];
-                salvarBancoLocal();
-                if(pedirConfirmacao) { alert("Dados puxados com sucesso!"); location.reload(); } else { iniciar(); }
-            }
-        } catch(e) { console.log("Erro ao puxar dados da nuvem."); }
+            let res = await fetch(db.configs.url + "?action=carregar_banco"); let nuvemDB = await res.json();
+            if(nuvemDB.produtos) { db.produtos = nuvemDB.produtos; db.categorias = nuvemDB.categorias || []; db.obsPedidos = nuvemDB.obsPedidos || ["Sem sal", "Pouco óleo"]; db.obsCancelamentos = nuvemDB.obsCancelamentos || ["Falta de insumo", "Queimou"]; salvarBancoLocal(); if(pedirConfirmacao) { alert("Sucesso!"); location.reload(); } else { iniciar(); } }
+        } catch(e) { console.log("Erro nuvem."); }
     }
 
     async function sincronizarSalvarNuvem() {
-        if(!db.configs.url) return alert("Salve a URL primeiro!");
-        try {
-            document.querySelector('#modalPainelUnificado .btn-outline:last-child').innerText = "Salvando...";
-            await fetch(db.configs.url, { 
-                method: 'POST', mode: 'no-cors', 
-                body: JSON.stringify({ action: 'salvar_banco', dados: { produtos: db.produtos, categorias: db.categorias, obsPedidos: db.obsPedidos, obsCancelamentos: db.obsCancelamentos } }) 
-            });
-            alert("Dados salvos na Nuvem com sucesso!");
-        } catch(e) { alert("Erro ao enviar para a nuvem."); }
-        document.querySelector('#modalPainelUnificado .btn-outline:last-child').innerText = "⬆️ Salvar na Nuvem";
+        if(!db.configs.url) return alert("Salve a URL!");
+        try { document.querySelector('#modalPainelUnificado .btn-outline:last-of-type').innerText = "Salvando..."; await fetch(db.configs.url, { method: 'POST', mode: 'no-cors', body: JSON.stringify({ action: 'salvar_banco', dados: { produtos: db.produtos, categorias: db.categorias, obsPedidos: db.obsPedidos, obsCancelamentos: db.obsCancelamentos } }) }); alert("Salvo na Nuvem!"); } catch(e) { alert("Erro nuvem."); } document.querySelector('#modalPainelUnificado .btn-outline:last-of-type').innerText = "⬆️ Salvar na Nuvem";
     }
 
-    function salvarURL() {
-        const urlInput = document.getElementById('configUrlApp').value.trim();
-        if(urlInput === "") return alert("A URL não pode estar vazia.");
-        
-        db.configs.url = urlInput; 
-        salvarBancoLocal(); 
-        sincronizarPuxarNuvem(false); 
-        alert("✅ URL salva e dados sincronizados!");
-    }
+    function salvarURL() { const urlInput = document.getElementById('configUrlApp').value.trim(); if(urlInput === "") return alert("Vazio."); db.configs.url = urlInput; salvarBancoLocal(); sincronizarPuxarNuvem(false); alert("URL salva e sincronizada!"); }
 
-    function fecharPainelUnificado() {
-        db.configs.senhaModo = document.getElementById('configSenhaModo').value;
-        db.configs.somCozinha = document.getElementById('configSomCozinha').value;
-        db.configs.somPanelas = document.getElementById('configSomPanelas').value;
-        
-        salvarBancoLocal();
-        gerenciarAlarme(); 
-        
-        if(previewAudio) { previewAudio.pause(); } 
-        fecharModal('modalPainelUnificado');
-    }
+    function fecharPainelUnificado() { db.configs.senhaModo = document.getElementById('configSenhaModo').value; db.configs.somCozinha = document.getElementById('configSomCozinha').value; db.configs.somPanelas = document.getElementById('configSomPanelas').value; salvarBancoLocal(); gerenciarAlarme(); if(previewAudio) { previewAudio.pause(); } fecharModal('modalPainelUnificado'); }
     
     function voltarParaPainelGeral() { fecharModal('modalListagem'); document.getElementById('modalPainelUnificado').style.display = 'flex'; }
 
-    function moverItem(tipo, index, direcao) {
-        const lista = tipo === 'produtos' ? db.produtos : (tipo === 'categorias' ? db.categorias : (tipo === 'obsPedidos' ? db.obsPedidos : db.obsCancelamentos));
-        if(direcao === 'cima' && index > 0) {
-            const temp = lista[index]; lista[index] = lista[index - 1]; lista[index - 1] = temp;
-        } else if (direcao === 'baixo' && index < lista.length - 1) {
-            const temp = lista[index]; lista[index] = lista[index + 1]; lista[index + 1] = temp;
-        }
-        salvarBancoLocal(); iniciar(); abrirGerenciar(tipo);
-    }
+    function moverItem(tipo, index, direcao) { const lista = tipo === 'produtos' ? db.produtos : (tipo === 'categorias' ? db.categorias : (tipo === 'obsPedidos' ? db.obsPedidos : db.obsCancelamentos)); if(direcao === 'cima' && index > 0) { const temp = lista[index]; lista[index] = lista[index - 1]; lista[index - 1] = temp; } else if (direcao === 'baixo' && index < lista.length - 1) { const temp = lista[index]; lista[index] = lista[index + 1]; lista[index + 1] = temp; } salvarBancoLocal(); iniciar(); abrirGerenciar(tipo); }
 
     function abrirGerenciar(tipo) {
         fecharModal('modalPainelUnificado'); fecharModal('modalFormProduto'); fecharModal('modalFormCategoria');
-        const lista = document.getElementById('conteudoListagem'); const btnNovo = document.getElementById('btnNovoListagem'); const titulo = document.getElementById('tituloListagem');
-        lista.innerHTML = '';
-
-        if(tipo === 'produtos') {
-            titulo.innerText = "Gerenciar Produtos"; btnNovo.onclick = () => abrirFormProduto(-1);
-            db.produtos.forEach((p, idx) => { lista.innerHTML += `<div class="gerenciar-item"><div class="gerenciar-info"><strong>${p.nome}</strong><br><span style="color:#666">${p.categoria}</span></div><div class="gerenciar-actions"><button onclick="moverItem('produtos', ${idx}, 'cima')">🔼</button><button onclick="moverItem('produtos', ${idx}, 'baixo')">🔽</button><button onclick="abrirFormProduto(${idx})">✏️</button><button onclick="excluirItem('produtos', ${idx})">🗑️</button></div></div>`; });
-        } else if (tipo === 'categorias') {
-            titulo.innerText = "Gerenciar Categorias"; btnNovo.onclick = () => abrirFormCategoria(-1);
-            db.categorias.forEach((c, idx) => { lista.innerHTML += `<div class="gerenciar-item"><div class="gerenciar-info"><span class="color-preview" style="background:${c.cor}; color:${c.corTexto}">${c.nome}</span></div><div class="gerenciar-actions"><button onclick="moverItem('categorias', ${idx}, 'cima')">🔼</button><button onclick="moverItem('categorias', ${idx}, 'baixo')">🔽</button><button onclick="abrirFormCategoria(${idx})">✏️</button><button onclick="excluirItem('categorias', '${c.nome}')">🗑️</button></div></div>`; });
-        } else if (tipo === 'obsPedidos') {
-            titulo.innerText = "Obs. de Pedidos"; btnNovo.onclick = () => novaObservacao('obsPedidos');
-            db.obsPedidos.forEach((obs, idx) => { lista.innerHTML += `<div class="gerenciar-item"><div class="gerenciar-info"><strong>${obs}</strong></div><div class="gerenciar-actions"><button onclick="moverItem('obsPedidos', ${idx}, 'cima')">🔼</button><button onclick="moverItem('obsPedidos', ${idx}, 'baixo')">🔽</button><button onclick="excluirItem('obsPedidos', '${obs}')">🗑️</button></div></div>`; });
-        } else if (tipo === 'obsCancelamentos') {
-            titulo.innerText = "Motivos Cancelamento"; btnNovo.onclick = () => novaObservacao('obsCancelamentos');
-            db.obsCancelamentos.forEach((obs, idx) => { lista.innerHTML += `<div class="gerenciar-item"><div class="gerenciar-info"><strong>${obs}</strong></div><div class="gerenciar-actions"><button onclick="moverItem('obsCancelamentos', ${idx}, 'cima')">🔼</button><button onclick="moverItem('obsCancelamentos', ${idx}, 'baixo')">🔽</button><button onclick="excluirItem('obsCancelamentos', '${obs}')">🗑️</button></div></div>`; });
-        }
+        const lista = document.getElementById('conteudoListagem'); const btnNovo = document.getElementById('btnNovoListagem'); const titulo = document.getElementById('tituloListagem'); lista.innerHTML = '';
+        if(tipo === 'produtos') { titulo.innerText = "Gerenciar Produtos"; btnNovo.onclick = () => abrirFormProduto(-1); db.produtos.forEach((p, idx) => { lista.innerHTML += `<div class="gerenciar-item"><div class="gerenciar-info"><strong>${p.nome}</strong><br><span style="color:#666">${p.categoria}</span></div><div class="gerenciar-actions"><button onclick="moverItem('produtos', ${idx}, 'cima')">🔼</button><button onclick="moverItem('produtos', ${idx}, 'baixo')">🔽</button><button onclick="abrirFormProduto(${idx})">✏️</button><button onclick="excluirItem('produtos', ${idx})">🗑️</button></div></div>`; }); } else if (tipo === 'categorias') { titulo.innerText = "Gerenciar Categorias"; btnNovo.onclick = () => abrirFormCategoria(-1); db.categorias.forEach((c, idx) => { lista.innerHTML += `<div class="gerenciar-item"><div class="gerenciar-info"><span class="color-preview" style="background:${c.cor}; color:${c.corTexto}">${c.nome}</span></div><div class="gerenciar-actions"><button onclick="moverItem('categorias', ${idx}, 'cima')">🔼</button><button onclick="moverItem('categorias', ${idx}, 'baixo')">🔽</button><button onclick="abrirFormCategoria(${idx})">✏️</button><button onclick="excluirItem('categorias', '${c.nome}')">🗑️</button></div></div>`; }); } else if (tipo === 'obsPedidos') { titulo.innerText = "Obs. de Pedidos"; btnNovo.onclick = () => novaObservacao('obsPedidos'); db.obsPedidos.forEach((obs, idx) => { lista.innerHTML += `<div class="gerenciar-item"><div class="gerenciar-info"><strong>${obs}</strong></div><div class="gerenciar-actions"><button onclick="moverItem('obsPedidos', ${idx}, 'cima')">🔼</button><button onclick="moverItem('obsPedidos', ${idx}, 'baixo')">🔽</button><button onclick="excluirItem('obsPedidos', '${obs}')">🗑️</button></div></div>`; }); } else if (tipo === 'obsCancelamentos') { titulo.innerText = "Motivos Cancelamento"; btnNovo.onclick = () => novaObservacao('obsCancelamentos'); db.obsCancelamentos.forEach((obs, idx) => { lista.innerHTML += `<div class="gerenciar-item"><div class="gerenciar-info"><strong>${obs}</strong></div><div class="gerenciar-actions"><button onclick="moverItem('obsCancelamentos', ${idx}, 'cima')">🔼</button><button onclick="moverItem('obsCancelamentos', ${idx}, 'baixo')">🔽</button><button onclick="excluirItem('obsCancelamentos', '${obs}')">🗑️</button></div></div>`; }); }
         document.getElementById('modalListagem').style.display = 'flex';
     }
 
-    function novaObservacao(tipo) {
-        const obs = prompt(tipo === 'obsPedidos' ? "Nova observação para pedido (Ex: Sem cebola):" : "Novo motivo de cancelamento (Ex: Erro do garçom):");
-        if(obs) { db[tipo].push(obs); salvarBancoLocal(); abrirGerenciar(tipo); }
-    }
+    function novaObservacao(tipo) { const obs = prompt(tipo === 'obsPedidos' ? "Nova observação para pedido:" : "Novo motivo de cancelamento:"); if(obs) { db[tipo].push(obs); salvarBancoLocal(); abrirGerenciar(tipo); } }
+    function excluirItem(tipo, id) { if(!confirm("Certeza?")) return; if(tipo === 'produtos') db.produtos.splice(id, 1); if(tipo === 'categorias') db.categorias = db.categorias.filter(i => i.nome !== id); if(tipo === 'obsPedidos') db.obsPedidos = db.obsPedidos.filter(i => i !== id); if(tipo === 'obsCancelamentos') db.obsCancelamentos = db.obsCancelamentos.filter(i => i !== id); salvarBancoLocal(); iniciar(); abrirGerenciar(tipo); }
 
-    function excluirItem(tipo, id) {
-        if(!confirm("Certeza que deseja excluir?")) return;
-        if(tipo === 'produtos') db.produtos.splice(id, 1);
-        if(tipo === 'categorias') db.categorias = db.categorias.filter(i => i.nome !== id);
-        if(tipo === 'obsPedidos') db.obsPedidos = db.obsPedidos.filter(i => i !== id);
-        if(tipo === 'obsCancelamentos') db.obsCancelamentos = db.obsCancelamentos.filter(i => i !== id);
-        salvarBancoLocal(); iniciar(); abrirGerenciar(tipo);
-    }
+    function abrirFormProduto(idx) { fecharModal('modalListagem'); const combo = document.getElementById('prodCategoria'); combo.innerHTML = ''; db.categorias.forEach(c => combo.innerHTML += `<option value="${c.nome}">${c.nome}</option>`); if(idx >= 0) { const p = db.produtos[idx]; document.getElementById('prodIndexOriginal').value = idx; document.getElementById('prodNome').value = p.nome; document.getElementById('prodCategoria').value = p.categoria; } else { document.getElementById('prodIndexOriginal').value = '-1'; document.getElementById('prodNome').value = ''; } document.getElementById('modalFormProduto').style.display = 'flex'; }
+    function salvarProduto() { const idx = parseInt(document.getElementById('prodIndexOriginal').value); const nome = document.getElementById('prodNome').value.trim(); const cat = document.getElementById('prodCategoria').value; if(!nome || !cat) return alert("Preencha tudo!"); if(idx >= 0) { db.produtos[idx] = { nome: nome, categoria: cat }; } else { db.produtos.push({ nome: nome, categoria: cat }); } salvarBancoLocal(); iniciar(); abrirGerenciar('produtos'); }
 
-    function abrirFormProduto(idx) {
-        fecharModal('modalListagem'); const combo = document.getElementById('prodCategoria'); combo.innerHTML = '';
-        db.categorias.forEach(c => combo.innerHTML += `<option value="${c.nome}">${c.nome}</option>`);
-        if(idx >= 0) {
-            const p = db.produtos[idx]; document.getElementById('prodIndexOriginal').value = idx; document.getElementById('prodNome').value = p.nome; document.getElementById('prodCategoria').value = p.categoria;
-        } else { document.getElementById('prodIndexOriginal').value = '-1'; document.getElementById('prodNome').value = ''; }
-        document.getElementById('modalFormProduto').style.display = 'flex';
-    }
-
-    function salvarProduto() {
-        const idx = parseInt(document.getElementById('prodIndexOriginal').value); const nome = document.getElementById('prodNome').value.trim(); const cat = document.getElementById('prodCategoria').value;
-        if(!nome || !cat) return alert("Preencha tudo!");
-        if(idx >= 0) { db.produtos[idx] = { nome: nome, categoria: cat }; } else { db.produtos.push({ nome: nome, categoria: cat }); }
-        salvarBancoLocal(); iniciar(); abrirGerenciar('produtos');
-    }
-
-    function abrirFormCategoria(idx) {
-        fecharModal('modalListagem');
-        if(idx >= 0) {
-            const c = db.categorias[idx]; document.getElementById('catIndexOriginal').value = idx; document.getElementById('catNome').value = c.nome; document.getElementById('catCor').value = c.cor; document.getElementById('catCorTexto').value = c.corTexto || '#000000';
-        } else { document.getElementById('catIndexOriginal').value = '-1'; document.getElementById('catNome').value = ''; document.getElementById('catCor').value = '#1976D2'; document.getElementById('catCorTexto').value = '#ffffff'; }
-        document.getElementById('modalFormCategoria').style.display = 'flex';
-    }
-
-    function salvarCategoria() {
-        const idx = parseInt(document.getElementById('catIndexOriginal').value); const nome = document.getElementById('catNome').value.trim(); const cor = document.getElementById('catCor').value; const corTexto = document.getElementById('catCorTexto').value;
-        if(!nome) return alert("Preencha o nome!");
-        if(idx >= 0) {
-            const nomeAntigo = db.categorias[idx].nome; db.categorias[idx] = { nome, cor, corTexto };
-            db.produtos.forEach(p => { if(p.categoria === nomeAntigo) p.categoria = nome; });
-        } else { db.categorias.push({ nome, cor, corTexto }); }
-        salvarBancoLocal(); iniciar(); abrirGerenciar('categorias');
-    }
+    function abrirFormCategoria(idx) { fecharModal('modalListagem'); if(idx >= 0) { const c = db.categorias[idx]; document.getElementById('catIndexOriginal').value = idx; document.getElementById('catNome').value = c.nome; document.getElementById('catCor').value = c.cor; document.getElementById('catCorTexto').value = c.corTexto || '#000000'; } else { document.getElementById('catIndexOriginal').value = '-1'; document.getElementById('catNome').value = ''; document.getElementById('catCor').value = '#1976D2'; document.getElementById('catCorTexto').value = '#ffffff'; } document.getElementById('modalFormCategoria').style.display = 'flex'; }
+    function salvarCategoria() { const idx = parseInt(document.getElementById('catIndexOriginal').value); const nome = document.getElementById('catNome').value.trim(); const cor = document.getElementById('catCor').value; const corTexto = document.getElementById('catCorTexto').value; if(!nome) return alert("Preencha o nome!"); if(idx >= 0) { const nomeAntigo = db.categorias[idx].nome; db.categorias[idx] = { nome, cor, corTexto }; db.produtos.forEach(p => { if(p.categoria === nomeAntigo) p.categoria = nome; }); } else { db.categorias.push({ nome, cor, corTexto }); } salvarBancoLocal(); iniciar(); abrirGerenciar('categorias'); }
 
     document.getElementById('senhaAdmin').addEventListener('input', function(e) {
-        if(this.value === "1999") {
-            this.blur(); document.getElementById('modalLoginAdmin').style.display = 'none';
-            document.getElementById('configUrlApp').value = db.configs.url || '';
-            document.getElementById('configSenhaModo').value = db.configs.senhaModo || '';
-            document.getElementById('configSomCozinha').value = db.configs.somCozinha || 'sem_som';
-            document.getElementById('configSomPanelas').value = db.configs.somPanelas || 'sem_som';
-            document.getElementById('modalPainelUnificado').style.display = 'flex'; this.value = ''; 
-        }
+        if(this.value === "1999") { this.blur(); document.getElementById('modalLoginAdmin').style.display = 'none'; document.getElementById('configUrlApp').value = db.configs.url || ''; document.getElementById('configSenhaModo').value = db.configs.senhaModo || ''; document.getElementById('configSomCozinha').value = db.configs.somCozinha || 'sem_som'; document.getElementById('configSomPanelas').value = db.configs.somPanelas || 'sem_som'; document.getElementById('modalPainelUnificado').style.display = 'flex'; this.value = ''; }
     });
 
     iniciar();
