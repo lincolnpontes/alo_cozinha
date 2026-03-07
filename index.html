@@ -44,7 +44,7 @@
         .item-avatar { background-color: #BBDEFB; color: #1565C0; width: 40px; height: 40px; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-weight: bold; margin-right: 15px; min-width: 40px; flex-shrink: 0; }
         .item-info { flex: 1; pointer-events: none; }
         .item-title { font-weight: bold; font-size: 18px; margin-bottom: 2px; }
-        .item-subtitle { color: #666; font-size: 14px; line-height: 1.4; }
+        .item-subtitle { color: #666; font-size: 13px; line-height: 1.4; }
 
         .status-pendente { border-left: 8px solid #d32f2f; background-color: #ffebee; }
         .status-fazendo { border-left: 8px solid #fbc02d; background-color: #fffde7; }
@@ -64,8 +64,8 @@
         input::placeholder { font-style: italic; color: #aaa; }
 
         .modal-overlay { display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.6); align-items: center; justify-content: center; z-index: 1000; }
-        .modal { background: white; padding: 20px; border-radius: 10px; width: 90%; max-width: 400px; max-height: 90vh; overflow-y: auto; }
-        .modal-title { font-size: 20px; font-weight: bold; margin-bottom: 20px; color: #333; border-bottom: 2px solid #1976D2; padding-bottom: 10px; display: flex; justify-content: space-between; }
+        .modal { background: white; padding: 20px; border-radius: 10px; width: 90%; max-width: 450px; max-height: 90vh; overflow-y: auto; }
+        .modal-title { font-size: 20px; font-weight: bold; margin-bottom: 20px; color: #333; border-bottom: 2px solid #1976D2; padding-bottom: 10px; display: flex; justify-content: space-between; align-items: center; }
         .form-group { margin-bottom: 15px; }
         .form-group label { display: block; margin-bottom: 5px; color: #555; font-weight: bold; font-size: 14px; }
         .form-group input, .form-group select { width: 100%; padding: 10px; border: 1px solid #ccc; border-radius: 5px; box-sizing: border-box; font-size: 16px; }
@@ -79,14 +79,15 @@
         .btn-danger { background: #d32f2f; color: white; border: none; padding: 10px; border-radius: 5px; cursor: pointer; font-weight: bold; width: 100%; margin-bottom: 10px; }
         .btn-outline { background: #E3F2FD; color: #1976D2; border: 1px solid #1976D2; padding: 10px; border-radius: 5px; cursor: pointer; font-weight: bold; width: 100%; margin-bottom: 10px; display: flex; align-items: center; justify-content: flex-start; gap: 15px; }
         
+        .btn-tab { background: #eee; color: #666; border: none; padding: 8px 15px; border-radius: 5px; cursor: pointer; font-weight: bold; flex: 1; }
+        .btn-tab.active { background: #1976D2; color: white; }
+
         .gerenciar-item { display: flex; justify-content: space-between; align-items: center; padding: 10px 0; border-bottom: 1px solid #eee; }
         .gerenciar-info { flex: 1; font-size: 14px; }
         .gerenciar-actions button { background: #eee; border: none; cursor: pointer; font-size: 16px; margin-left: 5px; padding: 8px; border-radius: 4px; }
         .color-preview { display: inline-block; padding: 2px 8px; border-radius: 12px; margin-right: 5px; vertical-align: middle; border: 1px solid #ccc; font-weight: bold; font-size: 12px; }
 
         .metrica-card { background: #f5f5f5; border: 1px solid #ddd; padding: 15px; border-radius: 8px; margin-bottom: 15px; text-align: center; }
-        .metrica-valor { font-size: 24px; font-weight: bold; color: #1976D2; margin: 10px 0; }
-        .metrica-titulo { font-size: 14px; color: #666; font-weight: bold; text-transform: uppercase; }
     </style>
 </head>
 <body class="theme-panelas">
@@ -228,7 +229,7 @@
         <button class="btn-outline" onclick="abrirGerenciar('obsPedidos')">💬 Obs. de Pedidos</button>
         <button class="btn-outline" onclick="abrirGerenciar('obsCancelamentos')" style="border-color:#d32f2f; color:#d32f2f;">🗑️ Motivos Cancelamento</button>
         
-        <button class="btn-outline" onclick="abrirModalMetricas()" style="border-color:#2e7d32; color:#2e7d32; margin-top: 15px;">📊 Relatórios e Métricas</button>
+        <button class="btn-outline" onclick="abrirModalMetricas()" style="border-color:#2e7d32; color:#2e7d32; margin-top: 15px;">📊 Relatórios por Item</button>
 
         <h3 style="font-size: 16px; color: #555; margin-top: 25px; margin-bottom: 10px;">Configurações Básicas</h3>
         
@@ -272,23 +273,26 @@
 </div>
 
 <div class="modal-overlay" id="modalMetricas">
-    <div class="modal">
-        <div class="modal-title">Relatórios e Métricas</div>
+    <div class="modal" style="display:flex; flex-direction:column; max-height: 90vh;">
+        <div class="modal-title">Detalhes da Produção</div>
         
-        <div class="metrica-titulo">Desempenho de Hoje</div>
-        <div class="metrica-card">
-            <div id="metricaHojeQtd" class="metrica-valor">0</div>
-            <div style="font-size: 13px; color: #666;">Total de Pedidos</div>
-            <div id="metricaHojeTempo" class="metrica-valor" style="color: #2e7d32;">0 min</div>
-            <div style="font-size: 13px; color: #666;">Tempo Médio de Preparo</div>
+        <div style="display:flex; gap:10px; margin-bottom:15px;">
+            <button class="btn-tab active" id="btnAbaHoje" onclick="renderizarMetricasDetalhes('hoje')">Hoje</button>
+            <button class="btn-tab" id="btnAbaSemana" onclick="renderizarMetricasDetalhes('semana')">Últimos 7 Dias</button>
         </div>
 
-        <div class="metrica-titulo">Últimos 7 Dias</div>
-        <div class="metrica-card">
-            <div id="metricaSemanaQtd" class="metrica-valor">0</div>
-            <div style="font-size: 13px; color: #666;">Total de Pedidos</div>
-            <div id="metricaSemanaTempo" class="metrica-valor" style="color: #2e7d32;">0 min</div>
-            <div style="font-size: 13px; color: #666;">Tempo Médio de Preparo</div>
+        <div class="metrica-card" style="padding: 10px; display:flex; justify-content:space-between; align-items:center;">
+            <div style="font-size: 14px; color: #666; font-weight:bold;">TOTAL DE PEDIDOS:</div>
+            <div id="metricaTotalQtd" style="font-size: 20px; font-weight: bold; color: #1976D2;">0</div>
+        </div>
+
+        <div style="font-size:12px; color:#888; display:flex; justify-content:space-between; padding: 0 5px 5px 5px;">
+            <span>Produto</span>
+            <span>Qtd / T. Médio</span>
+        </div>
+
+        <div class="scroll-area" style="flex: 1; border: 1px solid #eee; border-radius: 5px; padding: 5px; background: #fafafa;">
+            <ul class="list" id="listaMetricasDetalhes" style="padding-bottom: 0;"></ul>
         </div>
 
         <div class="modal-actions">
@@ -307,19 +311,14 @@
     let pedidosServidor = [];
     let pedidosBloqueados = new Set();
     let pedidosCientes = new Set(); 
-    let pedidosPendentesLocais = []; // NOVO: Resolve o pisca-pisca
+    let pedidosPendentesLocais = []; 
     let loopSync = null;
-    let wakeLock = null; // NOVO: Manter tela acesa
+    let wakeLock = null; 
 
     const sonsDisponiveis = { "sem_som": "", "beep": "https://actions.google.com/sounds/v1/alarms/beep_short.ogg", "sino": "https://actions.google.com/sounds/v1/alarms/dinner_bell_triangle.ogg", "sino_forte": "https://actions.google.com/sounds/v1/alarms/medium_bell_ringing_near.ogg", "alarme": "https://actions.google.com/sounds/v1/alarms/alarm_clock.ogg" };
     let playerAlarme = new Audio(); playerAlarme.loop = true; let alarmeTocando = false; let previewAudio = null; let previewTimeout = null;
 
-    // --- MANTER TELA ACESA (WAKE LOCK) ---
-    async function solicitarWakeLock() {
-        try {
-            if ('wakeLock' in navigator) { wakeLock = await navigator.wakeLock.request('screen'); }
-        } catch (err) { console.log('Wake Lock falhou:', err); }
-    }
+    async function solicitarWakeLock() { try { if ('wakeLock' in navigator) { wakeLock = await navigator.wakeLock.request('screen'); } } catch (err) { console.log('Wake Lock falhou:', err); } }
     document.addEventListener('visibilitychange', async () => { if (wakeLock !== null && document.visibilityState === 'visible') solicitarWakeLock(); });
 
     function tocarPreview(selectId) {
@@ -334,21 +333,17 @@
     function carregarBanco() {
         let defaultDB = { produtos: [], categorias: [], obsPedidos: ["Sem sal", "Pouco óleo"], obsCancelamentos: ["Falta de insumo", "Queimou"], configs: { modo: "panelas", url: "", senhaModo: "", somCozinha: "sem_som", somPanelas: "sem_som" } };
         let local = JSON.parse(localStorage.getItem('kds_v1_db'));
-        if(local) {
-            if(!local.configs) local.configs = defaultDB.configs;
-            return local;
-        }
+        if(local) { if(!local.configs) local.configs = defaultDB.configs; return local; }
         return defaultDB;
     }
-
     function salvarBancoLocal() { localStorage.setItem('kds_v1_db', JSON.stringify(db)); }
 
     function getTempoRelativo(timestamp) {
         const diffEmMs = Date.now() - new Date(timestamp).getTime();
         const minutos = Math.floor(diffEmMs / 60000);
-        if (minutos < 1) return "&lt; 1 minuto";
-        if (minutos === 1) return "há 1 minuto";
-        return `há ${minutos} minutos`;
+        if (minutos < 1) return "&lt; 1 min";
+        if (minutos === 1) return "há 1 min";
+        return `há ${minutos} min`;
     }
 
     let modoPendente = null; let seletorGlobal = null;
@@ -358,17 +353,14 @@
             modoPendente = novoModo; seletorGlobal = selectElement; document.getElementById('inputSenhaModo').value = ''; document.getElementById('modalSenhaModo').style.display = 'flex'; setTimeout(() => document.getElementById('inputSenhaModo').focus(), 100); selectElement.value = db.configs.modo; 
         } else { efetivarTrocaModo(novoModo); }
     }
-    function confirmarTrocaModo() {
-        if (document.getElementById('inputSenhaModo').value === db.configs.senhaModo) { document.getElementById('modalSenhaModo').style.display = 'none'; seletorGlobal.value = modoPendente; efetivarTrocaModo(modoPendente); } else { alert("Senha incorreta!"); document.getElementById('inputSenhaModo').value = ''; }
-    }
+    function confirmarTrocaModo() { if (document.getElementById('inputSenhaModo').value === db.configs.senhaModo) { document.getElementById('modalSenhaModo').style.display = 'none'; seletorGlobal.value = modoPendente; efetivarTrocaModo(modoPendente); } else { alert("Senha incorreta!"); document.getElementById('inputSenhaModo').value = ''; } }
     function cancelarTrocaModo() { document.getElementById('modalSenhaModo').style.display = 'none'; seletorGlobal.value = db.configs.modo; modoPendente = null; }
     function efetivarTrocaModo(modo) { db.configs.modo = modo; salvarBancoLocal(); aplicarModoVisual(modo); }
 
     function iniciar() {
         document.getElementById('seletorModo').value = db.configs.modo || 'panelas';
         aplicarModoVisual(db.configs.modo || 'panelas');
-        solicitarWakeLock(); // Liga a tela infinita
-
+        solicitarWakeLock(); 
         const splash = document.getElementById('splashScreen');
         if (!sessionStorage.getItem('splash_v1_shown')) {
             setTimeout(() => { splash.style.opacity = '0'; setTimeout(() => { splash.style.display = 'none'; sessionStorage.setItem('splash_v1_shown', 'true'); }, 500); }, 2000); 
@@ -421,7 +413,7 @@
         const tempId = Date.now().toString();
         const pedidoTemporario = { id: tempId, produto: nomeParaEnviar, status: 'pendente', timestamp: new Date().toISOString(), finalizadoEm: '', motivo: '', isTemp: true, localTime: Date.now() };
         
-        pedidosPendentesLocais.push(pedidoTemporario); // Salva na memória de curto prazo
+        pedidosPendentesLocais.push(pedidoTemporario); 
         pedidosServidor.push(pedidoTemporario);
         renderizarUltimosPedidos(); 
 
@@ -454,17 +446,13 @@
         try {
             const resp = await fetch(db.configs.url);
             const dadosServidor = await resp.json();
-            document.getElementById('indicadorConexao').innerHTML = '🟢'; // Online
+            document.getElementById('indicadorConexao').innerHTML = '🟢'; 
             
-            // Lógica Antirreflexo (Pisca-Pisca)
-            // Remove pedidos temporários que já tem mais de 20 segundos (tempo limite para o Google salvar)
             pedidosPendentesLocais = pedidosPendentesLocais.filter(p => (Date.now() - p.localTime) < 20000);
-            // Filtra os temporários que já chegaram no servidor (nome igual e status pendente nos ultimos 20s)
             pedidosPendentesLocais = pedidosPendentesLocais.filter(pTemp => {
                 return !dadosServidor.some(pServ => pServ.produto === pTemp.produto && pServ.status === 'pendente' && Math.abs(new Date(pServ.timestamp).getTime() - pTemp.localTime) < 25000);
             });
 
-            // Junta servidor + temporários
             let mixPedidos = dadosServidor.concat(pedidosPendentesLocais);
 
             pedidosServidor = mixPedidos.map(pServ => {
@@ -478,7 +466,7 @@
             if(db.configs.modo === 'cozinha') { renderizarListaCozinha(); } else { renderizarUltimosPedidos(); }
             gerenciarAlarme();
         } catch(e) { 
-            document.getElementById('indicadorConexao').innerHTML = '🔴'; // Offline
+            document.getElementById('indicadorConexao').innerHTML = '🔴'; 
         }
     }
 
@@ -486,8 +474,6 @@
 
     function renderizarUltimosPedidos() {
         const lista = document.getElementById('listaUltimosPedidosPanelas'); const agora = Date.now(); lista.innerHTML = '';
-        
-        // Exibe apenas o dia de hoje nos últimos pedidos
         const dataHoje = new Date().toDateString();
         let todosRecentes = pedidosServidor.filter(p => new Date(p.timestamp).toDateString() === dataHoje).filter(p => {
             if(p.status !== 'concluido' && p.status !== 'enviado' && p.status !== 'buscar' && p.status !== 'cancelado') return true;
@@ -524,15 +510,54 @@
     function renderizarListaCozinha() {
         const lista = document.getElementById('listaPedidosCozinha'); const agora = Date.now(); lista.innerHTML = '';
         const dataHoje = new Date().toDateString();
+        
         pedidosServidor.filter(p => new Date(p.timestamp).toDateString() === dataHoje).filter(p => {
             if(p.status !== 'concluido' && p.status !== 'enviado' && p.status !== 'buscar' && p.status !== 'cancelado') return true;
             return (agora - new Date(p.finalizadoEm).getTime()) < 300000;
         }).reverse().forEach(p => {
+            
             let emoji = '🔔'; let isFinal = false; let formatProduto = `<strong>${p.produto}</strong>`;
-            if (p.status === 'pendente') { emoji = '🔔'; } else if (p.status === 'fazendo') { emoji = '🔥'; } else if (p.status === 'enviado') { emoji = '✔️'; isFinal = true; } else if (p.status === 'buscar') { emoji = '✔️'; isFinal = true; } else if (p.status === 'cancelado') { emoji = '❌'; isFinal = true; }
+            let acaoTxt = ""; let tempoStr = ""; 
+            
+            if (p.status === 'pendente') { emoji = '🔔'; } 
+            else if (p.status === 'fazendo') { emoji = '🔥'; tempoStr = getTempoRelativo(p.timestamp); } 
+            else if (p.status === 'enviado') { 
+                emoji = '✔️'; isFinal = true; 
+                acaoTxt = '👈 Deslize: desfazer o envio - <b>[Enviado]</b>';
+            } 
+            else if (p.status === 'buscar') { 
+                emoji = '✔️'; isFinal = true; 
+                acaoTxt = '👈 Deslize: desfazer - <b>[Mandou Buscar]</b>';
+            } 
+            else if (p.status === 'cancelado') { 
+                emoji = '❌'; isFinal = true; 
+                acaoTxt = p.motivo ? `👈 Deslize: desfazer (Motivo: ${p.motivo})` : '👈 Deslize: desfazer';
+            }
+            
             let cssStatus = isFinal ? (p.status==='cancelado' ? 'cancelado' : 'concluido') : p.status;
-            let tempoStr = ""; if (!isFinal) { tempoStr = getTempoRelativo(p.timestamp); } else if (p.status === 'cancelado' && p.motivo) { tempoStr = `Motivo: ${p.motivo}`; }
-            lista.innerHTML += `<li class="item status-${cssStatus}" id="ped-${p.id}" data-id="${p.id}" data-status="${p.status}" data-nome="${p.produto}" ontouchstart="handleTouchStart(event, this)" ontouchmove="handleTouchMove(event)" ontouchend="handleTouchEnd(event, this)"><div class="item-avatar" style="background:transparent; font-size:24px; margin-right: 10px;">${emoji}</div><div class="item-info" style="display:flex; justify-content:space-between; align-items:center;"><div class="item-title" style="margin: 0;">${formatProduto}</div><div style="font-size:13px; color:#888;">${tempoStr}</div></div></li>`;
+            
+            // Calculando o "Entregue em X minutos"
+            if (isFinal && p.finalizadoEm && p.status !== 'cancelado') {
+                let minEntrega = Math.floor((new Date(p.finalizadoEm).getTime() - new Date(p.timestamp).getTime()) / 60000);
+                tempoStr = minEntrega < 1 ? "Entregue &lt; 1 min" : `Entregue em ${minEntrega} min`;
+            } else if (p.status === 'cancelado') {
+                tempoStr = ""; 
+            }
+
+            let subtitleHtml = acaoTxt ? `<div class="item-subtitle">${acaoTxt}</div>` : '';
+
+            lista.innerHTML += `
+                <li class="item status-${cssStatus}" id="ped-${p.id}" data-id="${p.id}" data-status="${p.status}" data-nome="${p.produto}" ontouchstart="handleTouchStart(event, this)" ontouchmove="handleTouchMove(event)" ontouchend="handleTouchEnd(event, this)">
+                    <div class="item-avatar" style="background:transparent; font-size:24px; margin-right: 10px;">${emoji}</div>
+                    <div class="item-info" style="display:flex; justify-content:space-between; align-items:center;">
+                        <div>
+                            <div class="item-title" style="margin: 0;">${formatProduto}</div>
+                            ${subtitleHtml}
+                        </div>
+                        <div style="font-size:13px; color:#888; font-weight:bold; white-space:nowrap; margin-left:10px;">${tempoStr}</div>
+                    </div>
+                </li>
+            `;
         });
     }
 
@@ -569,7 +594,6 @@
     
     function pararAlarme() { document.getElementById('mainHeader').classList.remove('alerta-pisca', 'alerta-pisca-buscar'); playerAlarme.pause(); alarmeTocando = false; }
 
-    // --- HISTÓRICO COM EXCLUSÃO (DUPLO CLIQUE) ---
     let histLastTap = 0; let histTapTimer;
     function acaoDuploCliqueHistorico(id) {
         let currentTime = new Date().getTime(); let tapLength = currentTime - histLastTap;
@@ -597,7 +621,6 @@
         document.getElementById('modalHistorico').style.display = 'flex';
     }
 
-    // --- ZERAR O DIA (BOTÃO VASSOURA) ---
     function limparHistoricoHoje() {
         let senha = prompt("⚠️ ZERAR O EXPEDIENTE DE HOJE?\nIsso apagará os testes/pedidos de hoje da tela e do servidor.\n\nDigite a senha ADM:");
         if (senha === "1999") {
@@ -610,10 +633,8 @@
     }
 
     function fecharModal(id) { document.getElementById(id).style.display = 'none'; }
-    
     function abrirLoginAdmin() { document.getElementById('senhaAdmin').value = ''; document.getElementById('modalLoginAdmin').style.display = 'flex'; setTimeout(()=>document.getElementById('senhaAdmin').focus(), 100); }
     
-    // --- FUNÇÕES AVANÇADAS ---
     function solicitarAcessoAvancado() {
         let senha = prompt("ZONA DE RISCO. Digite a senha ADM:");
         if (senha === "1999") { fecharModal('modalPainelUnificado'); document.getElementById('inputExcluirTudo').value = ''; document.getElementById('modalConfigAvancadas').style.display = 'flex'; } else if(senha) { alert("Senha incorreta!"); }
@@ -629,44 +650,78 @@
         } else { alert("Frase de segurança incorreta."); }
     }
 
-    function forcarAtualizacao() {
-        localStorage.removeItem('kds_v1_db'); sessionStorage.clear();
-        window.location.reload(true);
-    }
+    function forcarAtualizacao() { localStorage.removeItem('kds_v1_db'); sessionStorage.clear(); window.location.reload(true); }
 
-    // --- CÁLCULO DE MÉTRICAS ---
+    // --- MÉTRICAS POR ITEM ---
     function abrirModalMetricas() {
         fecharModal('modalPainelUnificado');
-        const dataHoje = new Date().toDateString(); const seteDiasAtras = Date.now() - (7 * 86400000);
-        let qtdHoje = 0; let somaMinHoje = 0; let baseDivisaoHoje = 0;
-        let qtdSemana = 0; let somaMinSemana = 0; let baseDivisaoSemana = 0;
+        renderizarMetricasDetalhes('hoje');
+        document.getElementById('modalMetricas').style.display = 'flex';
+    }
+
+    function renderizarMetricasDetalhes(periodo) {
+        document.getElementById('btnAbaHoje').classList.remove('active');
+        document.getElementById('btnAbaSemana').classList.remove('active');
+        if(periodo === 'hoje') document.getElementById('btnAbaHoje').classList.add('active');
+        else document.getElementById('btnAbaSemana').classList.add('active');
+
+        const dataHoje = new Date().toDateString(); 
+        const seteDiasAtras = Date.now() - (7 * 86400000);
+        
+        let stats = {}; 
+        let totalGeral = 0;
 
         pedidosServidor.forEach(p => {
             let dataPed = new Date(p.timestamp);
-            let ehHoje = dataPed.toDateString() === dataHoje;
-            let ehSemana = dataPed.getTime() >= seteDiasAtras;
-            
-            if(ehHoje) qtdHoje++;
-            if(ehSemana) qtdSemana++;
+            let incluir = false;
+            if (periodo === 'hoje' && dataPed.toDateString() === dataHoje) incluir = true;
+            if (periodo === 'semana' && dataPed.getTime() >= seteDiasAtras) incluir = true;
 
-            if(p.status === 'enviado' || p.status === 'buscar' || p.status === 'concluido') {
-                if(p.finalizadoEm) {
+            if (incluir) {
+                // Remove a observação do nome para agrupar corretamente o produto "Feijão (Obs: sem sal)" -> conta como "Feijão"
+                let nomeBase = p.produto.split(" (Obs:")[0]; 
+                
+                if (!stats[nomeBase]) stats[nomeBase] = { qtd: 0, tempoTotal: 0, countTempo: 0 };
+                stats[nomeBase].qtd++;
+                totalGeral++;
+
+                if ((p.status === 'enviado' || p.status === 'buscar' || p.status === 'concluido') && p.finalizadoEm) {
                     let minutos = (new Date(p.finalizadoEm).getTime() - dataPed.getTime()) / 60000;
-                    if(ehHoje) { somaMinHoje += minutos; baseDivisaoHoje++; }
-                    if(ehSemana) { somaMinSemana += minutos; baseDivisaoSemana++; }
+                    stats[nomeBase].tempoTotal += minutos;
+                    stats[nomeBase].countTempo++;
                 }
             }
         });
 
-        let medHoje = baseDivisaoHoje > 0 ? Math.round(somaMinHoje / baseDivisaoHoje) : 0;
-        let medSemana = baseDivisaoSemana > 0 ? Math.round(somaMinSemana / baseDivisaoSemana) : 0;
+        document.getElementById('metricaTotalQtd').innerText = totalGeral;
+        const lista = document.getElementById('listaMetricasDetalhes');
+        lista.innerHTML = '';
 
-        document.getElementById('metricaHojeQtd').innerText = qtdHoje;
-        document.getElementById('metricaHojeTempo').innerText = medHoje + " min";
-        document.getElementById('metricaSemanaQtd').innerText = qtdSemana;
-        document.getElementById('metricaSemanaTempo').innerText = medSemana + " min";
+        let arrayStats = Object.keys(stats).map(k => ({ nome: k, ...stats[k] }));
+        arrayStats.sort((a, b) => b.qtd - a.qtd); 
 
-        document.getElementById('modalMetricas').style.display = 'flex';
+        if(arrayStats.length === 0) {
+            lista.innerHTML = '<li style="padding: 15px; text-align: center; color: #999;">Nenhum dado no período.</li>';
+            return;
+        }
+
+        arrayStats.forEach(item => {
+            let media = item.countTempo > 0 ? Math.round(item.tempoTotal / item.countTempo) : 0;
+            let tempoStr = media < 1 ? "&lt; 1 min" : `${media} min`;
+            if(item.countTempo === 0) tempoStr = "-"; 
+
+            lista.innerHTML += `
+                <li class="item" style="padding: 10px; border-bottom: 1px solid #eee; display:flex; justify-content:space-between; align-items:center;">
+                    <div style="flex:1;">
+                        <strong style="font-size:14px; color:#333;">${item.nome}</strong>
+                    </div>
+                    <div style="text-align:right; font-size:13px; color:#555;">
+                        <span style="display:inline-block; width:40px; text-align:center; background:#e0e0e0; border-radius:10px; padding:2px 5px; font-weight:bold;">${item.qtd}x</span>
+                        <span style="display:inline-block; width:65px; text-align:right; color:#2e7d32; font-weight:bold;">⏱️ ${tempoStr}</span>
+                    </div>
+                </li>
+            `;
+        });
     }
 
     async function sincronizarPuxarNuvem(pedirConfirmacao) {
@@ -680,7 +735,7 @@
 
     async function sincronizarSalvarNuvem() {
         if(!db.configs.url) return alert("Salve a URL!");
-        try { document.querySelector('#modalPainelUnificado .btn-outline:last-of-type').innerText = "Salvando..."; await fetch(db.configs.url, { method: 'POST', mode: 'no-cors', body: JSON.stringify({ action: 'salvar_banco', dados: { produtos: db.produtos, categorias: db.categorias, obsPedidos: db.obsPedidos, obsCancelamentos: db.obsCancelamentos } }) }); alert("Salvo na Nuvem!"); } catch(e) { alert("Erro nuvem."); } document.querySelector('#modalPainelUnificado .btn-outline:last-of-type').innerText = "⬆️ Salvar na Nuvem";
+        try { document.querySelector('#modalPainelUnificado .btn-outline:nth-last-child(3)').innerText = "Salvando..."; await fetch(db.configs.url, { method: 'POST', mode: 'no-cors', body: JSON.stringify({ action: 'salvar_banco', dados: { produtos: db.produtos, categorias: db.categorias, obsPedidos: db.obsPedidos, obsCancelamentos: db.obsCancelamentos } }) }); alert("Salvo na Nuvem!"); } catch(e) { alert("Erro nuvem."); } document.querySelector('#modalPainelUnificado .btn-outline:nth-last-child(3)').innerText = "⬆️ Salvar na Nuvem";
     }
 
     function salvarURL() { const urlInput = document.getElementById('configUrlApp').value.trim(); if(urlInput === "") return alert("Vazio."); db.configs.url = urlInput; salvarBancoLocal(); sincronizarPuxarNuvem(false); alert("URL salva e sincronizada!"); }
