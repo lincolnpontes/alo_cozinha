@@ -8,18 +8,18 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
     <meta name="mobile-web-app-capable" content="yes">
     <meta name="theme-color" content="#1565C0" id="metaThemeColor">
-    <title>Alô Cozinha v1.0</title>
+    <title>Alô Cozinha v1.1</title>
 
     <style>
-        /* MUDANÇA 2: Bloqueio do menu nativo e seleção de texto */
         body { font-family: Arial, sans-serif; background-color: #f0f2f5; margin: 0; padding: 0; display: flex; justify-content: center; user-select: none; -webkit-user-select: none; -webkit-touch-callout: none; }
         input, select { user-select: auto; -webkit-user-select: auto; }
         
-        /* MUDANÇA 1: max-width alterado para 100% para ocupar toda a tela do tablet */
         .app-container { width: 100%; max-width: 100%; background-color: #ffffff; height: 100vh; display: flex; flex-direction: column; box-shadow: 0 0 10px rgba(0,0,0,0.1); position: relative; overflow: hidden; }
         
+        #overlayInatividade { position: fixed; top: 0; left: 0; width: 100%; height: 100%; background-color: rgba(0, 0, 0, 0.65); z-index: 9998; pointer-events: none; display: none; transition: opacity 0.5s; opacity: 0; }
+
         #splashScreen { position: fixed; top: 0; left: 0; width: 100%; height: 100%; background-color: #1565C0; z-index: 9999; display: flex; flex-direction: column; align-items: center; justify-content: center; color: white; transition: opacity 0.5s ease; }
-        .splash-icone { width: 120px; height: 120px; margin-bottom: 20px; border-radius: 25%; object-fit: cover; box-shadow: 0 4px 15px rgba(0,0,0,0.3); background-color: #fff; }
+        .splash-icone { width: 120px; height: 120px; margin-bottom: 20px; border-radius: 25%; object-fit: contain; box-shadow: 0 4px 15px rgba(0,0,0,0.3); background-color: transparent; }
         .splash-titulo { font-size: 32px; font-weight: bold; margin-bottom: 5px; }
         .splash-versao { font-size: 16px; opacity: 0.8; }
 
@@ -45,7 +45,7 @@
         .list { padding: 0; margin: 0; list-style: none; padding-bottom: 20px; }
         .item { display: flex; align-items: center; padding: 12px 15px; border-bottom: 1px solid #eee; cursor: pointer; transition: transform 0.2s; overflow: hidden; }
         .item:active { background-color: #e3f2fd; }
-        .item-avatar { background-color: #BBDEFB; color: #1565C0; width: 40px; height: 40px; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-weight: bold; margin-right: 15px; min-width: 40px; flex-shrink: 0; }
+        .item-avatar { background-color: transparent; color: #1565C0; width: 40px; height: 40px; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-weight: bold; margin-right: 15px; min-width: 40px; flex-shrink: 0; }
         .item-info { flex: 1; pointer-events: none; }
         .item-title { font-weight: bold; font-size: 18px; margin-bottom: 2px; }
         .item-subtitle { color: #666; font-size: 13px; line-height: 1.4; }
@@ -97,10 +97,12 @@
 </head>
 <body class="theme-panelas" oncontextmenu="return false;">
 
+<div id="overlayInatividade"></div>
+
 <div id="splashScreen">
     <img src="icon.png" alt="Logo" class="splash-icone" onerror="this.src='data:image/svg+xml;utf8,<svg xmlns=\'http://www.w3.org/2000/svg\' viewBox=\'0 0 100 100\'><text y=\'50\' font-size=\'40\'>🍲</text></svg>'">
     <div class="splash-titulo">Alô Cozinha</div>
-    <div class="splash-versao">v1.0</div>
+    <div class="splash-versao">v1.1</div>
 </div>
 
 <div class="app-container">
@@ -164,11 +166,11 @@
         <div class="modal-title" id="tituloModalPedido">Pedir Produto</div>
         <input type="hidden" id="pedidoItemNome">
         <div class="form-group">
-            <label>Observações Rápidas:</label>
+            <label>Observações:</label>
             <div id="obsChipsContainer" style="display: flex; flex-wrap: wrap; gap: 8px; margin-bottom: 10px;"></div>
         </div>
         <div class="form-group">
-            <label>Observação do Pedido:</label>
+            <label>Digitar Observação (Opcional):</label>
             <input type="text" id="pedidoObsText" placeholder="digite aqui">
         </div>
         <div class="modal-actions">
@@ -254,20 +256,39 @@
 
 <div class="modal-overlay" id="modalPainelUnificado">
     <div class="modal">
-        <div style="text-align: center; color: #666; font-size: 13px; font-weight: bold; margin-bottom: 20px;">Alô Cozinha - v1.0</div>
+        <div style="text-align: center; color: #666; font-size: 13px; font-weight: bold; margin-bottom: 20px;">Alô Cozinha - v1.1</div>
 
         <button class="btn-outline" onclick="abrirGerenciar('produtos')">🍔 Gerenciar Produtos</button>
         <button class="btn-outline" onclick="abrirGerenciar('categorias')">🏷️ Gerenciar Categorias</button>
-        <button class="btn-outline" onclick="abrirGerenciar('obsPedidos')">💬 Obs. de Pedidos</button>
+        <button class="btn-outline" onclick="abrirGerenciar('obsPedidos')">💬 Observação dos Produtos</button>
         <button class="btn-outline" onclick="abrirGerenciar('obsCancelamentos')" style="border-color:#d32f2f; color:#d32f2f;">🗑️ Motivos Cancelamento</button>
         
         <button class="btn-outline" onclick="abrirModalMetricas()" style="border-color:#2e7d32; color:#2e7d32; margin-top: 15px;">📊 Relatórios por Item</button>
 
         <h3 style="font-size: 16px; color: #555; margin-top: 25px; margin-bottom: 10px;">Configurações Básicas</h3>
         
+        <div style="display: flex; gap: 10px; margin-bottom: 15px;">
+            <div class="form-group" style="flex: 1; margin:0;">
+                <label>Manter Tela Ativa:</label>
+                <select id="configTelaAtiva">
+                    <option value="sim">Sim (Sempre ligada)</option>
+                    <option value="nao">Não (Economiza bateria)</option>
+                </select>
+            </div>
+            <div class="form-group" style="flex: 1; margin:0;">
+                <label>Cortina de Inatividade:</label>
+                <select id="configInatividade">
+                    <option value="0">Desativado</option>
+                    <option value="1">Após 1 min</option>
+                    <option value="2">Após 2 min</option>
+                    <option value="5">Após 5 min</option>
+                </select>
+            </div>
+        </div>
+
         <div class="form-group"><label>Senha para Trocar de Modo:</label><input type="password" id="configSenhaModo" placeholder="Deixe em branco para livre" inputmode="numeric" pattern="[0-9]*" oninput="this.value = this.value.replace(/[^0-9]/g, '')"></div>
-        <div class="form-group"><label>Som Cozinha (Novo Pedido):</label><div style="display:flex; gap:10px;"><select id="configSomCozinha" style="flex:1;"><option value="sem_som">Sem som</option><option value="beep">Beep Clássico</option><option value="sino">Sino de Jantar</option><option value="sino_forte">Sino Forte</option><option value="alarme">Alarme Curto</option></select><button class="btn-cancel" style="padding: 10px;" onclick="tocarPreview('configSomCozinha')">▶️</button></div></div>
-        <div class="form-group"><label>Som Panelas (Atenção/Cancelado):</label><div style="display:flex; gap:10px;"><select id="configSomPanelas" style="flex:1;"><option value="sem_som">Sem som</option><option value="beep">Beep Clássico</option><option value="sino">Sino de Jantar</option><option value="sino_forte">Sino Forte</option><option value="alarme">Alarme Curto</option></select><button class="btn-cancel" style="padding: 10px;" onclick="tocarPreview('configSomPanelas')">▶️</button></div></div>
+        <div class="form-group"><label>Som Cozinha (Novo Pedido):</label><div style="display:flex; gap:10px;"><select id="configSomCozinha" style="flex:1;"><option value="sem_som">Sem som</option><option value="beep">Beep Clássico</option><option value="beep_duplo">Beep Duplo</option><option value="sino">Sino de Jantar</option><option value="sino_forte">Sino Forte</option><option value="mecanico">Sino Mecânico</option><option value="alarme">Alarme Curto</option><option value="digital">Relógio Digital</option><option value="suave">Gota Suave</option></select><button class="btn-cancel" style="padding: 10px;" onclick="tocarPreview('configSomCozinha')">▶️</button></div></div>
+        <div class="form-group"><label>Som Panelas (Atenção/Cancelado):</label><div style="display:flex; gap:10px;"><select id="configSomPanelas" style="flex:1;"><option value="sem_som">Sem som</option><option value="beep">Beep Clássico</option><option value="beep_duplo">Beep Duplo</option><option value="sino">Sino de Jantar</option><option value="sino_forte">Sino Forte</option><option value="mecanico">Sino Mecânico</option><option value="alarme">Alarme Curto</option><option value="digital">Relógio Digital</option><option value="suave">Gota Suave</option></select><button class="btn-cancel" style="padding: 10px;" onclick="tocarPreview('configSomPanelas')">▶️</button></div></div>
         
         <h3 style="font-size: 16px; color: #d32f2f; margin-top: 25px; margin-bottom: 10px;">Avançado</h3>
         <button class="btn-danger" onclick="solicitarAcessoAvancado()">⚠️ Configurações Avançadas</button>
@@ -290,6 +311,13 @@
         </div>
         <div style="display: flex; gap: 10px; margin-bottom: 20px;">
             <button id="btnSalvarNuvem" class="btn-outline" style="margin: 0; flex: 1; justify-content: center; font-size: 13px; border-color:#2e7d32; color:#2e7d32;" onclick="sincronizarSalvarNuvem()">⬆️ Salvar Prod. e Categ. na Nuvem</button>
+        </div>
+
+        <h3 style="font-size: 15px; color: #333; margin-top: 0; margin-bottom: 10px;">Backup Físico do Aparelho</h3>
+        <div style="display: flex; gap: 10px; margin-bottom: 20px;">
+            <button class="btn-outline" style="margin: 0; flex: 1; justify-content: center; font-size: 13px;" onclick="exportarDadosFisicos()">📤 Exportar (Baixar)</button>
+            <button class="btn-outline" style="margin: 0; flex: 1; justify-content: center; font-size: 13px;" onclick="document.getElementById('fileImportacao').click()">📥 Importar</button>
+            <input type="file" id="fileImportacao" style="display:none" accept=".json" onchange="importarDadosFisicos(event)">
         </div>
 
         <hr style="border: 0; border-top: 1px solid #eee; margin: 20px 0;">
@@ -355,7 +383,7 @@
 </div>
 
 <div class="modal-overlay" id="modalListagem"><div class="modal"><div class="modal-title" id="tituloListagem">Gerenciar</div><button class="btn-action" id="btnNovoListagem" style="width: 100%; margin-bottom: 15px;">+ Novo</button><div id="conteudoListagem" style="max-height: 50vh; overflow-y: auto; padding-right: 5px;"></div><div class="modal-actions"><button class="btn-cancel" onclick="voltarParaPainelGeral()">Voltar</button></div></div></div>
-<div class="modal-overlay" id="modalFormProduto"><div class="modal"><div class="modal-title">Produto</div><input type="hidden" id="prodIndexOriginal"><div class="form-group"><label>Nome do Produto:</label><input type="text" id="prodNome"></div><div class="form-group"><label>Categoria:</label><select id="prodCategoria"></select></div><div class="modal-actions"><button class="btn-cancel" onclick="fecharModal('modalFormProduto'); abrirGerenciar('produtos')">Cancelar</button><button class="btn-action" onclick="salvarProduto()">Salvar</button></div></div></div>
+<div class="modal-overlay" id="modalFormProduto"><div class="modal"><div class="modal-title">Produto</div><input type="hidden" id="prodIndexOriginal"><div class="form-group"><label>Nome do Produto:</label><input type="text" id="prodNome"></div><div class="form-group"><label>Categoria:</label><select id="prodCategoria"></select></div><div class="form-group"><label>Observações Específicas <span style="font-size:11px; font-weight:normal;">(Separe por vírgula)</span>:</label><input type="text" id="prodObsEspec" placeholder="Ex: Ao ponto, Sem Gelo"></div><div class="modal-actions"><button class="btn-cancel" onclick="fecharModal('modalFormProduto'); abrirGerenciar('produtos')">Cancelar</button><button class="btn-action" onclick="salvarProduto()">Salvar</button></div></div></div>
 <div class="modal-overlay" id="modalFormCategoria"><div class="modal"><div class="modal-title">Categoria</div><input type="hidden" id="catIndexOriginal"><div class="form-group"><label>Nome da Categoria:</label><input type="text" id="catNome"></div><div style="display: flex; gap: 10px;"><div class="form-group" style="flex: 1;"><label>Cor do Fundo:</label><input type="color" id="catCor" value="#1976D2"></div><div class="form-group" style="flex: 1;"><label>Cor do Texto:</label><input type="color" id="catCorTexto" value="#ffffff"></div></div><div class="modal-actions"><button class="btn-cancel" onclick="fecharModal('modalFormCategoria'); abrirGerenciar('categorias')">Cancelar</button><button class="btn-action" onclick="salvarCategoria()">Salvar</button></div></div></div>
 
 <script>
@@ -370,13 +398,46 @@
     let acaoPendente = null;
     let parametroAcao = null;
 
+    // Fila invisível contra quedas de internet ("Caça-Fantasma")
+    let filaRetentativaStatus = JSON.parse(localStorage.getItem('kds_fila_status') || '[]');
+
     const hierarquiaStatus = { 'pendente': 1, 'fazendo': 2, 'enviado': 3, 'buscar': 3, 'cancelado': 4, 'concluido': 5 };
 
-    const sonsDisponiveis = { "sem_som": "", "beep": "https://actions.google.com/sounds/v1/alarms/beep_short.ogg", "sino": "https://actions.google.com/sounds/v1/alarms/dinner_bell_triangle.ogg", "sino_forte": "https://actions.google.com/sounds/v1/alarms/medium_bell_ringing_near.ogg", "alarme": "https://actions.google.com/sounds/v1/alarms/alarm_clock.ogg" };
+    const sonsDisponiveis = { 
+        "sem_som": "", 
+        "beep": "https://actions.google.com/sounds/v1/alarms/beep_short.ogg", 
+        "beep_duplo": "https://actions.google.com/sounds/v1/alarms/double_beep.ogg",
+        "sino": "https://actions.google.com/sounds/v1/alarms/dinner_bell_triangle.ogg", 
+        "sino_forte": "https://actions.google.com/sounds/v1/alarms/medium_bell_ringing_near.ogg", 
+        "mecanico": "https://actions.google.com/sounds/v1/alarms/mechanical_clock_ring.ogg",
+        "alarme": "https://actions.google.com/sounds/v1/alarms/alarm_clock.ogg",
+        "digital": "https://actions.google.com/sounds/v1/alarms/digital_watch_alarm_long.ogg",
+        "suave": "https://actions.google.com/sounds/v1/water/water_drop.ogg"
+    };
     let playerAlarme = new Audio(); playerAlarme.loop = true; let alarmeTocando = false; let previewAudio = null; let previewTimeout = null;
 
-    async function solicitarWakeLock() { try { if ('wakeLock' in navigator) { wakeLock = await navigator.wakeLock.request('screen'); } } catch (err) { console.log('Wake Lock falhou:', err); } }
-    document.addEventListener('visibilitychange', async () => { if (wakeLock !== null && document.visibilityState === 'visible') solicitarWakeLock(); });
+    let timerInatividade = null;
+    function resetInatividade() {
+        document.getElementById('overlayInatividade').style.opacity = '0';
+        setTimeout(() => document.getElementById('overlayInatividade').style.display = 'none', 300);
+        clearTimeout(timerInatividade);
+        let tempoMinutos = parseInt(db.configs.inatividade || 0);
+        if(tempoMinutos > 0) {
+            timerInatividade = setTimeout(() => {
+                document.getElementById('overlayInatividade').style.display = 'block';
+                setTimeout(() => document.getElementById('overlayInatividade').style.opacity = '1', 50);
+            }, tempoMinutos * 60000);
+        }
+    }
+    document.addEventListener('touchstart', resetInatividade); document.addEventListener('mousemove', resetInatividade); document.addEventListener('click', resetInatividade);
+
+    async function solicitarWakeLock() { 
+        if(db.configs.telaAtiva === "nao") {
+            if(wakeLock !== null) { wakeLock.release(); wakeLock = null; } return;
+        }
+        try { if ('wakeLock' in navigator) { wakeLock = await navigator.wakeLock.request('screen'); } } catch (err) {} 
+    }
+    document.addEventListener('visibilitychange', async () => { if (document.visibilityState === 'visible') solicitarWakeLock(); });
 
     function tocarPreview(selectId) {
         if(previewAudio) { previewAudio.pause(); previewAudio.currentTime = 0; }
@@ -388,16 +449,19 @@
     }
 
     function carregarBanco() {
-        let defaultDB = { produtos: [], categorias: [], obsPedidos: ["Sem sal", "Pouco óleo"], obsCancelamentos: ["Falta de insumo", "Queimou"], configs: { modo: "panelas", url: "", senhaModo: "", somCozinha: "sem_som", somPanelas: "sem_som", dadosBaixados: false } };
+        let defaultDB = { produtos: [], categorias: [], obsPedidos: ["Sem sal", "Pouco óleo"], obsCancelamentos: ["Falta de insumo", "Queimou"], configs: { modo: "panelas", url: "", senhaModo: "", somCozinha: "sem_som", somPanelas: "sem_som", dadosBaixados: false, telaAtiva: "sim", inatividade: "0" } };
         let local = JSON.parse(localStorage.getItem('kds_v1_db'));
         if(local) { 
             if(!local.configs) local.configs = defaultDB.configs; 
             if(typeof local.configs.dadosBaixados === 'undefined') local.configs.dadosBaixados = false;
+            if(!local.configs.telaAtiva) local.configs.telaAtiva = "sim";
+            if(!local.configs.inatividade) local.configs.inatividade = "0";
             return local; 
         }
         return defaultDB;
     }
     function salvarBancoLocal() { localStorage.setItem('kds_v1_db', JSON.stringify(db)); }
+    function salvarFilaStatus() { localStorage.setItem('kds_fila_status', JSON.stringify(filaRetentativaStatus)); }
 
     function getTempoRelativo(timestamp) {
         const diffEmMs = Date.now() - new Date(timestamp).getTime();
@@ -420,8 +484,10 @@
 
     function iniciar() {
         document.getElementById('seletorModo').value = db.configs.modo || 'panelas';
+        document.getElementById('configTelaAtiva').value = db.configs.telaAtiva || "sim";
+        document.getElementById('configInatividade').value = db.configs.inatividade || "0";
         aplicarModoVisual(db.configs.modo || 'panelas');
-        solicitarWakeLock(); 
+        solicitarWakeLock(); resetInatividade();
         const splash = document.getElementById('splashScreen');
         if (!sessionStorage.getItem('splash_v1_shown')) {
             setTimeout(() => { splash.style.opacity = '0'; setTimeout(() => { splash.style.display = 'none'; sessionStorage.setItem('splash_v1_shown', 'true'); }, 500); }, 2000); 
@@ -446,14 +512,25 @@
         const lista = document.getElementById('listaProdutosPanelas'); lista.innerHTML = '';
         let filtrados = categoriaAtual === null ? db.produtos : db.produtos.filter(p => p.categoria === categoriaAtual);
         if(filtrados.length === 0) { lista.innerHTML = '<li style="padding: 20px; text-align: center; color: #666;">Nenhum produto cadastrado.</li>'; return; }
-        filtrados.forEach(p => { const catObj = db.categorias.find(c => c.nome === p.categoria) || {cor:'#eee', corTexto:'#000'}; const primeiraLetra = p.nome.charAt(0).toUpperCase(); lista.innerHTML += `<li class="item" onclick="abrirModalPedido('${p.nome}')"><div class="item-avatar" style="background-color: ${catObj.cor}; color: ${catObj.corTexto};">${primeiraLetra}</div><div class="item-info"><div class="item-title">${p.nome}</div><div class="item-subtitle">${p.categoria}</div></div><div class="swipe-hint">➕</div></li>`; });
+        filtrados.forEach(p => { 
+            const catObj = db.categorias.find(c => c.nome === p.categoria) || {cor:'#eee', corTexto:'#000'}; 
+            // O Avatar não tem mais background branco forte, puxa a cor da categoria
+            const primeiraLetra = p.nome.charAt(0).toUpperCase(); 
+            lista.innerHTML += `<li class="item" onclick="abrirModalPedido('${p.nome}')"><div class="item-avatar" style="background-color: ${catObj.cor}; color: ${catObj.corTexto};">${primeiraLetra}</div><div class="item-info"><div class="item-title">${p.nome}</div><div class="item-subtitle">${p.categoria}</div></div><div class="swipe-hint">➕</div></li>`; 
+        });
     }
 
     function abrirModalPedido(nomeProduto) {
         if(!db.configs.url) return alert("URL não configurada! Vá na engrenagem ⚙️ > Avançadas");
         document.getElementById('tituloModalPedido').innerText = `Pedir: ${nomeProduto}`; document.getElementById('pedidoItemNome').value = nomeProduto; document.getElementById('pedidoObsText').value = '';
         const container = document.getElementById('obsChipsContainer'); container.innerHTML = '';
-        db.obsPedidos.forEach(obs => { container.innerHTML += `<div class="chip" style="font-weight: normal; background-color:#E3F2FD; color:#1565C0; border-color:#1565C0;" onclick="addObsToText('pedidoObsText', '${obs}')">${obs}</div>`; });
+        
+        // Junta Observações Globais com Específicas
+        let pObj = db.produtos.find(p => p.nome === nomeProduto);
+        let listaObs = [...db.obsPedidos];
+        if(pObj && pObj.obsEspec) listaObs = [...listaObs, ...pObj.obsEspec];
+
+        listaObs.forEach(obs => { container.innerHTML += `<div class="chip" style="font-weight: normal; background-color:#E3F2FD; color:#1565C0; border-color:#1565C0;" onclick="addObsToText('pedidoObsText', '${obs}')">${obs}</div>`; });
         document.getElementById('modalFazerPedido').style.display = 'flex';
     }
 
@@ -489,23 +566,54 @@
         }
     }
 
+    async function processarFilaRetentativas() {
+        if(filaRetentativaStatus.length === 0 || !db.configs.url) return;
+        // Pega o primeiro da fila
+        let item = filaRetentativaStatus[0];
+        try {
+            await fetch(db.configs.url, { method: 'POST', mode: 'no-cors', body: JSON.stringify(item.payload) });
+            // Se chegou aqui (o fetch não deu throw offline), removemos da fila
+            filaRetentativaStatus.shift();
+            salvarFilaStatus();
+            // Se ainda tem mais, processa no próximo pulso
+        } catch(e) { } // Silencioso, falhou porque tá sem net, tenta de novo daqui a 5s
+    }
+
+    async function alterarStatusPedido(id, novoStatus, motivo = '') {
+        pedidosBloqueados.add(id.toString()); 
+        let pedidoLocal = pedidosServidor.find(x => x.id == id);
+        
+        if(pedidoLocal) { 
+            pedidoLocal.status = novoStatus; 
+            if(novoStatus === 'enviado' || novoStatus === 'buscar' || novoStatus === 'concluido' || novoStatus === 'cancelado') {
+                pedidoLocal.finalizadoEm = new Date().toISOString(); 
+            }
+            if(motivo) pedidoLocal.motivo = motivo;
+        }
+        renderizarListaCozinha();
+        
+        // Coloca a ação na FILA de RETENTATIVAS (para combater quedas do Wi-Fi)
+        let payload = { action: (novoStatus === 'cancelado' ? 'cancelar_pedido' : 'atualizar_status'), id: id, novoStatus: novoStatus };
+        if(motivo) payload.motivo = motivo;
+        
+        filaRetentativaStatus.push({ payload: payload, time: Date.now() });
+        salvarFilaStatus();
+        processarFilaRetentativas(); // Tenta enviar logo de cara
+
+        setTimeout(() => pedidosBloqueados.delete(id.toString()), 15000);
+    }
+
     async function confirmarCancelamento() {
         const id = document.getElementById('cancelarItemId').value; const motivo = document.getElementById('cancelarObsText').value.trim();
         if(!motivo) return alert("Obrigatório informar o motivo!");
         document.getElementById('modalCancelarPedido').style.display = 'none';
-        
-        pedidosBloqueados.add(id.toString());
-        let pedidoLocal = pedidosServidor.find(x => x.id == id);
-        if(pedidoLocal) { pedidoLocal.status = 'cancelado'; pedidoLocal.motivo = motivo; pedidoLocal.finalizadoEm = new Date().toISOString(); }
-        renderizarListaCozinha();
-
-        fetch(db.configs.url, { method: 'POST', mode: 'no-cors', body: JSON.stringify({ action: 'cancelar_pedido', id: id, motivo: motivo }) })
-        .then(() => setTimeout(() => pedidosBloqueados.delete(id.toString()), 15000))
-        .catch(() => pedidosBloqueados.delete(id.toString()));
+        alterarStatusPedido(id, 'cancelado', motivo);
     }
 
     async function syncGeral() {
         if(!db.configs.url) return;
+        processarFilaRetentativas(); // Sempre que tentar sincronizar, tenta limpar a fila antes
+
         try {
             const resp = await fetch(db.configs.url);
             const dadosServidor = await resp.json();
@@ -524,7 +632,9 @@
                     if (pedidosBloqueados.has(pServ.id.toString())) { return pLocal; }
                     let pesoLocal = hierarquiaStatus[pLocal.status] || 0;
                     let pesoServidor = hierarquiaStatus[pServ.status] || 0;
-                    if (pesoLocal > pesoServidor) { return pLocal; }
+                    // Proteção extra: se eu tenho algo na fila de retentativas para esse ID, ignoro o servidor
+                    let temNaFila = filaRetentativaStatus.some(f => f.payload.id == pServ.id);
+                    if (pesoLocal > pesoServidor || temNaFila) { return pLocal; }
                 }
                 return pServ;
             });
@@ -642,16 +752,6 @@
             let currentTime = new Date().getTime(); let tapLength = currentTime - lastTap;
             if (tapLength < 350 && tapLength > 0) { clearTimeout(tapTimer); if(statusAtual === 'fazendo' || statusAtual === 'pendente') abrirModalCancelamento(id, nomeProd); } else { tapTimer = setTimeout(() => { if(statusAtual === 'pendente') alterarStatusPedido(id, 'fazendo'); }, 350); } lastTap = currentTime;
         } else if (diff > 80) { if(statusAtual === 'fazendo') alterarStatusPedido(id, 'enviado'); else if (statusAtual === 'pendente') alert("⚠️ Toque para aceitar primeiro!"); } else if (diff < -80) { if(statusAtual === 'enviado' || statusAtual === 'buscar' || statusAtual === 'cancelado' || statusAtual === 'concluido') alterarStatusPedido(id, 'fazendo'); }
-    }
-
-    function alterarStatusPedido(id, novoStatus) {
-        pedidosBloqueados.add(id.toString()); let pedidoLocal = pedidosServidor.find(x => x.id == id);
-        if(pedidoLocal) { pedidoLocal.status = novoStatus; if(novoStatus === 'enviado' || novoStatus === 'buscar' || novoStatus === 'concluido') pedidoLocal.finalizadoEm = new Date().toISOString(); }
-        renderizarListaCozinha();
-        
-        fetch(db.configs.url, { method: 'POST', mode: 'no-cors', body: JSON.stringify({ action: 'atualizar_status', id: id, novoStatus: novoStatus }) })
-        .then(() => setTimeout(() => pedidosBloqueados.delete(id.toString()), 15000))
-        .catch(() => pedidosBloqueados.delete(id.toString()));
     }
 
     function gerenciarAlarme() {
@@ -864,11 +964,19 @@
         } 
     }
 
+    // TRAVA ANTI-COLISÃO DE BANCO DE DADOS AQUI
     async function sincronizarPuxarNuvem(pedirConfirmacao) {
         if(!db.configs.url) return;
         if(pedirConfirmacao && !confirm("Deseja puxar dados da nuvem?")) return; 
         try {
             let res = await fetch(db.configs.url + "?action=carregar_banco"); let nuvemDB = await res.json();
+            
+            // Validação severa do Banco (Trava anti-outro-app)
+            if(!nuvemDB.obsCancelamentos && nuvemDB.produtos === undefined) {
+                alert("⛔ ERRO DE URL (BANCO INCOMPATÍVEL)!\n\nEste link não pertence ao banco de dados do Alô Cozinha. A operação foi abortada para proteger seu equipamento.\n\nVerifique a URL colada.");
+                return;
+            }
+
             if(nuvemDB.produtos) { 
                 db.produtos = nuvemDB.produtos; 
                 db.categorias = nuvemDB.categorias || []; 
@@ -883,9 +991,59 @@
         } catch(e) { console.log("Erro nuvem."); }
     }
 
-    function salvarURL() { const urlInput = document.getElementById('configUrlApp').value.trim(); if(urlInput === "") return alert("Vazio."); db.configs.url = urlInput; salvarBancoLocal(); sincronizarPuxarNuvem(false); alert("URL salva e sincronizada!"); }
+    // EXPORTAÇÃO E IMPORTAÇÃO FÍSICA
+    function exportarDadosFisicos() {
+        const dataStr = JSON.stringify(db);
+        const blob = new Blob([dataStr], { type: "application/json" });
+        const data = new Date();
+        const nomeArquivo = `alo_cozinha_backup_${data.getDate()}_${data.getMonth()+1}_${data.getFullYear()}.json`;
+        
+        // Tenta usar a interface nativa de compartilhamento (Web Share API) do Android/iOS
+        if (navigator.share && navigator.canShare && navigator.canShare({ files: [new File([blob], nomeArquivo, {type: blob.type})] })) {
+            const file = new File([blob], nomeArquivo, {type: blob.type});
+            navigator.share({
+                title: 'Backup Alô Cozinha',
+                text: 'Aqui está o backup do seu restaurante.',
+                files: [file]
+            }).catch(console.error);
+        } else {
+            // Fallback: Faz o download normal se estiver no PC
+            const a = document.createElement("a");
+            const url = URL.createObjectURL(blob);
+            a.href = url;
+            a.download = nomeArquivo;
+            document.body.appendChild(a);
+            a.click();
+            setTimeout(() => { document.body.removeChild(a); window.URL.revokeObjectURL(url); }, 0);
+        }
+    }
 
-    function fecharPainelUnificado() { db.configs.senhaModo = document.getElementById('configSenhaModo').value; db.configs.somCozinha = document.getElementById('configSomCozinha').value; db.configs.somPanelas = document.getElementById('configSomPanelas').value; salvarBancoLocal(); gerenciarAlarme(); if(previewAudio) { previewAudio.pause(); } fecharModal('modalPainelUnificado'); }
+    function importarDadosFisicos(event) {
+        const file = event.target.files[0];
+        if (!file) return;
+        const reader = new FileReader();
+        reader.onload = function(e) {
+            try {
+                const importedDB = JSON.parse(e.target.result);
+                if (importedDB && importedDB.produtos && importedDB.configs) {
+                    db = importedDB;
+                    db.configs.dadosBaixados = true; // Força a permissão de salvar na nuvem
+                    salvarBancoLocal();
+                    alert("✅ Banco de dados restaurado com sucesso! O aplicativo será recarregado.");
+                    location.reload();
+                } else {
+                    alert("❌ Arquivo inválido ou corrompido.");
+                }
+            } catch(err) {
+                alert("❌ Erro ao ler o arquivo JSON.");
+            }
+        };
+        reader.readAsText(file);
+    }
+
+    function salvarURL() { const urlInput = document.getElementById('configUrlApp').value.trim(); if(urlInput === "") return alert("Vazio."); db.configs.url = urlInput; salvarBancoLocal(); sincronizarPuxarNuvem(false); alert("URL salva e testada! (Aguarde alguns segundos para carregamento completo)"); }
+
+    function fecharPainelUnificado() { db.configs.senhaModo = document.getElementById('configSenhaModo').value; db.configs.somCozinha = document.getElementById('configSomCozinha').value; db.configs.somPanelas = document.getElementById('configSomPanelas').value; db.configs.telaAtiva = document.getElementById('configTelaAtiva').value; db.configs.inatividade = document.getElementById('configInatividade').value; salvarBancoLocal(); solicitarWakeLock(); resetInatividade(); gerenciarAlarme(); if(previewAudio) { previewAudio.pause(); } fecharModal('modalPainelUnificado'); }
     
     function voltarParaPainelGeral() { fecharModal('modalListagem'); document.getElementById('modalPainelUnificado').style.display = 'flex'; }
 
@@ -894,21 +1052,52 @@
     function abrirGerenciar(tipo) {
         fecharModal('modalPainelUnificado'); fecharModal('modalFormProduto'); fecharModal('modalFormCategoria');
         const lista = document.getElementById('conteudoListagem'); const btnNovo = document.getElementById('btnNovoListagem'); const titulo = document.getElementById('tituloListagem'); lista.innerHTML = '';
-        if(tipo === 'produtos') { titulo.innerText = "Gerenciar Produtos"; btnNovo.onclick = () => abrirFormProduto(-1); db.produtos.forEach((p, idx) => { lista.innerHTML += `<div class="gerenciar-item"><div class="gerenciar-info"><strong>${p.nome}</strong><br><span style="color:#666">${p.categoria}</span></div><div class="gerenciar-actions"><button onclick="moverItem('produtos', ${idx}, 'cima')">🔼</button><button onclick="moverItem('produtos', ${idx}, 'baixo')">🔽</button><button onclick="abrirFormProduto(${idx})">✏️</button><button onclick="excluirItem('produtos', ${idx})">🗑️</button></div></div>`; }); } else if (tipo === 'categorias') { titulo.innerText = "Gerenciar Categorias"; btnNovo.onclick = () => abrirFormCategoria(-1); db.categorias.forEach((c, idx) => { lista.innerHTML += `<div class="gerenciar-item"><div class="gerenciar-info"><span class="color-preview" style="background:${c.cor}; color:${c.corTexto}">${c.nome}</span></div><div class="gerenciar-actions"><button onclick="moverItem('categorias', ${idx}, 'cima')">🔼</button><button onclick="moverItem('categorias', ${idx}, 'baixo')">🔽</button><button onclick="abrirFormCategoria(${idx})">✏️</button><button onclick="excluirItem('categorias', '${c.nome}')">🗑️</button></div></div>`; }); } else if (tipo === 'obsPedidos') { titulo.innerText = "Obs. de Pedidos"; btnNovo.onclick = () => novaObservacao('obsPedidos'); db.obsPedidos.forEach((obs, idx) => { lista.innerHTML += `<div class="gerenciar-item"><div class="gerenciar-info"><strong>${obs}</strong></div><div class="gerenciar-actions"><button onclick="moverItem('obsPedidos', ${idx}, 'cima')">🔼</button><button onclick="moverItem('obsPedidos', ${idx}, 'baixo')">🔽</button><button onclick="excluirItem('obsPedidos', '${obs}')">🗑️</button></div></div>`; }); } else if (tipo === 'obsCancelamentos') { titulo.innerText = "Motivos Cancelamento"; btnNovo.onclick = () => novaObservacao('obsCancelamentos'); db.obsCancelamentos.forEach((obs, idx) => { lista.innerHTML += `<div class="gerenciar-item"><div class="gerenciar-info"><strong>${obs}</strong></div><div class="gerenciar-actions"><button onclick="moverItem('obsCancelamentos', ${idx}, 'cima')">🔼</button><button onclick="moverItem('obsCancelamentos', ${idx}, 'baixo')">🔽</button><button onclick="excluirItem('obsCancelamentos', '${obs}')">🗑️</button></div></div>`; }); }
+        if(tipo === 'produtos') { titulo.innerText = "Gerenciar Produtos"; btnNovo.onclick = () => abrirFormProduto(-1); db.produtos.forEach((p, idx) => { lista.innerHTML += `<div class="gerenciar-item"><div class="gerenciar-info"><strong>${p.nome}</strong><br><span style="color:#666">${p.categoria}</span></div><div class="gerenciar-actions"><button onclick="moverItem('produtos', ${idx}, 'cima')">🔼</button><button onclick="moverItem('produtos', ${idx}, 'baixo')">🔽</button><button onclick="abrirFormProduto(${idx})">✏️</button><button onclick="excluirItem('produtos', ${idx})">🗑️</button></div></div>`; }); } else if (tipo === 'categorias') { titulo.innerText = "Gerenciar Categorias"; btnNovo.onclick = () => abrirFormCategoria(-1); db.categorias.forEach((c, idx) => { lista.innerHTML += `<div class="gerenciar-item"><div class="gerenciar-info"><span class="color-preview" style="background:${c.cor}; color:${c.corTexto}">${c.nome}</span></div><div class="gerenciar-actions"><button onclick="moverItem('categorias', ${idx}, 'cima')">🔼</button><button onclick="moverItem('categorias', ${idx}, 'baixo')">🔽</button><button onclick="abrirFormCategoria(${idx})">✏️</button><button onclick="excluirItem('categorias', '${c.nome}')">🗑️</button></div></div>`; }); } else if (tipo === 'obsPedidos') { titulo.innerText = "Observação dos Produtos"; btnNovo.onclick = () => novaObservacao('obsPedidos'); db.obsPedidos.forEach((obs, idx) => { lista.innerHTML += `<div class="gerenciar-item"><div class="gerenciar-info"><strong>${obs}</strong></div><div class="gerenciar-actions"><button onclick="moverItem('obsPedidos', ${idx}, 'cima')">🔼</button><button onclick="moverItem('obsPedidos', ${idx}, 'baixo')">🔽</button><button onclick="excluirItem('obsPedidos', '${obs}')">🗑️</button></div></div>`; }); } else if (tipo === 'obsCancelamentos') { titulo.innerText = "Motivos Cancelamento"; btnNovo.onclick = () => novaObservacao('obsCancelamentos'); db.obsCancelamentos.forEach((obs, idx) => { lista.innerHTML += `<div class="gerenciar-item"><div class="gerenciar-info"><strong>${obs}</strong></div><div class="gerenciar-actions"><button onclick="moverItem('obsCancelamentos', ${idx}, 'cima')">🔼</button><button onclick="moverItem('obsCancelamentos', ${idx}, 'baixo')">🔽</button><button onclick="excluirItem('obsCancelamentos', '${obs}')">🗑️</button></div></div>`; }); }
         document.getElementById('modalListagem').style.display = 'flex';
     }
 
-    function novaObservacao(tipo) { const obs = prompt(tipo === 'obsPedidos' ? "Nova observação para pedido:" : "Novo motivo de cancelamento:"); if(obs) { db[tipo].push(obs); salvarBancoLocal(); abrirGerenciar(tipo); } }
+    function novaObservacao(tipo) { const obs = prompt(tipo === 'obsPedidos' ? "Nova observação global:" : "Novo motivo de cancelamento:"); if(obs) { db[tipo].push(obs); salvarBancoLocal(); abrirGerenciar(tipo); } }
     function excluirItem(tipo, id) { if(!confirm("Certeza?")) return; if(tipo === 'produtos') db.produtos.splice(id, 1); if(tipo === 'categorias') db.categorias = db.categorias.filter(i => i.nome !== id); if(tipo === 'obsPedidos') db.obsPedidos = db.obsPedidos.filter(i => i !== id); if(tipo === 'obsCancelamentos') db.obsCancelamentos = db.obsCancelamentos.filter(i => i !== id); salvarBancoLocal(); iniciar(); abrirGerenciar(tipo); }
 
-    function abrirFormProduto(idx) { fecharModal('modalListagem'); const combo = document.getElementById('prodCategoria'); combo.innerHTML = ''; db.categorias.forEach(c => combo.innerHTML += `<option value="${c.nome}">${c.nome}</option>`); if(idx >= 0) { const p = db.produtos[idx]; document.getElementById('prodIndexOriginal').value = idx; document.getElementById('prodNome').value = p.nome; document.getElementById('prodCategoria').value = p.categoria; } else { document.getElementById('prodIndexOriginal').value = '-1'; document.getElementById('prodNome').value = ''; } document.getElementById('modalFormProduto').style.display = 'flex'; }
-    function salvarProduto() { const idx = parseInt(document.getElementById('prodIndexOriginal').value); const nome = document.getElementById('prodNome').value.trim(); const cat = document.getElementById('prodCategoria').value; if(!nome || !cat) return alert("Preencha tudo!"); if(idx >= 0) { db.produtos[idx] = { nome: nome, categoria: cat }; } else { db.produtos.push({ nome: nome, categoria: cat }); } salvarBancoLocal(); iniciar(); abrirGerenciar('produtos'); }
+    function abrirFormProduto(idx) { 
+        fecharModal('modalListagem'); 
+        const combo = document.getElementById('prodCategoria'); combo.innerHTML = ''; 
+        db.categorias.forEach(c => combo.innerHTML += `<option value="${c.nome}">${c.nome}</option>`); 
+        if(idx >= 0) { 
+            const p = db.produtos[idx]; 
+            document.getElementById('prodIndexOriginal').value = idx; 
+            document.getElementById('prodNome').value = p.nome; 
+            document.getElementById('prodCategoria').value = p.categoria; 
+            document.getElementById('prodObsEspec').value = p.obsEspec ? p.obsEspec.join(', ') : '';
+        } else { 
+            document.getElementById('prodIndexOriginal').value = '-1'; 
+            document.getElementById('prodNome').value = ''; 
+            document.getElementById('prodObsEspec').value = ''; 
+        } 
+        document.getElementById('modalFormProduto').style.display = 'flex'; 
+    }
+
+    function salvarProduto() { 
+        const idx = parseInt(document.getElementById('prodIndexOriginal').value); 
+        const nome = document.getElementById('prodNome').value.trim(); 
+        const cat = document.getElementById('prodCategoria').value; 
+        const obsStr = document.getElementById('prodObsEspec').value;
+        const obsArray = obsStr.split(',').map(s => s.trim()).filter(s => s !== '');
+
+        if(!nome || !cat) return alert("Preencha o nome e a categoria!"); 
+        if(idx >= 0) { 
+            db.produtos[idx] = { nome: nome, categoria: cat, obsEspec: obsArray }; 
+        } else { 
+            db.produtos.push({ nome: nome, categoria: cat, obsEspec: obsArray }); 
+        } 
+        salvarBancoLocal(); iniciar(); abrirGerenciar('produtos'); 
+    }
 
     function abrirFormCategoria(idx) { fecharModal('modalListagem'); if(idx >= 0) { const c = db.categorias[idx]; document.getElementById('catIndexOriginal').value = idx; document.getElementById('catNome').value = c.nome; document.getElementById('catCor').value = c.cor; document.getElementById('catCorTexto').value = c.corTexto || '#000000'; } else { document.getElementById('catIndexOriginal').value = '-1'; document.getElementById('catNome').value = ''; document.getElementById('catCor').value = '#1976D2'; document.getElementById('catCorTexto').value = '#ffffff'; } document.getElementById('modalFormCategoria').style.display = 'flex'; }
     function salvarCategoria() { const idx = parseInt(document.getElementById('catIndexOriginal').value); const nome = document.getElementById('catNome').value.trim(); const cor = document.getElementById('catCor').value; const corTexto = document.getElementById('catCorTexto').value; if(!nome) return alert("Preencha o nome!"); if(idx >= 0) { const nomeAntigo = db.categorias[idx].nome; db.categorias[idx] = { nome, cor, corTexto }; db.produtos.forEach(p => { if(p.categoria === nomeAntigo) p.categoria = nome; }); } else { db.categorias.push({ nome, cor, corTexto }); } salvarBancoLocal(); iniciar(); abrirGerenciar('categorias'); }
 
     document.getElementById('senhaAdmin').addEventListener('input', function(e) {
-        if(this.value === "1999") { this.blur(); document.getElementById('modalLoginAdmin').style.display = 'none'; document.getElementById('configUrlApp').value = db.configs.url || ''; document.getElementById('configSenhaModo').value = db.configs.senhaModo || ''; document.getElementById('configSomCozinha').value = db.configs.somCozinha || 'sem_som'; document.getElementById('configSomPanelas').value = db.configs.somPanelas || 'sem_som'; document.getElementById('modalPainelUnificado').style.display = 'flex'; this.value = ''; }
+        if(this.value === "1999") { this.blur(); document.getElementById('modalLoginAdmin').style.display = 'none'; document.getElementById('configUrlApp').value = db.configs.url || ''; document.getElementById('configSenhaModo').value = db.configs.senhaModo || ''; document.getElementById('configSomCozinha').value = db.configs.somCozinha || 'sem_som'; document.getElementById('configSomPanelas').value = db.configs.somPanelas || 'sem_som'; document.getElementById('configTelaAtiva').value = db.configs.telaAtiva || 'sim'; document.getElementById('configInatividade').value = db.configs.inatividade || '0'; document.getElementById('modalPainelUnificado').style.display = 'flex'; this.value = ''; }
     });
 
     document.getElementById('senhaAvancada').addEventListener('input', function(e) {
