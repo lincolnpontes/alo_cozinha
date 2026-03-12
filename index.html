@@ -8,14 +8,12 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
     <meta name="mobile-web-app-capable" content="yes">
     <meta name="theme-color" content="#1565C0" id="metaThemeColor">
-    <title>Alô Cozinha v1.3</title>
+    <title>Alô Cozinha v1.4</title>
 
     <style>
-        /* MUDANÇA 10: position fixed e overflow hidden blindam a tela contra rolagens indesejadas */
         body { font-family: Arial, sans-serif; background-color: #f0f2f5; margin: 0; padding: 0; display: flex; justify-content: center; user-select: none; -webkit-user-select: none; -webkit-touch-callout: none; overflow: hidden; position: fixed; width: 100%; height: 100%; }
         input, select { user-select: auto; -webkit-user-select: auto; }
         
-        /* MUDANÇA 10: app-container agora preenche os 100% da tela travada */
         .app-container { width: 100%; max-width: 100%; background-color: #ffffff; height: 100%; display: flex; flex-direction: column; box-shadow: 0 0 10px rgba(0,0,0,0.1); position: relative; overflow: hidden; }
         
         #overlayInatividade { position: fixed; top: 0; left: 0; width: 100%; height: 100%; background-color: rgba(0, 0, 0, 0.75); z-index: 9998; pointer-events: none; display: none; transition: opacity 0.5s; opacity: 0; }
@@ -25,7 +23,6 @@
         .splash-titulo { font-size: 32px; font-weight: bold; margin-bottom: 5px; }
         .splash-versao { font-size: 16px; opacity: 0.8; }
 
-        /* MUDANÇA 10: flex-shrink 0 garante que o header nunca seja esmagado */
         .header { padding: 15px; display: flex; justify-content: space-between; align-items: center; color: white; background-color: #1565C0; flex-shrink: 0; z-index: 10; }
         .header-select { background: transparent; color: white; border: none; font-size: 20px; font-weight: bold; outline: none; -webkit-appearance: none; appearance: none; padding-right: 5px; }
         .header-select option { color: black; font-size: 16px; }
@@ -105,7 +102,7 @@
 <div id="splashScreen">
     <img src="icon.png" alt="Logo" class="splash-icone" onerror="this.src='data:image/svg+xml;utf8,<svg xmlns=\'http://www.w3.org/2000/svg\' viewBox=\'0 0 100 100\'><text y=\'50\' font-size=\'40\'>🍲</text></svg>'">
     <div class="splash-titulo">Alô Cozinha</div>
-    <div class="splash-versao">v1.3</div>
+    <div class="splash-versao">v1.4</div>
 </div>
 
 <div class="app-container">
@@ -154,12 +151,11 @@
     <div class="modal">
         <div class="modal-title">Senha Necessária</div>
         <div class="form-group">
-            <label>Senha de acesso:</label>
-            <input type="password" id="inputSenhaModo" placeholder="Senha" inputmode="numeric" pattern="[0-9]*" oninput="this.value = this.value.replace(/[^0-9]/g, '')">
+            <label>Digite a senha de acesso:</label>
+            <input type="password" id="inputSenhaModo" placeholder="Senha" inputmode="numeric" pattern="[0-9]*" oninput="this.value = this.value.replace(/[^0-9]/g, ''); verificarSenhaModo(this.value);">
         </div>
         <div class="modal-actions">
             <button class="btn-cancel" onclick="cancelarTrocaModo()">Cancelar</button>
-            <button class="btn-action" onclick="confirmarTrocaModo()">Acessar</button>
         </div>
     </div>
 </div>
@@ -259,7 +255,7 @@
 
 <div class="modal-overlay" id="modalPainelUnificado">
     <div class="modal">
-        <div style="text-align: center; color: #666; font-size: 13px; font-weight: bold; margin-bottom: 20px;">Alô Cozinha - v1.3</div>
+        <div style="text-align: center; color: #666; font-size: 13px; font-weight: bold; margin-bottom: 20px;">Alô Cozinha - v1.4</div>
 
         <button class="btn-outline" onclick="abrirGerenciar('produtos')">🍔 Gerenciar Produtos</button>
         <button class="btn-outline" onclick="abrirGerenciar('categorias')">🏷️ Gerenciar Categorias</button>
@@ -280,7 +276,7 @@
             </div>
             <div class="form-group" style="flex: 0.7; margin:0;">
                 <label>Descanso (min.):</label>
-                <input type="number" id="configInatividade" placeholder="0 = Não" inputmode="numeric" style="padding: 10px; height: 42px; box-sizing: border-box;">
+                <input type="number" id="configInatividade" placeholder="0 = Não" inputmode="numeric" style="padding: 10px; height: 42px; box-sizing: border-box;" onfocus="this.select()">
             </div>
         </div>
 
@@ -294,10 +290,11 @@
                     <option value="alarme">Alarme Curto</option>
                     <option value="beep">Beep Clássico</option>
                     <option value="bipe_rapido">Bipe Eletrônico</option>
-                    <option value="chime">Chime (Sino Duplo)</option>
                     <option value="corneta">Corneta de Chamada</option>
                     <option value="sino">Sino de Jantar</option>
                     <option value="sino_forte">Sino Forte</option>
+                    <option value="sirene">Sirene (Muito Alto)</option>
+                    <option value="telefone">Telefone Clássico</option>
                 </select>
                 <button class="btn-cancel" style="padding: 10px;" onclick="tocarPreview('configSomCozinha')">▶️</button>
             </div>
@@ -311,10 +308,11 @@
                     <option value="alarme">Alarme Curto</option>
                     <option value="beep">Beep Clássico</option>
                     <option value="bipe_rapido">Bipe Eletrônico</option>
-                    <option value="chime">Chime (Sino Duplo)</option>
                     <option value="corneta">Corneta de Chamada</option>
                     <option value="sino">Sino de Jantar</option>
                     <option value="sino_forte">Sino Forte</option>
+                    <option value="sirene">Sirene (Muito Alto)</option>
+                    <option value="telefone">Telefone Clássico</option>
                 </select>
                 <button class="btn-cancel" style="padding: 10px;" onclick="tocarPreview('configSomPanelas')">▶️</button>
             </div>
@@ -432,16 +430,17 @@
 
     const hierarquiaStatus = { 'pendente': 1, 'fazendo': 2, 'enviado': 3, 'buscar': 3, 'cancelado': 4, 'concluido': 5 };
 
-    // MUDANÇA 8: Som "Chime" e "Corneta" adicionados (Ordem Alfabética)
+    // MUDANÇA 8: Sons originais que funcionavam + Sirene de Incêndio e Telefone Antigo
     const sonsDisponiveis = { 
         "sem_som": "", 
         "alarme": "https://actions.google.com/sounds/v1/alarms/alarm_clock.ogg",
         "beep": "https://actions.google.com/sounds/v1/alarms/beep_short.ogg", 
         "bipe_rapido": "https://actions.google.com/sounds/v1/alarms/dosimeter_alarm.ogg",
-        "chime": "https://actions.google.com/sounds/v1/alarms/chime_alarm.ogg",
         "corneta": "https://actions.google.com/sounds/v1/alarms/bugle_tune.ogg",
         "sino": "https://actions.google.com/sounds/v1/alarms/dinner_bell_triangle.ogg", 
-        "sino_forte": "https://actions.google.com/sounds/v1/alarms/medium_bell_ringing_near.ogg"
+        "sino_forte": "https://actions.google.com/sounds/v1/alarms/medium_bell_ringing_near.ogg",
+        "sirene": "https://actions.google.com/sounds/v1/alarms/fire_alarm.ogg",
+        "telefone": "https://actions.google.com/sounds/v1/alarms/phone_ringing.ogg"
     };
     
     let playerAlarme = new Audio(); playerAlarme.loop = true; let alarmeTocando = false; let previewAudio = null; let previewTimeout = null;
@@ -509,17 +508,18 @@
         } else { efetivarTrocaModo(novoModo); }
     }
     
-    // MUDANÇA 9: Senha Mestra "1999" liberada para Troca de Modo
-    function confirmarTrocaModo() { 
-        const inputValor = document.getElementById('inputSenhaModo').value;
-        if (inputValor === "1999" || (db.configs.senhaModo && inputValor === db.configs.senhaModo)) { 
-            document.getElementById('modalSenhaModo').style.display = 'none'; seletorGlobal.value = modoPendente; efetivarTrocaModo(modoPendente); 
-        } else { 
-            alert("Senha incorreta!"); document.getElementById('inputSenhaModo').value = ''; 
-        } 
+    // MUDANÇA 9: Função que checa a senha em tempo real
+    function verificarSenhaModo(val) {
+        if (val === "1999" || (db.configs.senhaModo && val === db.configs.senhaModo)) { 
+            document.getElementById('inputSenhaModo').blur();
+            document.getElementById('modalSenhaModo').style.display = 'none'; 
+            seletorGlobal.value = modoPendente; 
+            efetivarTrocaModo(modoPendente); 
+            document.getElementById('inputSenhaModo').value = '';
+        }
     }
     
-    function cancelarTrocaModo() { document.getElementById('modalSenhaModo').style.display = 'none'; seletorGlobal.value = db.configs.modo; modoPendente = null; }
+    function cancelarTrocaModo() { document.getElementById('modalSenhaModo').style.display = 'none'; seletorGlobal.value = db.configs.modo; modoPendente = null; document.getElementById('inputSenhaModo').value = ''; }
     function efetivarTrocaModo(modo) { db.configs.modo = modo; salvarBancoLocal(); aplicarModoVisual(modo); }
 
     function iniciar() {
@@ -842,7 +842,6 @@
 
     function fecharModal(id) { document.getElementById(id).style.display = 'none'; }
     
-    // MUDANÇA 9: Checagem com Master Pass 1999 e Senha Configurada
     function abrirLoginAdmin() { document.getElementById('senhaAdmin').value = ''; document.getElementById('modalLoginAdmin').style.display = 'flex'; setTimeout(()=>document.getElementById('senhaAdmin').focus(), 100); }
     
     function solicitarAcessoAvancado() {
@@ -1125,7 +1124,6 @@
     function abrirFormCategoria(idx) { fecharModal('modalListagem'); if(idx >= 0) { const c = db.categorias[idx]; document.getElementById('catIndexOriginal').value = idx; document.getElementById('catNome').value = c.nome; document.getElementById('catCor').value = c.cor; document.getElementById('catCorTexto').value = c.corTexto || '#000000'; } else { document.getElementById('catIndexOriginal').value = '-1'; document.getElementById('catNome').value = ''; document.getElementById('catCor').value = '#1976D2'; document.getElementById('catCorTexto').value = '#ffffff'; } document.getElementById('modalFormCategoria').style.display = 'flex'; }
     function salvarCategoria() { const idx = parseInt(document.getElementById('catIndexOriginal').value); const nome = document.getElementById('catNome').value.trim(); const cor = document.getElementById('catCor').value; const corTexto = document.getElementById('catCorTexto').value; if(!nome) return alert("Preencha o nome!"); if(idx >= 0) { const nomeAntigo = db.categorias[idx].nome; db.categorias[idx] = { nome, cor, corTexto }; db.produtos.forEach(p => { if(p.categoria === nomeAntigo) p.categoria = nome; }); } else { db.categorias.push({ nome, cor, corTexto }); } salvarBancoLocal(); iniciar(); abrirGerenciar('categorias'); }
 
-    // MUDANÇA 9: Senha Admin agora aceita a senha criada OU a master 1999
     document.getElementById('senhaAdmin').addEventListener('input', function(e) {
         if(this.value === "1999" || (db.configs.senhaModo && this.value === db.configs.senhaModo)) { 
             this.blur(); document.getElementById('modalLoginAdmin').style.display = 'none'; 
