@@ -8,7 +8,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
     <meta name="mobile-web-app-capable" content="yes">
     <meta name="theme-color" content="#1565C0" id="metaThemeColor">
-    <title>Alô Cozinha v1.1.1</title>
+    <title>Alô Cozinha v1.1.2</title>
 
     <style>
         body { font-family: Arial, sans-serif; background-color: #f0f2f5; margin: 0; padding: 0; display: flex; justify-content: center; user-select: none; -webkit-user-select: none; -webkit-touch-callout: none; overflow: hidden; position: fixed; width: 100%; height: 100%; }
@@ -102,7 +102,7 @@
 <div id="splashScreen">
     <img src="icon.png" alt="Logo" class="splash-icone" onerror="this.src='data:image/svg+xml;utf8,<svg xmlns=\'http://www.w3.org/2000/svg\' viewBox=\'0 0 100 100\'><text y=\'50\' font-size=\'40\'>🍲</text></svg>'">
     <div class="splash-titulo">Alô Cozinha</div>
-    <div class="splash-versao">v1.1.1</div>
+    <div class="splash-versao">v1.1.2</div>
 </div>
 
 <div class="app-container">
@@ -255,7 +255,7 @@
 
 <div class="modal-overlay" id="modalPainelUnificado">
     <div class="modal">
-        <div style="text-align: center; color: #666; font-size: 13px; font-weight: bold; margin-bottom: 20px;">Alô Cozinha - v1.1.1</div>
+        <div style="text-align: center; color: #666; font-size: 13px; font-weight: bold; margin-bottom: 20px;">Alô Cozinha - v1.1.2</div>
 
         <button class="btn-outline" onclick="abrirGerenciar('produtos')">🍔 Gerenciar Produtos</button>
         <button class="btn-outline" onclick="abrirGerenciar('categorias')">🏷️ Gerenciar Categorias</button>
@@ -289,7 +289,7 @@
                     <option value="sem_som">Sem som</option>
                     <option value="alarme">Alarme Curto</option>
                     <option value="beep">Beep Clássico</option>
-                    <option value="bipe_duplo">Bipe Duplo</option>
+                    <option value="bipe_eletronico">Bipe Eletrônico</option>
                     <option value="corneta">Corneta de Chamada</option>
                     <option value="digital">Despertador Digital</option>
                     <option value="mecanico">Despertador Mecânico</option>
@@ -307,7 +307,7 @@
                     <option value="sem_som">Sem som</option>
                     <option value="alarme">Alarme Curto</option>
                     <option value="beep">Beep Clássico</option>
-                    <option value="bipe_duplo">Bipe Duplo</option>
+                    <option value="bipe_eletronico">Bipe Eletrônico</option>
                     <option value="corneta">Corneta de Chamada</option>
                     <option value="digital">Despertador Digital</option>
                     <option value="mecanico">Despertador Mecânico</option>
@@ -361,7 +361,7 @@
 
         <div class="form-group">
             <label>Problemas de Cache ou Atualização?</label>
-            <button class="btn-outline" style="border-color:#fbc02d; color:#fbc02d; justify-content:center;" onclick="forcarAtualizacao()">🔄 Atualizar Aplicativo</button>
+            <button id="btnAtualizarApp" class="btn-outline" style="border-color:#fbc02d; color:#fbc02d; justify-content:center;" onclick="forcarAtualizacao()">🔄 Atualizar Aplicativo</button>
         </div>
 
         <div class="modal-actions">
@@ -440,7 +440,7 @@
         "sem_som": "", 
         "alarme": "https://actions.google.com/sounds/v1/alarms/alarm_clock.ogg",
         "beep": "https://actions.google.com/sounds/v1/alarms/beep_short.ogg", 
-        "bipe_duplo": "https://actions.google.com/sounds/v1/alarms/double_beep.ogg",
+        "bipe_eletronico": "https://actions.google.com/sounds/v1/alarms/dosimeter_alarm.ogg",
         "corneta": "https://actions.google.com/sounds/v1/alarms/bugle_tune.ogg",
         "digital": "https://actions.google.com/sounds/v1/alarms/digital_watch_alarm_long.ogg",
         "mecanico": "https://actions.google.com/sounds/v1/alarms/mechanical_clock_ring.ogg",
@@ -611,7 +611,7 @@
         document.getElementById('modalCancelarPedido').style.display = 'flex';
     }
 
-    // REVISÃO 12: Efeito Liga/Desliga. Se a observação já está na caixa, ele retira. Se não, adiciona.
+    // Efeito Liga/Desliga. Se a observação já está na caixa, ele retira. Se não, adiciona.
     function addObsToText(inputID, obsStr) { 
         const input = document.getElementById(inputID); 
         let parts = input.value.split(',').map(s => s.trim()).filter(s => s !== '');
@@ -907,24 +907,38 @@
         } else { alert("Frase de segurança incorreta."); }
     }
 
+    // RESOLVIDO: Atualiza na hora! Destrói o Service Worker antigo e força o link com timestamp
     async function forcarAtualizacao() {
         if (confirm("Deseja salvar as configurações e o cardápio na nuvem antes de recarregar?")) {
             if (!db.configs.url) { 
                 alert("Sem URL salva. A atualização será continuada."); 
             } else {
                 try {
+                    const btn = document.getElementById('btnAtualizarApp');
+                    if(btn) btn.innerText = "Salvando...";
                     await fetch(db.configs.url, { method: 'POST', mode: 'no-cors', body: JSON.stringify({ action: 'salvar_banco', dados: { produtos: db.produtos, categorias: db.categorias, obsPedidos: db.obsPedidos, obsCancelamentos: db.obsCancelamentos, pedidos: pedidosServidor } }) });
                 } catch(e) { }
             }
         }
+        
         sessionStorage.clear();
         
+        // Limpa agressivamente o cache
         if ('caches' in window) {
-            caches.keys().then((names) => {
-                names.forEach(name => { caches.delete(name); });
-            });
+            const names = await caches.keys();
+            await Promise.all(names.map(name => caches.delete(name)));
         }
-        setTimeout(() => window.location.reload(true), 300);
+
+        // Mata os Service Workers que estão segurando a versão velha
+        if ('serviceWorker' in navigator) {
+            const registrations = await navigator.serviceWorker.getRegistrations();
+            for (let registration of registrations) {
+                await registration.unregister();
+            }
+        }
+        
+        // Adiciona um identificador único na URL para enganar a memória do navegador
+        window.location.href = window.location.pathname + '?t=' + new Date().getTime();
     }
 
     function abrirModalMetricas() {
