@@ -8,7 +8,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
     <meta name="mobile-web-app-capable" content="yes">
     <meta name="theme-color" content="#1565C0" id="metaThemeColor">
-    <title>Alô Cozinha v1.1.4</title>
+    <title>Alô Cozinha v1.1.5</title>
 
     <style>
         body { font-family: Arial, sans-serif; background-color: #f0f2f5; margin: 0; padding: 0; display: flex; justify-content: center; user-select: none; -webkit-user-select: none; -webkit-touch-callout: none; overflow: hidden; position: fixed; width: 100%; height: 100%; }
@@ -102,7 +102,7 @@
 <div id="splashScreen">
     <img src="icon.png" alt="Logo" class="splash-icone" onerror="this.src='data:image/svg+xml;utf8,<svg xmlns=\'http://www.w3.org/2000/svg\' viewBox=\'0 0 100 100\'><text y=\'50\' font-size=\'40\'>🍲</text></svg>'">
     <div class="splash-titulo">Alô Cozinha</div>
-    <div class="splash-versao">v1.1.4</div>
+    <div class="splash-versao">v1.1.5</div>
 </div>
 
 <div class="app-container">
@@ -255,7 +255,7 @@
 
 <div class="modal-overlay" id="modalPainelUnificado">
     <div class="modal">
-        <div style="text-align: center; color: #666; font-size: 13px; font-weight: bold; margin-bottom: 20px;">Alô Cozinha - v1.1.4</div>
+        <div style="text-align: center; color: #666; font-size: 13px; font-weight: bold; margin-bottom: 20px;">Alô Cozinha - v1.1.5</div>
 
         <button class="btn-outline" onclick="abrirGerenciar('produtos')">🍔 Gerenciar Produtos</button>
         <button class="btn-outline" onclick="abrirGerenciar('categorias')">🏷️ Gerenciar Categorias</button>
@@ -505,26 +505,6 @@
     }
     setInterval(salvarHistoricoLocal, 60000); 
 
-    async function salvarTudoNaNuvemAuto() {
-        if(!db.configs.url || !db.configs.dadosBaixados) return;
-        try {
-            await fetch(db.configs.url, { 
-                method: 'POST', 
-                mode: 'no-cors', 
-                body: JSON.stringify({ 
-                    action: 'salvar_banco', 
-                    dados: { 
-                        produtos: db.produtos, 
-                        categorias: db.categorias, 
-                        obsPedidos: db.obsPedidos, 
-                        obsCancelamentos: db.obsCancelamentos,
-                        pedidos: pedidosServidor
-                    } 
-                }) 
-            });
-        } catch(e) {}
-    }
-
     function getTempoRelativo(timestamp) {
         const diffEmMs = Date.now() - new Date(timestamp).getTime();
         const minutos = Math.floor(diffEmMs / 60000);
@@ -682,13 +662,6 @@
         setTimeout(() => pedidosBloqueados.delete(id.toString()), 15000);
     }
 
-    async function confirmarCancelamento() {
-        const id = document.getElementById('cancelarItemId').value; const motivo = document.getElementById('cancelarObsText').value.trim();
-        if(!motivo) return alert("Obrigatório informar o motivo!");
-        document.getElementById('modalCancelarPedido').style.display = 'none';
-        alterarStatusPedido(id, 'cancelado', motivo);
-    }
-
     async function syncGeral() {
         if(!db.configs.url) return;
         processarFilaRetentativas(); 
@@ -716,7 +689,16 @@
                     let pesoLocal = hierarquiaStatus[pLocal.status] || 0;
                     let pesoServidor = hierarquiaStatus[pServ.status] || 0;
                     let temNaFila = filaRetentativaStatus.some(f => f.payload.id == pServ.id);
-                    if (pesoLocal > pesoServidor || temNaFila) { return pLocal; }
+                    
+                    if (pesoLocal > pesoServidor || temNaFila) { 
+                        // AQUI ESTÁ A AUTO-CURA DO CONFLITO:
+                        // Se meu tablet sabe que tá mais avançado que a nuvem, ele obriga a nuvem a se corrigir.
+                        if (pesoLocal > pesoServidor && !temNaFila) {
+                            filaRetentativaStatus.push({ payload: { action: (pLocal.status === 'cancelado' ? 'cancelar_pedido' : 'atualizar_status'), id: pLocal.id, novoStatus: pLocal.status, motivo: pLocal.motivo || '' }, time: Date.now() });
+                            salvarFilaStatus();
+                        }
+                        return pLocal; 
+                    }
                 }
                 return pServ;
             });
@@ -911,31 +893,22 @@
     }
 
     async function forcarAtualizacao() {
-        if (confirm("Deseja salvar as configurações e o cardápio na nuvem antes de recarregar?")) {
-            if (!db.configs.url) { 
-                alert("Sem URL salva. A atualização será continuada."); 
-            } else {
-                try {
-                    const btn = document.getElementById('btnAtualizarApp');
-                    if(btn) btn.innerText = "Salvando..."; 
-                    await fetch(db.configs.url, { method: 'POST', mode: 'no-cors', body: JSON.stringify({ action: 'salvar_banco', dados: { produtos: db.produtos, categorias: db.categorias, obsPedidos: db.obsPedidos, obsCancelamentos: db.obsCancelamentos, pedidos: pedidosServidor } }) });
-                } catch(e) { }
+        if (confirm("Deseja recarregar o aplicativo limpando o cache?")) {
+            sessionStorage.clear();
+            
+            if ('caches' in window) {
+                const names = await caches.keys();
+                await Promise.all(names.map(name => caches.delete(name)));
             }
-        }
-        sessionStorage.clear();
-        
-        if ('caches' in window) {
-            const names = await caches.keys();
-            await Promise.all(names.map(name => caches.delete(name)));
-        }
 
-        if ('serviceWorker' in navigator) {
-            const registrations = await navigator.serviceWorker.getRegistrations();
-            for (let registration of registrations) {
-                await registration.unregister();
+            if ('serviceWorker' in navigator) {
+                const registrations = await navigator.serviceWorker.getRegistrations();
+                for (let registration of registrations) {
+                    await registration.unregister();
+                }
             }
+            window.location.href = window.location.pathname + '?t=' + new Date().getTime();
         }
-        window.location.href = window.location.pathname + '?t=' + new Date().getTime();
     }
 
     function abrirModalMetricas() {
@@ -1053,7 +1026,6 @@
         });
     }
 
-    // A TRAVA DE SEGURANÇA FOI IMPLEMENTADA AQUI
     async function sincronizarSalvarNuvem() {
         if(!db.configs.url) return alert("Salve a URL primeiro!");
         
@@ -1061,7 +1033,6 @@
             const btn = document.getElementById('btnSalvarNuvem');
             btn.innerText = "Verificando..."; 
             
-            // Passo 1: Espiar a nuvem para ver se ela já existe e tem coisas dentro
             let fetchUrl = db.configs.url;
             fetchUrl += fetchUrl.includes('?') ? '&' : '?';
             fetchUrl += "action=carregar_banco&cb=" + Date.now();
@@ -1069,13 +1040,11 @@
             let res = await fetch(fetchUrl);
             let nuvemDB = await res.json();
             
-            // Passo 2: A Trava! Se a nuvem tem produtos e o seu app local não baixou os dados, bloqueia tudo.
             if (!db.configs.dadosBaixados && nuvemDB.produtos && nuvemDB.produtos.length > 0) {
                 btn.innerText = "⬆️ Salvar Tudo na Nuvem";
                 return alert("🚨 OPERAÇÃO ABORTADA (PROTEÇÃO ATIVADA)!\n\nFoi detectado que o servidor já possui um cardápio salvo. Se você continuar, vai APAGAR O CARDÁPIO de todos os outros tablets.\n\nPor favor, clique obrigatoriamente em '⬇️ Puxar Tudo da Nuvem' primeiro para se sincronizar com a equipe.");
             }
 
-            // Passo 3: Se passou pela trava, ele salva de verdade
             btn.innerText = "Salvando..."; 
             await fetch(db.configs.url, { method: 'POST', mode: 'no-cors', body: JSON.stringify({ action: 'salvar_banco', dados: { produtos: db.produtos, categorias: db.categorias, obsPedidos: db.obsPedidos, obsCancelamentos: db.obsCancelamentos, pedidos: pedidosServidor } }) }); 
             
@@ -1199,7 +1168,6 @@
         const urlInput = document.getElementById('configUrlApp').value.trim(); 
         if(urlInput === "") return alert("Vazio."); 
         
-        // RESET DE CONFIANÇA SE A URL MUDAR
         if (urlInput !== db.configs.url) {
             db.configs.dadosBaixados = false; 
         }
@@ -1217,7 +1185,7 @@
         db.configs.inatividade = document.getElementById('configInatividade').value; 
         salvarBancoLocal(); 
         
-        salvarTudoNaNuvemAuto();
+        // AQUI ESTAVA O BUG TRAÍRA. Foi removido o envio forçado da nuvem ao fechar o painel.
 
         solicitarWakeLock(); 
         resetInatividade(); 
