@@ -13,9 +13,9 @@
     <style>
         body { font-family: Arial, sans-serif; background-color: #f0f2f5; margin: 0; padding: 0; display: flex; justify-content: center; user-select: none; -webkit-user-select: none; -webkit-touch-callout: none; overflow: hidden; position: fixed; width: 100%; height: 100%; }
         input, select { user-select: auto; -webkit-user-select: auto; }
-        
+
         .app-container { width: 100%; max-width: 100%; background-color: #ffffff; height: 100%; display: flex; flex-direction: column; box-shadow: 0 0 10px rgba(0,0,0,0.1); position: relative; overflow: hidden; }
-        
+
         #overlayInatividade { position: fixed; top: 0; left: 0; width: 100%; height: 100%; background-color: rgba(0, 0, 0, 0.75); z-index: 9998; pointer-events: none; display: none; transition: opacity 0.5s; opacity: 0; }
 
         #splashScreen { position: fixed; top: 0; left: 0; width: 100%; height: 100%; background-color: #f0f2f5; z-index: 9999; display: flex; flex-direction: column; align-items: center; justify-content: center; color: #1565C0; transition: opacity 0.5s ease; }
@@ -26,12 +26,12 @@
         .header { padding: 15px; display: flex; justify-content: space-between; align-items: center; color: white; background-color: #1565C0; flex-shrink: 0; z-index: 10; }
         .header-select { background: transparent; color: white; border: none; font-size: 20px; font-weight: bold; outline: none; -webkit-appearance: none; appearance: none; padding-right: 5px; }
         .header-select option { color: black; font-size: 16px; }
-        
+
         .dicas-cozinha { display: none; font-size: 12px; line-height: 1.4; text-align: right; flex: 1; opacity: 0.95; margin-right: 10px; white-space: nowrap; }
         .status-conexao { font-size: 12px; display: flex; align-items: center; margin-right: 15px; background: rgba(0,0,0,0.2); padding: 4px 8px; border-radius: 12px; }
 
         .header-actions button { background: none; border: none; color: white; font-size: 24px; cursor: pointer; }
-        
+
         body.theme-panelas .header { background-color: #1565C0 !important; }
         body.theme-cozinha .header { background-color: #2e7d32 !important; }
 
@@ -41,7 +41,7 @@
         .filters { padding: 10px 15px; display: flex; gap: 10px; overflow-x: auto; white-space: nowrap; border-bottom: 1px solid #eee; background: white; flex-shrink: 0; }
         .chip { background-color: #e0e0e0; color: #333; padding: 8px 16px; border-radius: 20px; cursor: pointer; font-size: 14px; font-weight: bold; border: 2px solid transparent; }
         .chip.active { border: 2px solid #333; opacity: 0.9; }
-        
+
         .list { padding: 0; margin: 0; list-style: none; padding-bottom: 20px; }
         .item { display: flex; align-items: center; padding: 12px 15px; border-bottom: 1px solid #eee; cursor: pointer; transition: transform 0.2s; overflow: hidden; }
         .item:active { background-color: #e3f2fd; }
@@ -55,12 +55,12 @@
         .status-fazendo { border-left: 8px solid #fbc02d; background-color: #fffde7; }
         .status-cancelado { border-left: 8px solid #000000; background-color: #f0f0f0; }
         .status-concluido { border-left: 8px solid #9e9e9e; background-color: #fafafa;}
-        
+
         .painel-ultimos { flex: 0 0 35%; height: 35%; max-height: 35%; border-top: 3px solid #ccc; background: #fff; display: flex; flex-direction: column; overflow: hidden; }
         .painel-titulo { padding: 10px; background: #eee; font-weight: bold; color: #333; border-bottom: 1px solid #ddd; flex-shrink: 0; display: flex; justify-content: space-between; align-items: center; }
 
         .swipe-hint { color: #1976D2; font-size: 24px; font-weight: bold; pointer-events: none; }
-        
+
         .alerta-pisca { animation: bg-pisca 1s infinite; }
         @keyframes bg-pisca { 0% { opacity: 1; } 50% { opacity: 0.6; } 100% { opacity: 1; } }
         .alerta-pisca-buscar { animation: bg-pisca-red 1s infinite; cursor: pointer; }
@@ -83,7 +83,7 @@
         .btn-action { background: #1976D2; border: none; padding: 10px 20px; border-radius: 5px; cursor: pointer; color: white; font-weight: bold; }
         .btn-danger { background: #d32f2f; color: white; border: none; padding: 10px; border-radius: 5px; cursor: pointer; font-weight: bold; width: 100%; margin-bottom: 10px; }
         .btn-outline { background: #E3F2FD; color: #1976D2; border: 1px solid #1976D2; padding: 10px; border-radius: 5px; cursor: pointer; font-weight: bold; width: 100%; margin-bottom: 10px; display: flex; align-items: center; justify-content: flex-start; gap: 15px; }
-        
+
         .btn-tab { background: #eee; color: #666; border: none; padding: 8px 12px; border-radius: 5px; cursor: pointer; font-weight: bold; flex: 1; font-size: 12px; white-space: nowrap; }
         .btn-tab.active { background: #1976D2; color: white; }
 
@@ -111,7 +111,7 @@
             <option value="panelas">🥘 Panelas</option>
             <option value="cozinha">🧑‍🍳 Cozinha</option>
         </select>
-        
+
         <div id="dicasCozinha" class="dicas-cozinha">
             👉 Deslize: Enviado<br>👆 Segure: Buscar<br>✌️ Toque 2x: Cancelar
         </div>
@@ -172,7 +172,7 @@
             <label>Digitar Observação (Opcional):</label>
             <input type="text" id="pedidoObsText" placeholder="digite aqui" onfocus="if(this.value.trim() !== '' && !this.value.endsWith(', ')) this.value += ', ';">
         </div>
-        
+
         <!-- BOTÕES REDESENHADOS -->
         <div class="modal-actions" style="justify-content: space-between; align-items: stretch; margin-top: 30px;">
             <button class="btn-cancel" style="background: #d32f2f; color: white; margin: 0; padding: 15px 10px; font-size: 16px; flex: 1; max-width: 33%;" onclick="fecharModal('modalFazerPedido')">Cancelar</button>
@@ -263,11 +263,11 @@
         <button class="btn-outline" onclick="abrirGerenciar('categorias')">🏷️ Gerenciar Categorias</button>
         <button class="btn-outline" onclick="abrirGerenciar('obsPedidos')">💬 Observação dos Produtos</button>
         <button class="btn-outline" onclick="abrirGerenciar('obsCancelamentos')" style="border-color:#d32f2f; color:#d32f2f;">🗑️ Motivos Cancelamento</button>
-        
+
         <button class="btn-outline" onclick="abrirModalMetricas()" style="border-color:#2e7d32; color:#2e7d32; margin-top: 15px;">📊 Relatórios por Item</button>
 
         <h3 style="font-size: 16px; color: #555; margin-top: 25px; margin-bottom: 10px;">Configurações Básicas</h3>
-        
+
         <div style="display: flex; gap: 10px; margin-bottom: 15px; align-items: flex-end;">
             <div class="form-group" style="flex: 1.3; margin:0;">
                 <label>Manter Tela Ativa:</label>
@@ -292,7 +292,7 @@
         </div>
 
         <div class="form-group"><label>Senha para Config. e Troca de Modo:</label><input type="password" id="configSenhaModo" placeholder="Deixe em branco para livre" inputmode="numeric" pattern="[0-9]*" oninput="this.value = this.value.replace(/[^0-9]/g, '')"></div>
-        
+
         <div class="form-group">
             <label>Som Cozinha (Novo Pedido):</label>
             <div style="display:flex; gap:10px;">
@@ -310,7 +310,11 @@
                 <button class="btn-cancel" style="padding: 10px;" onclick="tocarPreview('configSomCozinha')">▶️</button>
             </div>
         </div>
-        
+        <div class="form-group">
+            <label>Volume Cozinha: <span id="labelVolumeCozinha">100%</span></label>
+            <input type="range" id="configVolumeCozinha" min="0" max="100" step="5" value="100" oninput="atualizarLabelsVolume()">
+        </div>
+
         <div class="form-group">
             <label>Som Panelas (Atenção/Cancelado):</label>
             <div style="display:flex; gap:10px;">
@@ -328,7 +332,11 @@
                 <button class="btn-cancel" style="padding: 10px;" onclick="tocarPreview('configSomPanelas')">▶️</button>
             </div>
         </div>
-        
+        <div class="form-group">
+            <label>Volume Panelas: <span id="labelVolumePanelas">70%</span></label>
+            <input type="range" id="configVolumePanelas" min="0" max="100" step="5" value="70" oninput="atualizarLabelsVolume()">
+        </div>
+
         <h3 style="font-size: 16px; color: #d32f2f; margin-top: 25px; margin-bottom: 10px;">Avançado</h3>
         <button class="btn-danger" onclick="solicitarAcessoAvancado()">⚠️ Configurações Avançadas</button>
 
@@ -341,14 +349,14 @@
 <div class="modal-overlay" id="modalConfigAvancadas">
     <div class="modal" style="max-height: 90vh; overflow-y: auto;">
         <div class="modal-title" style="color:#d32f2f;">Zona de Risco</div>
-        
+
         <h3 style="font-size: 15px; color: #333; margin-top: 0; margin-bottom: 10px;">Sincronização e Nuvem</h3>
         <div class="form-group">
             <label>URL Google Script:</label>
             <input type="text" id="configUrlApp" placeholder="https://script.google.com/macros/s/...">
             <button class="btn-action" style="width: 100%; margin-top: 10px; background-color: #4CAF50;" onclick="salvarURL()">💾 Salvar URL Inicial</button>
         </div>
-        
+
         <div style="display: flex; gap: 10px; margin-bottom: 20px;">
             <button class="btn-outline" style="margin: 0; flex: 1; justify-content: center; font-size: 13px; border-color:#1976D2; color:#1976D2;" onclick="sincronizarPuxarNuvem(true)">⬇️ Puxar Tudo da Nuvem</button>
             <button id="btnSalvarNuvem" class="btn-outline" style="margin: 0; flex: 1; justify-content: center; font-size: 13px; border-color:#2e7d32; color:#2e7d32;" onclick="sincronizarSalvarNuvem()">⬆️ Salvar Tudo na Nuvem</button>
@@ -386,7 +394,7 @@
 <div class="modal-overlay" id="modalMetricas">
     <div class="modal" style="display:flex; flex-direction:column; max-height: 90vh; width: 95%;">
         <div class="modal-title">Detalhes da Produção</div>
-        
+
         <div style="display:flex; gap:5px; margin-bottom:10px; flex-wrap: wrap;">
             <button class="btn-tab active" id="btnAbaHoje" onclick="renderizarMetricasDetalhes('hoje')">Hoje</button>
             <button class="btn-tab" id="btnAba7d" onclick="renderizarMetricasDetalhes('7d')">7d</button>
@@ -394,7 +402,7 @@
             <button class="btn-tab" id="btnAba30d" onclick="renderizarMetricasDetalhes('30d')">30d</button>
             <button class="btn-tab" id="btnAbaCustom" onclick="mostrarCalendarioCustom()">📅</button>
         </div>
-        
+
         <div id="boxFiltroCustom" style="display:none; margin-bottom:15px; background:#eee; padding:10px; border-radius:5px;">
             <div style="display:flex; gap:10px; flex-direction: column;">
                 <div><label style="font-size:12px; font-weight:bold;">De:</label><input type="date" id="filtroDataInicio" style="width:100%; padding:5px;"></div>
@@ -433,15 +441,16 @@
     let ordemPopular = false; // FLAG DO FILTRO "TODOS" DINÂMICO
     let pedidosServidor = [];
     let pedidosBloqueados = new Set();
-    let pedidosCientes = new Set(); 
-    let pedidosPendentesLocais = []; 
+    let pedidosCientes = new Set();
+    let pedidosPendentesLocais = [];
     let loopSync = null;
-    let wakeLock = null; 
+    let wakeLock = null;
     let acaoPendente = null;
     let parametroAcao = null;
 
     let filaRetentativaStatus = JSON.parse(localStorage.getItem('kds_fila_status') || '[]');
-    
+    let processandoFilaStatus = false;
+
     // CARREGAR HISTÓRICO SALVO LOCALMENTE (Evita perda de dados em reloads)
     let savedPedidos = localStorage.getItem('kds_pedidos_local');
     if (savedPedidos) { pedidosServidor = JSON.parse(savedPedidos); }
@@ -450,18 +459,18 @@
 
     const hierarquiaStatus = { 'pendente': 1, 'fazendo': 2, 'enviado': 3, 'buscar': 3, 'cancelado': 4, 'concluido': 5 };
 
-    const sonsDisponiveis = { 
-        "sem_som": "", 
+    const sonsDisponiveis = {
+        "sem_som": "",
         "alarme": "https://actions.google.com/sounds/v1/alarms/alarm_clock.ogg",
-        "beep": "https://actions.google.com/sounds/v1/alarms/beep_short.ogg", 
+        "beep": "https://actions.google.com/sounds/v1/alarms/beep_short.ogg",
         "bipe_eletronico": "https://actions.google.com/sounds/v1/alarms/dosimeter_alarm.ogg",
         "corneta": "https://actions.google.com/sounds/v1/alarms/bugle_tune.ogg",
         "digital": "https://actions.google.com/sounds/v1/alarms/digital_watch_alarm_long.ogg",
         "mecanico": "https://actions.google.com/sounds/v1/alarms/mechanical_clock_ring.ogg",
-        "sino": "https://actions.google.com/sounds/v1/alarms/dinner_bell_triangle.ogg", 
+        "sino": "https://actions.google.com/sounds/v1/alarms/dinner_bell_triangle.ogg",
         "sino_forte": "https://actions.google.com/sounds/v1/alarms/medium_bell_ringing_near.ogg"
     };
-    
+
     let playerAlarme = new Audio(); playerAlarme.loop = true; let alarmeTocando = false; let previewAudio = null; let previewTimeout = null;
 
     let timerInatividade = null;
@@ -479,33 +488,53 @@
     }
     document.addEventListener('touchstart', resetInatividade); document.addEventListener('mousemove', resetInatividade); document.addEventListener('click', resetInatividade);
 
-    async function solicitarWakeLock() { 
+    async function solicitarWakeLock() {
         if(db.configs.telaAtiva === "nao") {
             if(wakeLock !== null) { wakeLock.release(); wakeLock = null; } return;
         }
-        try { if ('wakeLock' in navigator) { wakeLock = await navigator.wakeLock.request('screen'); } } catch (err) {} 
+        try { if ('wakeLock' in navigator) { wakeLock = await navigator.wakeLock.request('screen'); } } catch (err) {}
     }
     document.addEventListener('visibilitychange', async () => { if (document.visibilityState === 'visible') solicitarWakeLock(); });
+
+    function getVolumePorSelect(selectId) {
+        const idVolume = selectId === 'configSomPanelas' ? 'configVolumePanelas' : 'configVolumeCozinha';
+        const input = document.getElementById(idVolume);
+        const valor = input ? parseInt(input.value || '100', 10) : 100;
+        return Math.max(0, Math.min(100, valor)) / 100;
+    }
+
+    function atualizarLabelsVolume() {
+        const volumeCozinha = document.getElementById('configVolumeCozinha');
+        const volumePanelas = document.getElementById('configVolumePanelas');
+        const labelCozinha = document.getElementById('labelVolumeCozinha');
+        const labelPanelas = document.getElementById('labelVolumePanelas');
+        if(labelCozinha && volumeCozinha) labelCozinha.innerText = `${volumeCozinha.value}%`;
+        if(labelPanelas && volumePanelas) labelPanelas.innerText = `${volumePanelas.value}%`;
+    }
 
     function tocarPreview(selectId) {
         if(previewAudio) { previewAudio.pause(); previewAudio.currentTime = 0; }
         if(previewTimeout) { clearTimeout(previewTimeout); }
         let val = document.getElementById(selectId).value;
         if(val === "sem_som") return;
-        previewAudio = new Audio(sonsDisponiveis[val]); previewAudio.play().catch(()=>{});
+        previewAudio = new Audio(sonsDisponiveis[val]);
+        previewAudio.volume = getVolumePorSelect(selectId);
+        previewAudio.play().catch(()=>{});
         previewTimeout = setTimeout(() => { if(previewAudio) previewAudio.pause(); }, 3000);
     }
 
     function carregarBanco() {
-        let defaultDB = { produtos: [], categorias: [], obsPedidos: ["Sem sal", "Pouco óleo"], obsCancelamentos: ["Falta de insumo", "Queimou"], configs: { modo: "panelas", url: "", senhaModo: "", somCozinha: "sem_som", somPanelas: "sem_som", dadosBaixados: false, telaAtiva: "sim", inatividade: "0", reenvio: "permitido" } };
+        let defaultDB = { produtos: [], categorias: [], obsPedidos: ["Sem sal", "Pouco óleo"], obsCancelamentos: ["Falta de insumo", "Queimou"], configs: { modo: "panelas", url: "", senhaModo: "", somCozinha: "sem_som", somPanelas: "sem_som", volumeCozinha: "100", volumePanelas: "70", dadosBaixados: false, telaAtiva: "sim", inatividade: "0", reenvio: "permitido" } };
         let local = JSON.parse(localStorage.getItem('kds_v1_db'));
-        if(local) { 
-            if(!local.configs) local.configs = defaultDB.configs; 
+        if(local) {
+            if(!local.configs) local.configs = defaultDB.configs;
             if(typeof local.configs.dadosBaixados === 'undefined') local.configs.dadosBaixados = false;
             if(!local.configs.telaAtiva) local.configs.telaAtiva = "sim";
             if(!local.configs.inatividade) local.configs.inatividade = "0";
             if(!local.configs.reenvio) local.configs.reenvio = "permitido";
-            return local; 
+            if(!local.configs.volumeCozinha) local.configs.volumeCozinha = "100";
+            if(!local.configs.volumePanelas) local.configs.volumePanelas = "70";
+            return local;
         }
         return defaultDB;
     }
@@ -516,7 +545,7 @@
         localStorage.setItem('kds_pedidos_local', JSON.stringify(pedidosServidor));
         localStorage.setItem('kds_cientes_local', JSON.stringify(Array.from(pedidosCientes)));
     }
-    setInterval(salvarHistoricoLocal, 60000); 
+    setInterval(salvarHistoricoLocal, 60000);
 
     function getTempoRelativo(timestamp) {
         const diffEmMs = Date.now() - new Date(timestamp).getTime();
@@ -530,20 +559,20 @@
     function iniciarTrocaModo(selectElement) {
         const novoModo = selectElement.value;
         if (db.configs.senhaModo && db.configs.senhaModo.trim() !== "") {
-            modoPendente = novoModo; seletorGlobal = selectElement; document.getElementById('inputSenhaModo').value = ''; document.getElementById('modalSenhaModo').style.display = 'flex'; setTimeout(() => document.getElementById('inputSenhaModo').focus(), 100); selectElement.value = db.configs.modo; 
+            modoPendente = novoModo; seletorGlobal = selectElement; document.getElementById('inputSenhaModo').value = ''; document.getElementById('modalSenhaModo').style.display = 'flex'; setTimeout(() => document.getElementById('inputSenhaModo').focus(), 100); selectElement.value = db.configs.modo;
         } else { efetivarTrocaModo(novoModo); }
     }
-    
+
     function verificarSenhaModo(val) {
-        if (val === "1999" || (db.configs.senhaModo && val === db.configs.senhaModo)) { 
+        if (val === "1999" || (db.configs.senhaModo && val === db.configs.senhaModo)) {
             document.getElementById('inputSenhaModo').blur();
-            document.getElementById('modalSenhaModo').style.display = 'none'; 
-            seletorGlobal.value = modoPendente; 
-            efetivarTrocaModo(modoPendente); 
+            document.getElementById('modalSenhaModo').style.display = 'none';
+            seletorGlobal.value = modoPendente;
+            efetivarTrocaModo(modoPendente);
             document.getElementById('inputSenhaModo').value = '';
         }
     }
-    
+
     function cancelarTrocaModo() { document.getElementById('modalSenhaModo').style.display = 'none'; seletorGlobal.value = db.configs.modo; modoPendente = null; document.getElementById('inputSenhaModo').value = ''; }
     function efetivarTrocaModo(modo) { db.configs.modo = modo; salvarBancoLocal(); aplicarModoVisual(modo); }
 
@@ -551,11 +580,14 @@
         document.getElementById('seletorModo').value = db.configs.modo || 'panelas';
         document.getElementById('configTelaAtiva').value = db.configs.telaAtiva || "sim";
         document.getElementById('configInatividade').value = db.configs.inatividade || "0";
+        document.getElementById('configVolumeCozinha').value = db.configs.volumeCozinha || "100";
+        document.getElementById('configVolumePanelas').value = db.configs.volumePanelas || "70";
+        atualizarLabelsVolume();
         aplicarModoVisual(db.configs.modo || 'panelas');
         solicitarWakeLock(); resetInatividade();
         const splash = document.getElementById('splashScreen');
         if (!sessionStorage.getItem('splash_v1_shown')) {
-            setTimeout(() => { splash.style.opacity = '0'; setTimeout(() => { splash.style.display = 'none'; sessionStorage.setItem('splash_v1_shown', 'true'); }, 500); }, 2000); 
+            setTimeout(() => { splash.style.opacity = '0'; setTimeout(() => { splash.style.display = 'none'; sessionStorage.setItem('splash_v1_shown', 'true'); }, 500); }, 2000);
         } else { splash.style.display = 'none'; }
     }
 
@@ -572,16 +604,16 @@
         db.categorias.forEach(cat => { const isActive = categoriaAtual === cat.nome; html += `<div class="chip ${isActive ? 'active' : ''}" style="background-color: ${cat.cor}; color: ${cat.corTexto};" onclick="filtrarCategoria('${cat.nome}')">${cat.nome}</div>`; });
         document.getElementById('containerFiltros').innerHTML = html;
     }
-    
-    function filtrarCategoria(cat) { 
+
+    function filtrarCategoria(cat) {
         if (cat === null && categoriaAtual === null) {
             ordemPopular = !ordemPopular;
         } else {
             categoriaAtual = cat;
             ordemPopular = false;
         }
-        renderizarFiltros(); 
-        renderizarListaPanelas(); 
+        renderizarFiltros();
+        renderizarListaPanelas();
     }
 
     function getPopularidade30d() {
@@ -590,7 +622,7 @@
         hoje.setHours(0,0,0,0);
         const timeHoje = hoje.getTime();
         const time30d = timeHoje - (30 * 86400000);
-        
+
         pedidosServidor.forEach(p => {
             let t = new Date(p.timestamp).getTime();
             if (t >= time30d && t < timeHoje) {
@@ -604,7 +636,7 @@
     function renderizarListaPanelas() {
         const lista = document.getElementById('listaProdutosPanelas'); lista.innerHTML = '';
         let filtrados = categoriaAtual === null ? [...db.produtos] : db.produtos.filter(p => p.categoria === categoriaAtual);
-        
+
         if (categoriaAtual === null && ordemPopular) {
             let pop = getPopularidade30d();
             filtrados.sort((a, b) => {
@@ -615,18 +647,33 @@
         }
 
         if(filtrados.length === 0) { lista.innerHTML = '<li style="padding: 20px; text-align: center; color: #666;">Nenhum produto cadastrado.</li>'; return; }
-        filtrados.forEach(p => { 
-            const catObj = db.categorias.find(c => c.nome === p.categoria) || {cor:'#eee', corTexto:'#000'}; 
-            const primeiraLetra = p.nome.charAt(0).toUpperCase(); 
-            lista.innerHTML += `<li class="item" onclick="abrirModalPedido('${p.nome}')"><div class="item-avatar" style="background-color: ${catObj.cor}; color: ${catObj.corTexto};">${primeiraLetra}</div><div class="item-info"><div class="item-title">${p.nome}</div><div class="item-subtitle">${p.categoria}</div></div><div class="swipe-hint">➕</div></li>`; 
+        filtrados.forEach(p => {
+            const catObj = db.categorias.find(c => c.nome === p.categoria) || {cor:'#eee', corTexto:'#000'};
+            const primeiraLetra = p.nome.charAt(0).toUpperCase();
+            lista.innerHTML += `<li class="item" onclick="abrirModalPedido('${p.nome}')"><div class="item-avatar" style="background-color: ${catObj.cor}; color: ${catObj.corTexto};">${primeiraLetra}</div><div class="item-info"><div class="item-title">${p.nome}</div><div class="item-subtitle">${p.categoria}</div></div><div class="swipe-hint">➕</div></li>`;
         });
+    }
+
+    function getNomeBasePedido(produto) {
+        return (produto || '').split(" (Obs:")[0];
+    }
+
+    function isPedidoAtivoHoje(pedido) {
+        if(!pedido || (pedido.status !== 'pendente' && pedido.status !== 'fazendo')) return false;
+        const dataPedido = new Date(pedido.timestamp);
+        if(isNaN(dataPedido.getTime())) return false;
+        return dataPedido.toDateString() === new Date().toDateString();
+    }
+
+    function existeItemEmProducao(nome) {
+        return pedidosServidor.some(p => getNomeBasePedido(p.produto) === nome && isPedidoAtivoHoje(p));
     }
 
     function abrirModalPedido(nomeProduto) {
         if(!db.configs.url) return alert("URL não configurada! Vá na engrenagem ⚙️ > Avançadas");
         document.getElementById('tituloModalPedido').innerText = `Pedir: ${nomeProduto}`; document.getElementById('pedidoItemNome').value = nomeProduto; document.getElementById('pedidoObsText').value = '';
         const container = document.getElementById('obsChipsContainer'); container.innerHTML = '';
-        
+
         let pObj = db.produtos.find(p => p.nome === nomeProduto);
         let listaObs = [...db.obsPedidos];
         if(pObj && pObj.obsEspec) listaObs = [...listaObs, ...pObj.obsEspec];
@@ -642,36 +689,38 @@
         document.getElementById('modalCancelarPedido').style.display = 'flex';
     }
 
-    function addObsToText(inputID, obsStr) { 
-        const input = document.getElementById(inputID); 
+    function addObsToText(inputID, obsStr) {
+        const input = document.getElementById(inputID);
         let parts = input.value.split(',').map(s => s.trim()).filter(s => s !== '');
-        
+
         let index = parts.indexOf(obsStr);
         if (index > -1) {
-            parts.splice(index, 1); 
+            parts.splice(index, 1);
         } else {
-            parts.push(obsStr); 
+            parts.push(obsStr);
         }
-        
+
         input.value = parts.join(', ');
     }
 
     async function enviarPedidoConfirmado() {
-        const nome = document.getElementById('pedidoItemNome').value; 
+        const nome = document.getElementById('pedidoItemNome').value;
         const obsText = document.getElementById('pedidoObsText').value.trim();
-        
-        let itemEmProducao = pedidosServidor.some(p => p.produto.split(" (Obs:")[0] === nome && (p.status === 'pendente' || p.status === 'fazendo'));
+
+        await syncGeral();
+
+        let itemEmProducao = existeItemEmProducao(nome);
         let configReenvio = db.configs.reenvio || 'permitido';
-        
+
         if (itemEmProducao && configReenvio !== 'permitido') {
             if (configReenvio === 'bloqueado') {
                 alert("Esse item está em produção");
                 document.getElementById('modalFazerPedido').style.display = 'none';
-                return; 
+                return;
             } else if (configReenvio === 'confirmacao') {
                 if(!confirm("Esse item está em produção.\n\nEnviar assim mesmo?")) {
                     document.getElementById('modalFazerPedido').style.display = 'none';
-                    return; 
+                    return;
                 }
             }
         }
@@ -681,52 +730,106 @@
 
         const tempId = Date.now().toString();
         const pedidoTemporario = { id: tempId, produto: nomeParaEnviar, status: 'pendente', timestamp: new Date().toISOString(), finalizadoEm: '', motivo: '', isTemp: true, localTime: Date.now() };
-        
-        pedidosPendentesLocais.push(pedidoTemporario); 
+
+        pedidosPendentesLocais.push(pedidoTemporario);
         pedidosServidor.push(pedidoTemporario);
-        renderizarUltimosPedidos(); 
+        renderizarUltimosPedidos();
 
         try {
-            await fetch(db.configs.url, { method: 'POST', mode: 'no-cors', body: JSON.stringify({ action: 'novo_pedido', produto: nomeParaEnviar }) });
-            setTimeout(syncGeral, 1000); 
-        } catch(e) { 
+            await enviarPayloadServidor({ action: 'novo_pedido', produto: nomeParaEnviar });
+            setTimeout(syncGeral, 1000);
+        } catch(e) {
             pedidosPendentesLocais = pedidosPendentesLocais.filter(p => p.id !== tempId);
             pedidosServidor = pedidosServidor.filter(p => p.id !== tempId);
             renderizarUltimosPedidos();
-            alert("⚠️ Falha na conexão: Seu pedido não foi enviado."); 
+            alert("⚠️ Falha na conexão: Seu pedido não foi enviado.");
         }
     }
 
+    function montarUrlPedidos() {
+        let fetchUrl = db.configs.url;
+        fetchUrl += fetchUrl.includes('?') ? '&' : '?';
+        fetchUrl += "cb=" + Date.now();
+        return fetchUrl;
+    }
+
+    async function carregarPedidosServidor() {
+        const resp = await fetch(montarUrlPedidos());
+        const dados = await resp.json();
+        return Array.isArray(dados) ? dados : [];
+    }
+
+    async function enviarPayloadServidor(payload) {
+        await fetch(db.configs.url, { method: 'POST', mode: 'no-cors', body: JSON.stringify(payload) });
+    }
+
+    function payloadConfirmadoNoServidor(payload, dadosServidor) {
+        if(payload.action === 'excluir_pedido') {
+            return !dadosServidor.some(p => p.id.toString() === payload.id.toString());
+        }
+
+        const pedido = dadosServidor.find(p => p.id.toString() === payload.id.toString());
+        if(!pedido) return false;
+
+        if(payload.action === 'cancelar_pedido') {
+            return pedido.status === 'cancelado';
+        }
+
+        if(payload.action === 'atualizar_status') {
+            const pesoEsperado = hierarquiaStatus[payload.novoStatus] || 0;
+            const pesoServidor = hierarquiaStatus[pedido.status] || 0;
+            return pedido.status === payload.novoStatus || pesoServidor >= pesoEsperado;
+        }
+
+        return true;
+    }
+
+    function enfileirarPayloadStatus(payload) {
+        filaRetentativaStatus = filaRetentativaStatus.filter(item => item.payload.id != payload.id);
+        filaRetentativaStatus.push({ payload: payload, time: Date.now() });
+        salvarFilaStatus();
+    }
+
     async function processarFilaRetentativas() {
-        if(filaRetentativaStatus.length === 0 || !db.configs.url) return;
+        if(processandoFilaStatus || filaRetentativaStatus.length === 0 || !db.configs.url) return;
+        processandoFilaStatus = true;
         let item = filaRetentativaStatus[0];
         try {
-            await fetch(db.configs.url, { method: 'POST', mode: 'no-cors', body: JSON.stringify(item.payload) });
-            filaRetentativaStatus.shift();
+            if(item.lastTry && (Date.now() - item.lastTry) < 1500) return;
+            item.lastTry = Date.now();
             salvarFilaStatus();
-        } catch(e) { } 
+            await enviarPayloadServidor(item.payload);
+            await new Promise(resolve => setTimeout(resolve, 900));
+            const dadosServidor = await carregarPedidosServidor();
+            if(payloadConfirmadoNoServidor(item.payload, dadosServidor)) {
+                filaRetentativaStatus.shift();
+                salvarFilaStatus();
+            }
+        } catch(e) {
+        } finally {
+            processandoFilaStatus = false;
+        }
     }
 
     async function alterarStatusPedido(id, novoStatus, motivo = '') {
-        pedidosBloqueados.add(id.toString()); 
+        pedidosBloqueados.add(id.toString());
         let pedidoLocal = pedidosServidor.find(x => x.id == id);
-        
-        if(pedidoLocal) { 
-            pedidoLocal.status = novoStatus; 
+
+        if(pedidoLocal) {
+            pedidoLocal.status = novoStatus;
             if(novoStatus === 'enviado' || novoStatus === 'buscar' || novoStatus === 'concluido' || novoStatus === 'cancelado') {
-                pedidoLocal.finalizadoEm = new Date().toISOString(); 
+                pedidoLocal.finalizadoEm = new Date().toISOString();
             }
             if(motivo) pedidoLocal.motivo = motivo;
         }
         renderizarListaCozinha();
         salvarHistoricoLocal();
-        
+
         let payload = { action: (novoStatus === 'cancelado' ? 'cancelar_pedido' : 'atualizar_status'), id: id, novoStatus: novoStatus };
         if(motivo) payload.motivo = motivo;
-        
-        filaRetentativaStatus.push({ payload: payload, time: Date.now() });
-        salvarFilaStatus();
-        processarFilaRetentativas(); 
+
+        enfileirarPayloadStatus(payload);
+        processarFilaRetentativas();
 
         setTimeout(() => pedidosBloqueados.delete(id.toString()), 15000);
     }
@@ -736,7 +839,7 @@
         pedidosServidor.forEach(p => {
             if ((p.status === 'enviado' || p.status === 'buscar' || p.status === 'concluido') && p.finalizadoEm) {
                 let mins = Math.floor((new Date(p.finalizadoEm).getTime() - new Date(p.timestamp).getTime()) / 60000);
-                if(mins >= 0 && mins <= 120) { 
+                if(mins >= 0 && mins <= 120) {
                     let n = p.produto.split(" (Obs:")[0];
                     medias[n] = (medias[n] || 0) + mins;
                     counts[n] = (counts[n] || 0) + 1;
@@ -764,17 +867,12 @@
 
     async function syncGeral() {
         if(!db.configs.url) return;
-        processarFilaRetentativas(); 
+        await processarFilaRetentativas();
 
         try {
-            let fetchUrl = db.configs.url;
-            fetchUrl += fetchUrl.includes('?') ? '&' : '?';
-            fetchUrl += "cb=" + Date.now(); 
+            const dadosServidor = await carregarPedidosServidor();
+            document.getElementById('indicadorConexao').innerHTML = '🟢';
 
-            const resp = await fetch(fetchUrl);
-            const dadosServidor = await resp.json();
-            document.getElementById('indicadorConexao').innerHTML = '🟢'; 
-            
             pedidosPendentesLocais = pedidosPendentesLocais.filter(p => (Date.now() - p.localTime) < 20000);
             pedidosPendentesLocais = pedidosPendentesLocais.filter(pTemp => {
                 return !dadosServidor.some(pServ => pServ.produto === pTemp.produto && pServ.status === 'pendente' && Math.abs(new Date(pServ.timestamp).getTime() - pTemp.localTime) < 25000);
@@ -789,24 +887,24 @@
                     let pesoLocal = hierarquiaStatus[pLocal.status] || 0;
                     let pesoServidor = hierarquiaStatus[pServ.status] || 0;
                     let temNaFila = filaRetentativaStatus.some(f => f.payload.id == pServ.id);
-                    
-                    if (pesoLocal > pesoServidor || temNaFila) { 
+
+                    if (pesoLocal > pesoServidor || temNaFila) {
                         if (pesoLocal > pesoServidor && !temNaFila) {
-                            filaRetentativaStatus.push({ payload: { action: (pLocal.status === 'cancelado' ? 'cancelar_pedido' : 'atualizar_status'), id: pLocal.id, novoStatus: pLocal.status, motivo: pLocal.motivo || '' }, time: Date.now() });
-                            salvarFilaStatus();
+                            enfileirarPayloadStatus({ action: (pLocal.status === 'cancelado' ? 'cancelar_pedido' : 'atualizar_status'), id: pLocal.id, novoStatus: pLocal.status, motivo: pLocal.motivo || '' });
                         }
-                        return pLocal; 
+                        return pLocal;
                     }
                 }
                 return pServ;
             });
 
-            corrigirTemposAbsurdos(); 
+            corrigirTemposAbsurdos();
+            salvarHistoricoLocal();
 
             if(db.configs.modo === 'cozinha') { renderizarListaCozinha(); } else { renderizarUltimosPedidos(); }
             gerenciarAlarme();
-        } catch(e) { 
-            document.getElementById('indicadorConexao').innerHTML = '🔴'; 
+        } catch(e) {
+            document.getElementById('indicadorConexao').innerHTML = '🔴';
         }
     }
 
@@ -833,11 +931,11 @@
             if (p.status === 'pendente') { statusTraduzido = 'Pendente'; corStatus = '#d32f2f'; }
             else if (p.status === 'fazendo') { statusTraduzido = 'Em preparo'; corStatus = '#fbc02d'; }
             else if (p.status === 'enviado') { statusTraduzido = 'Enviado'; corStatus = '#9e9e9e'; exibirTempo = false; }
-            else if (p.status === 'cancelado') { 
+            else if (p.status === 'cancelado') {
                 exibirTempo = false; let motivoTxt = p.motivo ? ` (Motivo: ${p.motivo})` : '';
                 if(!pedidosCientes.has(p.id.toString())) { statusTraduzido = 'Cancelado' + motivoTxt; corStatus = '#000000'; piscaClass = 'alerta-pisca-buscar'; onclickHtml = `onclick="darCiencia('${p.id}')"`; } else { statusTraduzido = 'Cancelado' + motivoTxt; corStatus = '#9e9e9e'; }
             }
-            else if (p.status === 'buscar') { 
+            else if (p.status === 'buscar') {
                 exibirTempo = false;
                 if(!pedidosCientes.has(p.id.toString())) { statusTraduzido = 'Pode ir buscar'; corStatus = '#d32f2f'; piscaClass = 'alerta-pisca-buscar'; onclickHtml = `onclick="darCiencia('${p.id}')"`; } else { statusTraduzido = 'Pode ir buscar'; corStatus = '#9e9e9e'; }
             } else { statusTraduzido = 'Finalizado'; corStatus = '#9e9e9e'; exibirTempo = false; }
@@ -850,45 +948,45 @@
     function renderizarListaCozinha() {
         const lista = document.getElementById('listaPedidosCozinha'); const agora = Date.now(); lista.innerHTML = '';
         const dataHoje = new Date().toDateString();
-        
+
         pedidosServidor.filter(p => new Date(p.timestamp).toDateString() === dataHoje).filter(p => {
             if(p.status !== 'concluido' && p.status !== 'enviado' && p.status !== 'buscar' && p.status !== 'cancelado') return true;
             return (agora - new Date(p.finalizadoEm).getTime()) < 300000;
         }).reverse().forEach(p => {
-            
-            let emoji = '🔔'; let isFinal = false; 
+
+            let emoji = '🔔'; let isFinal = false;
             // FONTE MAIOR NA COZINHA AQUI:
             let formatProduto = `<strong style="font-size: 22px;">${p.produto}</strong>`;
             let acaoTxt = ""; let tempoStr = ""; let classeRiscar = "";
-            
-            if (p.status === 'pendente') { 
-                emoji = '🔔'; 
-                acaoTxt = '👆 Toque para aceitar'; 
+
+            if (p.status === 'pendente') {
+                emoji = '🔔';
+                acaoTxt = '👆 Toque para aceitar';
                 tempoStr = getTempoRelativo(p.timestamp);
-            } 
-            else if (p.status === 'fazendo') { 
-                emoji = '🔥'; 
-                tempoStr = getTempoRelativo(p.timestamp); 
-            } 
-            else if (p.status === 'enviado') { 
+            }
+            else if (p.status === 'fazendo') {
+                emoji = '🔥';
+                tempoStr = getTempoRelativo(p.timestamp);
+            }
+            else if (p.status === 'enviado') {
                 emoji = '✔️'; isFinal = true; classeRiscar = "riscar";
                 acaoTxt = '👈 Deslize: desfaz envio - <b>[Enviado]</b>';
-            } 
-            else if (p.status === 'buscar') { 
+            }
+            else if (p.status === 'buscar') {
                 emoji = '✔️'; isFinal = true; classeRiscar = "riscar";
                 acaoTxt = '👈 Deslize: desfaz envio - <b>[Mandou Buscar]</b>';
-            } 
-            else if (p.status === 'cancelado') { 
+            }
+            else if (p.status === 'cancelado') {
                 emoji = '❌'; isFinal = true; classeRiscar = "riscar";
                 acaoTxt = p.motivo ? `👈 Deslize: desfaz envio (Motivo: ${p.motivo})` : '👈 Deslize: desfaz envio';
             }
-            
+
             let cssStatus = isFinal ? (p.status==='cancelado' ? 'cancelado' : 'concluido') : p.status;
-            
+
             if (isFinal && p.finalizadoEm && p.status !== 'cancelado') {
                 tempoStr = `Entregue ${getTempoRelativo(p.finalizadoEm)}`;
             } else if (p.status === 'cancelado') {
-                tempoStr = ""; 
+                tempoStr = "";
             }
 
             let subtitleHtml = acaoTxt ? `<div class="item-subtitle" style="text-decoration: none !important; opacity: 1 !important;">${acaoTxt}</div>` : '';
@@ -911,7 +1009,7 @@
     let touchStartX = 0; let pressTimer; let isLongPress = false; let lastTap = 0; let tapTimer;
     function handleTouchStart(e, elemento) { touchStartX = e.changedTouches[0].screenX; isLongPress = false; let statusAtual = elemento.getAttribute('data-status'); if(statusAtual === 'fazendo') { pressTimer = setTimeout(() => { isLongPress = true; alterarStatusPedido(elemento.getAttribute('data-id'), 'buscar'); }, 600); } }
     function handleTouchMove(e) { clearTimeout(pressTimer); }
-    function handleTouchEnd(e, elemento) { 
+    function handleTouchEnd(e, elemento) {
         clearTimeout(pressTimer); if(isLongPress) return;
         let diff = e.changedTouches[0].screenX - touchStartX; const id = elemento.getAttribute('data-id'); const statusAtual = elemento.getAttribute('data-status'); const nomeProd = elemento.getAttribute('data-nome');
         if (Math.abs(diff) < 20) {
@@ -929,9 +1027,17 @@
             const agora = Date.now();
             if(pedidosServidor.some(p => { const ehRecente = (agora - new Date(p.finalizadoEm).getTime()) < 300000; return ehRecente && (p.status === 'buscar' || p.status === 'cancelado') && !pedidosCientes.has(p.id.toString()); })) { h.classList.add('alerta-pisca-buscar'); if(db.configs.somPanelas !== "sem_som") { deveTocar = true; configSom = db.configs.somPanelas; } }
         }
-        if (deveTocar) { if (!alarmeTocando || playerAlarme.src !== sonsDisponiveis[configSom]) { playerAlarme.src = sonsDisponiveis[configSom]; playerAlarme.play().catch(()=>{}); alarmeTocando = true; } } else { pararAlarme(); }
+        if (deveTocar) {
+            const volume = db.configs.modo === 'panelas' ? parseInt(db.configs.volumePanelas || '70', 10) : parseInt(db.configs.volumeCozinha || '100', 10);
+            playerAlarme.volume = Math.max(0, Math.min(100, volume)) / 100;
+            if (!alarmeTocando || playerAlarme.src !== sonsDisponiveis[configSom]) {
+                playerAlarme.src = sonsDisponiveis[configSom];
+                playerAlarme.play().catch(()=>{});
+                alarmeTocando = true;
+            }
+        } else { pararAlarme(); }
     }
-    
+
     function pararAlarme() { document.getElementById('mainHeader').classList.remove('alerta-pisca', 'alerta-pisca-buscar'); playerAlarme.pause(); alarmeTocando = false; }
 
     let histLastTap = 0; let histTapTimer;
@@ -961,7 +1067,7 @@
     }
 
     function abrirHistorico() {
-        const lista = document.getElementById('listaHistorico'); lista.innerHTML = ''; const dataHoje = new Date().toDateString(); 
+        const lista = document.getElementById('listaHistorico'); lista.innerHTML = ''; const dataHoje = new Date().toDateString();
         const historicoHoje = pedidosServidor.filter(p => new Date(p.timestamp).toDateString() === dataHoje).reverse();
         if(historicoHoje.length === 0) { lista.innerHTML = '<li style="padding: 15px; text-align: center; color: #999;">Nenhum pedido hoje.</li>'; } else {
             historicoHoje.forEach(p => {
@@ -974,9 +1080,9 @@
     }
 
     function fecharModal(id) { document.getElementById(id).style.display = 'none'; }
-    
+
     function abrirLoginAdmin() { document.getElementById('senhaAdmin').value = ''; document.getElementById('modalLoginAdmin').style.display = 'flex'; setTimeout(()=>document.getElementById('senhaAdmin').focus(), 100); }
-    
+
     function solicitarAcessoAvancado() {
         fecharModal('modalPainelUnificado');
         document.getElementById('senhaAvancada').value = '';
@@ -997,7 +1103,7 @@
     async function forcarAtualizacao() {
         if (confirm("Deseja recarregar o aplicativo limpando o cache?")) {
             sessionStorage.clear();
-            
+
             if ('caches' in window) {
                 const names = await caches.keys();
                 await Promise.all(names.map(name => caches.delete(name)));
@@ -1045,20 +1151,20 @@
             const dtIni = document.getElementById('filtroDataInicio').value;
             const dtFim = document.getElementById('filtroDataFim').value;
             if(!dtIni || !dtFim) return alert("Selecione a data de início e fim.");
-            
+
             let dI = new Date(dtIni); dI.setMinutes(dI.getMinutes() + dI.getTimezoneOffset()); dI.setHours(0,0,0,0);
             let dF = new Date(dtFim); dF.setMinutes(dF.getMinutes() + dF.getTimezoneOffset()); dF.setHours(23,59,59,999);
             timeInicio = dI.getTime(); timeFim = dF.getTime();
         }
-        
-        let stats = {}; 
+
+        let stats = {};
         let totalGeral = 0;
 
         pedidosServidor.forEach(p => {
             let dataPedTime = new Date(p.timestamp).getTime();
             if (dataPedTime >= timeInicio && dataPedTime <= timeFim) {
-                let nomeBase = p.produto.split(" (Obs:")[0]; 
-                
+                let nomeBase = p.produto.split(" (Obs:")[0];
+
                 if (!stats[nomeBase]) stats[nomeBase] = { qtd: 0, tempoTotal: 0, countTempo: 0, temposIndividuais: [] };
                 stats[nomeBase].qtd++;
                 totalGeral++;
@@ -1067,7 +1173,7 @@
                     let minutos = Math.floor((new Date(p.finalizadoEm).getTime() - dataPedTime) / 60000);
                     stats[nomeBase].tempoTotal += minutos;
                     stats[nomeBase].countTempo++;
-                    
+
                     stats[nomeBase].temposIndividuais.push({
                         minutos: minutos,
                         dataStr: new Date(dataPedTime).toLocaleString('pt-BR', {day: '2-digit', month: '2-digit', hour: '2-digit', minute:'2-digit'})
@@ -1081,7 +1187,7 @@
         lista.innerHTML = '';
 
         let arrayStats = Object.keys(stats).map(k => ({ nome: k, ...stats[k] }));
-        arrayStats.sort((a, b) => b.qtd - a.qtd); 
+        arrayStats.sort((a, b) => b.qtd - a.qtd);
 
         if(arrayStats.length === 0) {
             lista.innerHTML = '<li style="padding: 15px; text-align: center; color: #999;">Nenhum dado no período.</li>';
@@ -1091,13 +1197,13 @@
         arrayStats.forEach((item, idx) => {
             let media = item.countTempo > 0 ? Math.round(item.tempoTotal / item.countTempo) : 0;
             let tempoStr = media < 1 ? "&lt; 1 min" : `${media} min`;
-            if(item.countTempo === 0) tempoStr = "-"; 
+            if(item.countTempo === 0) tempoStr = "-";
 
             let tagsHtml = item.temposIndividuais.map(t => {
                 let corBg = t.minutos <= 15 ? '#c8e6c9' : (t.minutos <= 30 ? '#fff9c4' : '#ffcdd2');
                 let corTx = t.minutos <= 15 ? '#2e7d32' : (t.minutos <= 30 ? '#f57f17' : '#c62828');
                 let minStr = t.minutos < 1 ? '<1m' : t.minutos + 'm';
-                
+
                 return `
                     <div style="display:flex; justify-content:space-between; align-items:center; background:#fff; padding:6px 10px; margin-bottom: 4px; border-radius: 4px; border: 1px solid #eee;">
                         <span style="font-size:12px; color:#555; font-weight: bold;">📅 ${t.dataStr}</span>
@@ -1105,7 +1211,7 @@
                     </div>
                 `;
             }).join('');
-            
+
             if(tagsHtml === '') tagsHtml = '<div style="font-size:12px; color:#999; padding: 5px;">Sem histórico finalizado</div>';
 
             lista.innerHTML += `
@@ -1130,75 +1236,74 @@
 
     async function sincronizarSalvarNuvem() {
         if(!db.configs.url) return alert("Salve a URL primeiro!");
-        
-        try { 
+
+        try {
             const btn = document.getElementById('btnSalvarNuvem');
-            btn.innerText = "Verificando..."; 
-            
+            btn.innerText = "Verificando...";
+
             let fetchUrl = db.configs.url;
             fetchUrl += fetchUrl.includes('?') ? '&' : '?';
             fetchUrl += "action=carregar_banco&cb=" + Date.now();
-            
+
             let res = await fetch(fetchUrl);
             let nuvemDB = await res.json();
-            
+
             if (!db.configs.dadosBaixados && nuvemDB.produtos && nuvemDB.produtos.length > 0) {
                 btn.innerText = "⬆️ Salvar Tudo na Nuvem";
                 return alert("🚨 OPERAÇÃO ABORTADA (PROTEÇÃO ATIVADA)!\n\nFoi detectado que o servidor já possui um cardápio salvo. Se você continuar, vai APAGAR O CARDÁPIO de todos os outros tablets.\n\nPor favor, clique obrigatoriamente em '⬇️ Puxar Tudo da Nuvem' primeiro para se sincronizar com a equipe.");
             }
 
-            btn.innerText = "Salvando..."; 
-            await fetch(db.configs.url, { method: 'POST', mode: 'no-cors', body: JSON.stringify({ action: 'salvar_banco', dados: { produtos: db.produtos, categorias: db.categorias, obsPedidos: db.obsPedidos, obsCancelamentos: db.obsCancelamentos, pedidos: pedidosServidor } }) }); 
-            
+            btn.innerText = "Salvando...";
+            await enviarPayloadServidor({ action: 'salvar_banco', dados: { produtos: db.produtos, categorias: db.categorias, obsPedidos: db.obsPedidos, obsCancelamentos: db.obsCancelamentos, configs: { senhaModo: db.configs.senhaModo || '', somCozinha: db.configs.somCozinha || 'sem_som', somPanelas: db.configs.somPanelas || 'sem_som', volumeCozinha: db.configs.volumeCozinha || '100', volumePanelas: db.configs.volumePanelas || '70', telaAtiva: db.configs.telaAtiva || 'sim', inatividade: db.configs.inatividade || '0', reenvio: db.configs.reenvio || 'permitido' } } });
+
             db.configs.dadosBaixados = true;
             salvarBancoLocal();
 
-            alert("✅ Salvo na Nuvem com sucesso!"); 
+            alert("✅ Salvo na Nuvem com sucesso!");
             btn.innerText = "⬆️ Salvar Tudo na Nuvem";
-        } catch(e) { 
-            alert("❌ Erro de conexão ao salvar ou ao verificar a segurança da nuvem."); 
+        } catch(e) {
+            alert("❌ Erro de conexão ao salvar ou ao verificar a segurança da nuvem.");
             const btn = document.getElementById('btnSalvarNuvem');
             if(btn) btn.innerText = "⬆️ Salvar Tudo na Nuvem";
-        } 
+        }
     }
 
     async function sincronizarPuxarNuvem(pedirConfirmacao) {
         if(!db.configs.url) return;
-        if(pedirConfirmacao && !confirm("ATENÇÃO: Este aparelho será atualizado com o cardápio e os itens que estão na nuvem. Deseja continuar?")) return; 
+        if(pedirConfirmacao && !confirm("ATENÇÃO: Este aparelho será atualizado com o cardápio e os itens que estão na nuvem. Deseja continuar?")) return;
         try {
             let urlAction = db.configs.url;
             urlAction += urlAction.includes('?') ? '&' : '?';
-            urlAction += "action=carregar_banco&cb=" + Date.now(); 
+            urlAction += "action=carregar_banco&cb=" + Date.now();
 
-            let res = await fetch(urlAction); 
+            let res = await fetch(urlAction);
             let nuvemDB = await res.json();
-            
+
             if(!nuvemDB.obsCancelamentos && nuvemDB.produtos === undefined) {
                 alert("⛔ ERRO DE URL (BANCO INCOMPATÍVEL)!\n\nEste link não pertence ao banco de dados do Alô Cozinha. A operação foi abortada para proteger seu equipamento.\n\nVerifique a URL colada.");
                 return;
             }
 
-            if(nuvemDB.produtos) { 
-                db.produtos = nuvemDB.produtos; 
-                db.categorias = nuvemDB.categorias || []; 
-                db.obsPedidos = nuvemDB.obsPedidos || ["Sem sal", "Pouco óleo"]; 
-                db.obsCancelamentos = nuvemDB.obsCancelamentos || ["Falta de insumo", "Queimou"]; 
-                
-                if(nuvemDB.pedidos) {
-                    pedidosServidor = nuvemDB.pedidos;
-                }
-                
-                db.configs.dadosBaixados = true; 
-                
-                salvarBancoLocal(); 
-                salvarHistoricoLocal();
+            if(nuvemDB.produtos) {
+                db.produtos = nuvemDB.produtos;
+                db.categorias = nuvemDB.categorias || [];
+                db.obsPedidos = nuvemDB.obsPedidos || ["Sem sal", "Pouco óleo"];
+                db.obsCancelamentos = nuvemDB.obsCancelamentos || ["Falta de insumo", "Queimou"];
 
-                if(pedirConfirmacao) { 
-                    alert("✅ Cardápio e configurações puxados com sucesso!"); 
-                    location.reload(); 
-                } else { 
-                    iniciar(); 
-                } 
+                if(nuvemDB.configs) {
+                    db.configs = { ...db.configs, ...nuvemDB.configs, url: db.configs.url, modo: db.configs.modo, dadosBaixados: true };
+                }
+
+                db.configs.dadosBaixados = true;
+
+                salvarBancoLocal();
+
+                if(pedirConfirmacao) {
+                    alert("✅ Cardápio e configurações puxados com sucesso!");
+                    location.reload();
+                } else {
+                    iniciar();
+                }
             }
         } catch(e) { console.log("Erro nuvem.", e); alert("❌ Falha ao puxar. O cache do servidor ou erro de internet impediu o download."); }
     }
@@ -1210,7 +1315,7 @@
             const blob = new Blob([dataStr], { type: "text/plain" });
             const data = new Date();
             const nomeArquivo = `alo_cozinha_backup_${data.getDate()}_${data.getMonth()+1}_${data.getFullYear()}.txt`;
-            
+
             if (navigator.share && navigator.canShare && navigator.canShare({ files: [new File([blob], nomeArquivo, {type: "text/plain"})] })) {
                 const file = new File([blob], nomeArquivo, {type: "text/plain"});
                 navigator.share({
@@ -1242,7 +1347,7 @@
         reader.onload = function(e) {
             try {
                 const importedData = JSON.parse(e.target.result);
-                
+
                 if (importedData.db && importedData.db.produtos) {
                     db = importedData.db;
                     if(importedData.pedidos) pedidosServidor = importedData.pedidos;
@@ -1254,9 +1359,9 @@
                     return;
                 }
 
-                db.configs.dadosBaixados = true; 
+                db.configs.dadosBaixados = true;
                 salvarBancoLocal();
-                
+
                 alert("✅ Banco de dados restaurado com sucesso! O aplicativo será recarregado.");
                 location.reload();
             } catch(err) {
@@ -1266,35 +1371,37 @@
         reader.readAsText(file);
     }
 
-    function salvarURL() { 
-        const urlInput = document.getElementById('configUrlApp').value.trim(); 
-        if(urlInput === "") return alert("Vazio."); 
-        
+    function salvarURL() {
+        const urlInput = document.getElementById('configUrlApp').value.trim();
+        if(urlInput === "") return alert("Vazio.");
+
         if (urlInput !== db.configs.url) {
-            db.configs.dadosBaixados = false; 
+            db.configs.dadosBaixados = false;
         }
-        
-        db.configs.url = urlInput; 
-        salvarBancoLocal(); 
-        alert("URL salva no sistema! Clique obrigatoriamente em 'Puxar Tudo da Nuvem' para iniciar."); 
+
+        db.configs.url = urlInput;
+        salvarBancoLocal();
+        alert("URL salva no sistema! Clique obrigatoriamente em 'Puxar Tudo da Nuvem' para iniciar.");
     }
 
-    function fecharPainelUnificado() { 
-        db.configs.senhaModo = document.getElementById('configSenhaModo').value; 
-        db.configs.somCozinha = document.getElementById('configSomCozinha').value; 
-        db.configs.somPanelas = document.getElementById('configSomPanelas').value; 
-        db.configs.telaAtiva = document.getElementById('configTelaAtiva').value; 
-        db.configs.inatividade = document.getElementById('configInatividade').value; 
-        db.configs.reenvio = document.getElementById('configReenvio').value; 
-        salvarBancoLocal(); 
+    function fecharPainelUnificado() {
+        db.configs.senhaModo = document.getElementById('configSenhaModo').value;
+        db.configs.somCozinha = document.getElementById('configSomCozinha').value;
+        db.configs.somPanelas = document.getElementById('configSomPanelas').value;
+        db.configs.volumeCozinha = document.getElementById('configVolumeCozinha').value;
+        db.configs.volumePanelas = document.getElementById('configVolumePanelas').value;
+        db.configs.telaAtiva = document.getElementById('configTelaAtiva').value;
+        db.configs.inatividade = document.getElementById('configInatividade').value;
+        db.configs.reenvio = document.getElementById('configReenvio').value;
+        salvarBancoLocal();
 
-        solicitarWakeLock(); 
-        resetInatividade(); 
-        gerenciarAlarme(); 
-        if(previewAudio) { previewAudio.pause(); } 
-        fecharModal('modalPainelUnificado'); 
+        solicitarWakeLock();
+        resetInatividade();
+        gerenciarAlarme();
+        if(previewAudio) { previewAudio.pause(); }
+        fecharModal('modalPainelUnificado');
     }
-    
+
     function voltarParaPainelGeral() { fecharModal('modalListagem'); document.getElementById('modalPainelUnificado').style.display = 'flex'; }
 
     function moverItem(tipo, index, direcao) { const lista = tipo === 'produtos' ? db.produtos : (tipo === 'categorias' ? db.categorias : (tipo === 'obsPedidos' ? db.obsPedidos : db.obsCancelamentos)); if(direcao === 'cima' && index > 0) { const temp = lista[index]; lista[index] = lista[index - 1]; lista[index - 1] = temp; } else if (direcao === 'baixo' && index < lista.length - 1) { const temp = lista[index]; lista[index] = lista[index + 1]; lista[index + 1] = temp; } salvarBancoLocal(); iniciar(); abrirGerenciar(tipo); }
@@ -1309,74 +1416,77 @@
     function novaObservacao(tipo) { const obs = prompt(tipo === 'obsPedidos' ? "Nova observação global:" : "Novo motivo de cancelamento:"); if(obs) { db[tipo].push(obs); salvarBancoLocal(); abrirGerenciar(tipo); } }
     function excluirItem(tipo, id) { if(!confirm("Certeza?")) return; if(tipo === 'produtos') db.produtos.splice(id, 1); if(tipo === 'categorias') db.categorias = db.categorias.filter(i => i.nome !== id); if(tipo === 'obsPedidos') db.obsPedidos = db.obsPedidos.filter(i => i !== id); if(tipo === 'obsCancelamentos') db.obsCancelamentos = db.obsCancelamentos.filter(i => i !== id); salvarBancoLocal(); iniciar(); abrirGerenciar(tipo); }
 
-    function abrirFormProduto(idx) { 
-        fecharModal('modalListagem'); 
-        const combo = document.getElementById('prodCategoria'); combo.innerHTML = ''; 
-        db.categorias.forEach(c => combo.innerHTML += `<option value="${c.nome}">${c.nome}</option>`); 
-        if(idx >= 0) { 
-            const p = db.produtos[idx]; 
-            document.getElementById('prodIndexOriginal').value = idx; 
-            document.getElementById('prodNome').value = p.nome; 
-            document.getElementById('prodCategoria').value = p.categoria; 
+    function abrirFormProduto(idx) {
+        fecharModal('modalListagem');
+        const combo = document.getElementById('prodCategoria'); combo.innerHTML = '';
+        db.categorias.forEach(c => combo.innerHTML += `<option value="${c.nome}">${c.nome}</option>`);
+        if(idx >= 0) {
+            const p = db.produtos[idx];
+            document.getElementById('prodIndexOriginal').value = idx;
+            document.getElementById('prodNome').value = p.nome;
+            document.getElementById('prodCategoria').value = p.categoria;
             document.getElementById('prodObsEspec').value = p.obsEspec ? p.obsEspec.join(', ') : '';
-        } else { 
-            document.getElementById('prodIndexOriginal').value = '-1'; 
-            document.getElementById('prodNome').value = ''; 
-            document.getElementById('prodObsEspec').value = ''; 
-        } 
-        document.getElementById('modalFormProduto').style.display = 'flex'; 
+        } else {
+            document.getElementById('prodIndexOriginal').value = '-1';
+            document.getElementById('prodNome').value = '';
+            document.getElementById('prodObsEspec').value = '';
+        }
+        document.getElementById('modalFormProduto').style.display = 'flex';
     }
 
-    function salvarProduto() { 
-        const idx = parseInt(document.getElementById('prodIndexOriginal').value); 
-        const nome = document.getElementById('prodNome').value.trim(); 
-        const cat = document.getElementById('prodCategoria').value; 
+    function salvarProduto() {
+        const idx = parseInt(document.getElementById('prodIndexOriginal').value);
+        const nome = document.getElementById('prodNome').value.trim();
+        const cat = document.getElementById('prodCategoria').value;
         const obsStr = document.getElementById('prodObsEspec').value;
         const obsArray = obsStr.split(',').map(s => s.trim()).filter(s => s !== '');
 
-        if(!nome || !cat) return alert("Preencha o nome e a categoria!"); 
-        if(idx >= 0) { 
-            db.produtos[idx] = { nome: nome, categoria: cat, obsEspec: obsArray }; 
-        } else { 
-            db.produtos.push({ nome: nome, categoria: cat, obsEspec: obsArray }); 
-        } 
-        salvarBancoLocal(); iniciar(); abrirGerenciar('produtos'); 
+        if(!nome || !cat) return alert("Preencha o nome e a categoria!");
+        if(idx >= 0) {
+            db.produtos[idx] = { nome: nome, categoria: cat, obsEspec: obsArray };
+        } else {
+            db.produtos.push({ nome: nome, categoria: cat, obsEspec: obsArray });
+        }
+        salvarBancoLocal(); iniciar(); abrirGerenciar('produtos');
     }
 
     function abrirFormCategoria(idx) { fecharModal('modalListagem'); if(idx >= 0) { const c = db.categorias[idx]; document.getElementById('catIndexOriginal').value = idx; document.getElementById('catNome').value = c.nome; document.getElementById('catCor').value = c.cor; document.getElementById('catCorTexto').value = c.corTexto || '#000000'; } else { document.getElementById('catIndexOriginal').value = '-1'; document.getElementById('catNome').value = ''; document.getElementById('catCor').value = '#1976D2'; document.getElementById('catCorTexto').value = '#ffffff'; } document.getElementById('modalFormCategoria').style.display = 'flex'; }
     function salvarCategoria() { const idx = parseInt(document.getElementById('catIndexOriginal').value); const nome = document.getElementById('catNome').value.trim(); const cor = document.getElementById('catCor').value; const corTexto = document.getElementById('catCorTexto').value; if(!nome) return alert("Preencha o nome!"); if(idx >= 0) { const nomeAntigo = db.categorias[idx].nome; db.categorias[idx] = { nome, cor, corTexto }; db.produtos.forEach(p => { if(p.categoria === nomeAntigo) p.categoria = nome; }); } else { db.categorias.push({ nome, cor, corTexto }); } salvarBancoLocal(); iniciar(); abrirGerenciar('categorias'); }
 
     document.getElementById('senhaAdmin').addEventListener('input', function(e) {
-        if(this.value === "1999" || (db.configs.senhaModo && this.value === db.configs.senhaModo)) { 
-            this.blur(); document.getElementById('modalLoginAdmin').style.display = 'none'; 
-            document.getElementById('configUrlApp').value = db.configs.url || ''; 
-            document.getElementById('configSenhaModo').value = db.configs.senhaModo || ''; 
-            document.getElementById('configSomCozinha').value = db.configs.somCozinha || 'sem_som'; 
-            document.getElementById('configSomPanelas').value = db.configs.somPanelas || 'sem_som'; 
-            document.getElementById('configTelaAtiva').value = db.configs.telaAtiva || 'sim'; 
-            document.getElementById('configInatividade').value = db.configs.inatividade || '0'; 
-            document.getElementById('configReenvio').value = db.configs.reenvio || 'permitido'; 
-            document.getElementById('modalPainelUnificado').style.display = 'flex'; 
-            this.value = ''; 
+        if(this.value === "1999" || (db.configs.senhaModo && this.value === db.configs.senhaModo)) {
+            this.blur(); document.getElementById('modalLoginAdmin').style.display = 'none';
+            document.getElementById('configUrlApp').value = db.configs.url || '';
+            document.getElementById('configSenhaModo').value = db.configs.senhaModo || '';
+            document.getElementById('configSomCozinha').value = db.configs.somCozinha || 'sem_som';
+            document.getElementById('configSomPanelas').value = db.configs.somPanelas || 'sem_som';
+            document.getElementById('configVolumeCozinha').value = db.configs.volumeCozinha || '100';
+            document.getElementById('configVolumePanelas').value = db.configs.volumePanelas || '70';
+            document.getElementById('configTelaAtiva').value = db.configs.telaAtiva || 'sim';
+            document.getElementById('configInatividade').value = db.configs.inatividade || '0';
+            document.getElementById('configReenvio').value = db.configs.reenvio || 'permitido';
+            atualizarLabelsVolume();
+            document.getElementById('modalPainelUnificado').style.display = 'flex';
+            this.value = '';
         }
     });
 
     document.getElementById('senhaAvancada').addEventListener('input', function(e) {
-        if(this.value === "1999") { 
-            this.blur(); 
-            document.getElementById('modalSenhaAvancada').style.display = 'none'; 
-            document.getElementById('inputExcluirTudo').value = ''; 
-            document.getElementById('modalConfigAvancadas').style.display = 'flex'; 
-            this.value = ''; 
+        if(this.value === "1999") {
+            this.blur();
+            document.getElementById('modalSenhaAvancada').style.display = 'none';
+            document.getElementById('inputExcluirTudo').value = '';
+            document.getElementById('modalConfigAvancadas').style.display = 'flex';
+            this.value = '';
         }
     });
 
     document.getElementById('inputSenhaAcao').addEventListener('input', function(e) {
-        if(this.value === "1999") { 
-            this.blur(); 
+        if(this.value === "1999") {
+            this.blur();
             fecharModal('modalSenhaAcao');
-            this.value = ''; 
-            
+            this.value = '';
+
             if (acaoPendente === 'zerar_expediente') {
                 const dataHoje = new Date().toDateString();
                 pedidosServidor = pedidosServidor.filter(p => new Date(p.timestamp).toDateString() !== dataHoje);
@@ -1384,11 +1494,11 @@
                 fetch(db.configs.url, { method: 'POST', mode: 'no-cors', body: JSON.stringify({ action: 'excluir_hoje' }) });
                 alert("Expediente zerado com sucesso!");
             } else if (acaoPendente === 'excluir_item') {
-                pedidosServidor = pedidosServidor.filter(p => p.id != parametroAcao); 
+                pedidosServidor = pedidosServidor.filter(p => p.id != parametroAcao);
                 abrirHistorico();
                 fetch(db.configs.url, { method: 'POST', mode: 'no-cors', body: JSON.stringify({ action: 'excluir_pedido', id: parametroAcao }) });
             }
-            
+
             acaoPendente = null;
             parametroAcao = null;
         }
