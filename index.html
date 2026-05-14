@@ -8,7 +8,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
     <meta name="mobile-web-app-capable" content="yes">
     <meta name="theme-color" content="#1565C0" id="metaThemeColor">
-    <title>Alô Cozinha v1.2</title>
+    <title>Alô Cozinha v1.3.1</title>
 
     <style>
         body { font-family: Arial, sans-serif; background-color: #f0f2f5; margin: 0; padding: 0; display: flex; justify-content: center; user-select: none; -webkit-user-select: none; -webkit-touch-callout: none; overflow: hidden; position: fixed; width: 100%; height: 100%; }
@@ -102,7 +102,7 @@
 <div id="splashScreen">
     <img src="icon.png" alt="Logo" class="splash-icone" onerror="this.src='data:image/svg+xml;utf8,<svg xmlns=\'http://www.w3.org/2000/svg\' viewBox=\'0 0 100 100\'><text y=\'50\' font-size=\'40\'>🍲</text></svg>'">
     <div class="splash-titulo">Alô Cozinha</div>
-    <div class="splash-versao">v1.2</div>
+    <div class="splash-versao">v1.3.1</div>
 </div>
 
 <div class="app-container">
@@ -176,7 +176,7 @@
         <!-- BOTÕES REDESENHADOS -->
         <div class="modal-actions" style="justify-content: space-between; align-items: stretch; margin-top: 30px;">
             <button class="btn-cancel" style="background: #d32f2f; color: white; margin: 0; padding: 15px 10px; font-size: 16px; flex: 1; max-width: 33%;" onclick="fecharModal('modalFazerPedido')">Cancelar</button>
-            <button class="btn-action" style="background: #2e7d32; margin: 0; padding: 15px 10px; font-size: 18px; flex: 2; margin-left: 10px;" onclick="enviarPedidoConfirmado()">Confirmar</button>
+            <button id="btnConfirmarPedido" class="btn-action" style="background: #2e7d32; margin: 0; padding: 15px 10px; font-size: 18px; flex: 2; margin-left: 10px;" onclick="enviarPedidoConfirmado()">Confirmar</button>
         </div>
     </div>
 </div>
@@ -257,7 +257,7 @@
 
 <div class="modal-overlay" id="modalPainelUnificado">
     <div class="modal">
-        <div style="text-align: center; color: #666; font-size: 13px; font-weight: bold; margin-bottom: 20px;">Alô Cozinha - v1.2</div>
+        <div style="text-align: center; color: #666; font-size: 13px; font-weight: bold; margin-bottom: 20px;">Alô Cozinha - v1.3.1</div>
 
         <button class="btn-outline" onclick="abrirGerenciar('produtos')">🍔 Gerenciar Produtos</button>
         <button class="btn-outline" onclick="abrirGerenciar('categorias')">🏷️ Gerenciar Categorias</button>
@@ -300,12 +300,11 @@
                     <option value="sem_som">Sem som</option>
                     <option value="alarme">Alarme Curto</option>
                     <option value="beep">Beep Clássico</option>
-                    <option value="bipe_eletronico">Bipe Eletrônico</option>
-                    <option value="corneta">Corneta de Chamada</option>
-                    <option value="digital">Despertador Digital</option>
-                    <option value="mecanico">Despertador Mecânico</option>
-                    <option value="sino">Sino de Jantar</option>
                     <option value="sino_forte">Sino Forte</option>
+                    <option value="sirene_cozinha">Sirene Cozinha</option>
+                    <option value="alerta_triplo">Alerta Triplo</option>
+                    <option value="campainha_forte">Campainha Forte</option>
+                    <option value="toque_urgente">Toque Urgente</option>
                 </select>
                 <button class="btn-cancel" style="padding: 10px;" onclick="tocarPreview('configSomCozinha')">▶️</button>
             </div>
@@ -322,12 +321,11 @@
                     <option value="sem_som">Sem som</option>
                     <option value="alarme">Alarme Curto</option>
                     <option value="beep">Beep Clássico</option>
-                    <option value="bipe_eletronico">Bipe Eletrônico</option>
-                    <option value="corneta">Corneta de Chamada</option>
-                    <option value="digital">Despertador Digital</option>
-                    <option value="mecanico">Despertador Mecânico</option>
-                    <option value="sino">Sino de Jantar</option>
                     <option value="sino_forte">Sino Forte</option>
+                    <option value="sirene_cozinha">Sirene Cozinha</option>
+                    <option value="alerta_triplo">Alerta Triplo</option>
+                    <option value="campainha_forte">Campainha Forte</option>
+                    <option value="toque_urgente">Toque Urgente</option>
                 </select>
                 <button class="btn-cancel" style="padding: 10px;" onclick="tocarPreview('configSomPanelas')">▶️</button>
             </div>
@@ -458,20 +456,21 @@
     if (savedCientes) { pedidosCientes = new Set(JSON.parse(savedCientes)); }
 
     const hierarquiaStatus = { 'pendente': 1, 'fazendo': 2, 'enviado': 3, 'buscar': 3, 'cancelado': 4, 'concluido': 5 };
+    const SYNC_INTERVALO_MS = 2000;
 
     const sonsDisponiveis = {
-        "sem_som": "",
-        "alarme": "https://actions.google.com/sounds/v1/alarms/alarm_clock.ogg",
-        "beep": "https://actions.google.com/sounds/v1/alarms/beep_short.ogg",
-        "bipe_eletronico": "https://actions.google.com/sounds/v1/alarms/dosimeter_alarm.ogg",
-        "corneta": "https://actions.google.com/sounds/v1/alarms/bugle_tune.ogg",
-        "digital": "https://actions.google.com/sounds/v1/alarms/digital_watch_alarm_long.ogg",
-        "mecanico": "https://actions.google.com/sounds/v1/alarms/mechanical_clock_ring.ogg",
-        "sino": "https://actions.google.com/sounds/v1/alarms/dinner_bell_triangle.ogg",
-        "sino_forte": "https://actions.google.com/sounds/v1/alarms/medium_bell_ringing_near.ogg"
+        "sem_som": { tipo: "silencio" },
+        "alarme": { tipo: "audio", url: "https://actions.google.com/sounds/v1/alarms/alarm_clock.ogg" },
+        "beep": { tipo: "audio", url: "https://actions.google.com/sounds/v1/alarms/beep_short.ogg" },
+        "sino_forte": { tipo: "audio", url: "https://actions.google.com/sounds/v1/alarms/medium_bell_ringing_near.ogg" },
+        "sirene_cozinha": { tipo: "sintetico", intervalo: 1400 },
+        "alerta_triplo": { tipo: "sintetico", intervalo: 1200 },
+        "campainha_forte": { tipo: "sintetico", intervalo: 1500 },
+        "toque_urgente": { tipo: "sintetico", intervalo: 1300 }
     };
 
     let playerAlarme = new Audio(); playerAlarme.loop = true; let alarmeTocando = false; let previewAudio = null; let previewTimeout = null;
+    let audioCtx = null; let somAtualTocando = "sem_som"; let alarmeSinteticoTimer = null; let envioPedidoEmAndamento = false;
 
     let timerInatividade = null;
     function resetInatividade() {
@@ -487,6 +486,19 @@
         }
     }
     document.addEventListener('touchstart', resetInatividade); document.addEventListener('mousemove', resetInatividade); document.addEventListener('click', resetInatividade);
+
+    function prepararAudioNoPrimeiroToque() {
+        const ctx = getAudioCtx();
+        if(!ctx) return;
+        const gain = ctx.createGain();
+        gain.gain.setValueAtTime(0.0001, ctx.currentTime);
+        const osc = ctx.createOscillator();
+        osc.connect(gain).connect(ctx.destination);
+        osc.start();
+        osc.stop(ctx.currentTime + 0.03);
+    }
+    document.addEventListener('touchstart', prepararAudioNoPrimeiroToque, { once: true });
+    document.addEventListener('click', prepararAudioNoPrimeiroToque, { once: true });
 
     async function solicitarWakeLock() {
         if(db.configs.telaAtiva === "nao") {
@@ -512,15 +524,84 @@
         if(labelPanelas && volumePanelas) labelPanelas.innerText = `${volumePanelas.value}%`;
     }
 
+    function normalizarSom(valor, fallback) {
+        if(valor === "sem_som") return "sem_som";
+        return sonsDisponiveis[valor] ? valor : fallback;
+    }
+
+    function normalizarSonsConfigurados() {
+        db.configs.somCozinha = normalizarSom(db.configs.somCozinha || "sem_som", "alarme");
+        db.configs.somPanelas = normalizarSom(db.configs.somPanelas || "sem_som", "beep");
+    }
+
+    function getAudioCtx() {
+        const AudioContextClass = window.AudioContext || window.webkitAudioContext;
+        if(!AudioContextClass) return null;
+        if(!audioCtx) audioCtx = new AudioContextClass();
+        if(audioCtx.state === "suspended") audioCtx.resume().catch(()=>{});
+        return audioCtx;
+    }
+
+    function tocarPulso(freqInicio, freqFim, atraso, duracao, volume, tipoOnda = "square") {
+        const ctx = getAudioCtx();
+        if(!ctx || volume <= 0) return;
+        const inicio = ctx.currentTime + atraso;
+        const osc = ctx.createOscillator();
+        const gain = ctx.createGain();
+        osc.type = tipoOnda;
+        osc.frequency.setValueAtTime(freqInicio, inicio);
+        osc.frequency.linearRampToValueAtTime(freqFim, inicio + duracao);
+        gain.gain.setValueAtTime(0.0001, inicio);
+        gain.gain.exponentialRampToValueAtTime(Math.max(0.001, volume), inicio + 0.02);
+        gain.gain.exponentialRampToValueAtTime(0.0001, inicio + duracao);
+        osc.connect(gain).connect(ctx.destination);
+        osc.start(inicio);
+        osc.stop(inicio + duracao + 0.05);
+    }
+
+    function executarSomSintetico(tipo, volume) {
+        const vol = Math.max(0, Math.min(1, volume));
+        if(tipo === "sirene_cozinha") {
+            tocarPulso(640, 1220, 0, 0.38, vol, "square");
+            tocarPulso(1220, 640, 0.45, 0.38, vol, "square");
+        } else if(tipo === "alerta_triplo") {
+            tocarPulso(980, 980, 0, 0.12, vol, "square");
+            tocarPulso(1220, 1220, 0.18, 0.12, vol, "square");
+            tocarPulso(980, 980, 0.36, 0.12, vol, "square");
+        } else if(tipo === "campainha_forte") {
+            tocarPulso(820, 1320, 0, 0.22, vol, "sine");
+            tocarPulso(1320, 820, 0.28, 0.22, vol, "sine");
+        } else if(tipo === "toque_urgente") {
+            tocarPulso(540, 540, 0, 0.14, vol, "sawtooth");
+            tocarPulso(760, 760, 0.18, 0.14, vol, "sawtooth");
+            tocarPulso(980, 980, 0.36, 0.2, vol, "sawtooth");
+        }
+    }
+
+    function pararSomSintetico() {
+        if(alarmeSinteticoTimer) {
+            clearInterval(alarmeSinteticoTimer);
+            alarmeSinteticoTimer = null;
+        }
+    }
+
     function tocarPreview(selectId) {
         if(previewAudio) { previewAudio.pause(); previewAudio.currentTime = 0; }
         if(previewTimeout) { clearTimeout(previewTimeout); }
-        let val = document.getElementById(selectId).value;
+
+        let val = normalizarSom(document.getElementById(selectId).value, selectId === 'configSomPanelas' ? 'beep' : 'alarme');
         if(val === "sem_som") return;
-        previewAudio = new Audio(sonsDisponiveis[val]);
-        previewAudio.volume = getVolumePorSelect(selectId);
-        previewAudio.play().catch(()=>{});
-        previewTimeout = setTimeout(() => { if(previewAudio) previewAudio.pause(); }, 3000);
+
+        const som = sonsDisponiveis[val];
+        const volume = getVolumePorSelect(selectId);
+        if(som.tipo === "audio") {
+            previewAudio = new Audio(som.url);
+            previewAudio.volume = volume;
+            previewAudio.play().catch(()=>{});
+            previewTimeout = setTimeout(() => { if(previewAudio) previewAudio.pause(); }, 3000);
+        } else if(som.tipo === "sintetico") {
+            executarSomSintetico(val, volume);
+        }
     }
 
     function carregarBanco() {
@@ -577,7 +658,10 @@
     function efetivarTrocaModo(modo) { db.configs.modo = modo; salvarBancoLocal(); aplicarModoVisual(modo); }
 
     function iniciar() {
+        normalizarSonsConfigurados();
         document.getElementById('seletorModo').value = db.configs.modo || 'panelas';
+        document.getElementById('configSomCozinha').value = db.configs.somCozinha || 'sem_som';
+        document.getElementById('configSomPanelas').value = db.configs.somPanelas || 'sem_som';
         document.getElementById('configTelaAtiva').value = db.configs.telaAtiva || "sim";
         document.getElementById('configInatividade').value = db.configs.inatividade || "0";
         document.getElementById('configVolumeCozinha').value = db.configs.volumeCozinha || "100";
@@ -595,7 +679,7 @@
         const themeColor = document.getElementById('metaThemeColor'); document.body.className = modo === 'panelas' ? 'theme-panelas' : 'theme-cozinha';
         document.getElementById('dicasCozinha').style.display = modo === 'cozinha' ? 'block' : 'none';
         if(loopSync) clearInterval(loopSync);
-        if(modo === 'panelas') { if(themeColor) themeColor.content = '#1565C0'; document.getElementById('area-panelas').style.display = 'flex'; document.getElementById('area-cozinha').style.display = 'none'; pararAlarme(); renderizarFiltros(); renderizarListaPanelas(); syncGeral(); loopSync = setInterval(syncGeral, 5000); } else { if(themeColor) themeColor.content = '#2e7d32'; document.getElementById('area-panelas').style.display = 'none'; document.getElementById('area-cozinha').style.display = 'flex'; pararAlarme(); syncGeral(); loopSync = setInterval(syncGeral, 5000); }
+        if(modo === 'panelas') { if(themeColor) themeColor.content = '#1565C0'; document.getElementById('area-panelas').style.display = 'flex'; document.getElementById('area-cozinha').style.display = 'none'; pararAlarme(); renderizarFiltros(); renderizarListaPanelas(); syncGeral(); loopSync = setInterval(syncGeral, SYNC_INTERVALO_MS); } else { if(themeColor) themeColor.content = '#2e7d32'; document.getElementById('area-panelas').style.display = 'none'; document.getElementById('area-cozinha').style.display = 'flex'; pararAlarme(); syncGeral(); loopSync = setInterval(syncGeral, SYNC_INTERVALO_MS); }
     }
 
     function renderizarFiltros() {
@@ -672,6 +756,8 @@
     function abrirModalPedido(nomeProduto) {
         if(!db.configs.url) return alert("URL não configurada! Vá na engrenagem ⚙️ > Avançadas");
         document.getElementById('tituloModalPedido').innerText = `Pedir: ${nomeProduto}`; document.getElementById('pedidoItemNome').value = nomeProduto; document.getElementById('pedidoObsText').value = '';
+        const btnConfirmar = document.getElementById('btnConfirmarPedido');
+        if(btnConfirmar) btnConfirmar.disabled = false;
         const container = document.getElementById('obsChipsContainer'); container.innerHTML = '';
 
         let pObj = db.produtos.find(p => p.nome === nomeProduto);
@@ -680,6 +766,7 @@
 
         listaObs.forEach(obs => { container.innerHTML += `<div class="chip" style="font-weight: normal; background-color:#E3F2FD; color:#1565C0; border-color:#1565C0;" onclick="addObsToText('pedidoObsText', '${obs}')">${obs}</div>`; });
         document.getElementById('modalFazerPedido').style.display = 'flex';
+        syncGeral();
     }
 
     function abrirModalCancelamento(id, nomeProduto) {
@@ -703,11 +790,22 @@
         input.value = parts.join(', ');
     }
 
+    function focarUltimosPedidosPanelas() {
+        requestAnimationFrame(() => {
+            const lista = document.getElementById('listaUltimosPedidosPanelas');
+            const areaScroll = lista ? lista.closest('.scroll-area') : null;
+            if(areaScroll) areaScroll.scrollTop = 0;
+        });
+    }
+
     async function enviarPedidoConfirmado() {
+        if(envioPedidoEmAndamento) return;
+        envioPedidoEmAndamento = true;
+        const btnConfirmar = document.getElementById('btnConfirmarPedido');
+        if(btnConfirmar) btnConfirmar.disabled = true;
+
         const nome = document.getElementById('pedidoItemNome').value;
         const obsText = document.getElementById('pedidoObsText').value.trim();
-
-        await syncGeral();
 
         let itemEmProducao = existeItemEmProducao(nome);
         let configReenvio = db.configs.reenvio || 'permitido';
@@ -716,10 +814,14 @@
             if (configReenvio === 'bloqueado') {
                 alert("Esse item está em produção");
                 document.getElementById('modalFazerPedido').style.display = 'none';
+                envioPedidoEmAndamento = false;
+                if(btnConfirmar) btnConfirmar.disabled = false;
                 return;
             } else if (configReenvio === 'confirmacao') {
                 if(!confirm("Esse item está em produção.\n\nEnviar assim mesmo?")) {
                     document.getElementById('modalFazerPedido').style.display = 'none';
+                    envioPedidoEmAndamento = false;
+                    if(btnConfirmar) btnConfirmar.disabled = false;
                     return;
                 }
             }
@@ -734,10 +836,15 @@
         pedidosPendentesLocais.push(pedidoTemporario);
         pedidosServidor.push(pedidoTemporario);
         renderizarUltimosPedidos();
+        focarUltimosPedidosPanelas();
+        salvarHistoricoLocal();
+        envioPedidoEmAndamento = false;
+        if(btnConfirmar) btnConfirmar.disabled = false;
 
         try {
             await enviarPayloadServidor({ action: 'novo_pedido', produto: nomeParaEnviar });
-            setTimeout(syncGeral, 1000);
+            setTimeout(syncGeral, 500);
+            setTimeout(syncGeral, 1800);
         } catch(e) {
             pedidosPendentesLocais = pedidosPendentesLocais.filter(p => p.id !== tempId);
             pedidosServidor = pedidosServidor.filter(p => p.id !== tempId);
@@ -793,17 +900,24 @@
     async function processarFilaRetentativas() {
         if(processandoFilaStatus || filaRetentativaStatus.length === 0 || !db.configs.url) return;
         processandoFilaStatus = true;
-        let item = filaRetentativaStatus[0];
         try {
-            if(item.lastTry && (Date.now() - item.lastTry) < 1500) return;
-            item.lastTry = Date.now();
-            salvarFilaStatus();
-            await enviarPayloadServidor(item.payload);
-            await new Promise(resolve => setTimeout(resolve, 900));
-            const dadosServidor = await carregarPedidosServidor();
-            if(payloadConfirmadoNoServidor(item.payload, dadosServidor)) {
-                filaRetentativaStatus.shift();
+            while(filaRetentativaStatus.length > 0) {
+                const agora = Date.now();
+                const itensParaEnviar = filaRetentativaStatus.filter(item => !item.lastTry || (agora - item.lastTry) >= 700);
+
+                if(itensParaEnviar.length === 0) break;
+
+                itensParaEnviar.forEach(item => item.lastTry = agora);
                 salvarFilaStatus();
+                await Promise.allSettled(itensParaEnviar.map(item => enviarPayloadServidor(item.payload)));
+                await new Promise(resolve => setTimeout(resolve, 500));
+
+                const dadosServidor = await carregarPedidosServidor();
+                const tamanhoAntes = filaRetentativaStatus.length;
+                filaRetentativaStatus = filaRetentativaStatus.filter(item => !payloadConfirmadoNoServidor(item.payload, dadosServidor));
+                salvarFilaStatus();
+
+                if(filaRetentativaStatus.length === tamanhoAntes) break;
             }
         } catch(e) {
         } finally {
@@ -830,6 +944,8 @@
 
         enfileirarPayloadStatus(payload);
         processarFilaRetentativas();
+        setTimeout(syncGeral, 700);
+        setTimeout(syncGeral, 2200);
 
         setTimeout(() => pedidosBloqueados.delete(id.toString()), 15000);
     }
@@ -1028,17 +1144,34 @@
             if(pedidosServidor.some(p => { const ehRecente = (agora - new Date(p.finalizadoEm).getTime()) < 300000; return ehRecente && (p.status === 'buscar' || p.status === 'cancelado') && !pedidosCientes.has(p.id.toString()); })) { h.classList.add('alerta-pisca-buscar'); if(db.configs.somPanelas !== "sem_som") { deveTocar = true; configSom = db.configs.somPanelas; } }
         }
         if (deveTocar) {
+            configSom = normalizarSom(configSom, db.configs.modo === 'panelas' ? 'beep' : 'alarme');
             const volume = db.configs.modo === 'panelas' ? parseInt(db.configs.volumePanelas || '70', 10) : parseInt(db.configs.volumeCozinha || '100', 10);
-            playerAlarme.volume = Math.max(0, Math.min(100, volume)) / 100;
-            if (!alarmeTocando || playerAlarme.src !== sonsDisponiveis[configSom]) {
-                playerAlarme.src = sonsDisponiveis[configSom];
-                playerAlarme.play().catch(()=>{});
+            const volumeNormalizado = Math.max(0, Math.min(100, volume)) / 100;
+            const som = sonsDisponiveis[configSom];
+
+            if (som.tipo === "audio") {
+                pararSomSintetico();
+                playerAlarme.volume = volumeNormalizado;
+                if (!alarmeTocando || somAtualTocando !== configSom) {
+                    playerAlarme.src = som.url;
+                    playerAlarme.play().catch(()=>{});
+                    somAtualTocando = configSom;
+                }
+                alarmeTocando = true;
+            } else if (som.tipo === "sintetico") {
+                playerAlarme.pause();
+                if (!alarmeTocando || somAtualTocando !== configSom) {
+                    pararSomSintetico();
+                    executarSomSintetico(configSom, volumeNormalizado);
+                    alarmeSinteticoTimer = setInterval(() => executarSomSintetico(configSom, volumeNormalizado), som.intervalo || 1400);
+                    somAtualTocando = configSom;
+                }
                 alarmeTocando = true;
             }
         } else { pararAlarme(); }
     }
 
-    function pararAlarme() { document.getElementById('mainHeader').classList.remove('alerta-pisca', 'alerta-pisca-buscar'); playerAlarme.pause(); alarmeTocando = false; }
+    function pararAlarme() { document.getElementById('mainHeader').classList.remove('alerta-pisca', 'alerta-pisca-buscar'); playerAlarme.pause(); pararSomSintetico(); alarmeTocando = false; somAtualTocando = "sem_som"; }
 
     let histLastTap = 0; let histTapTimer;
 
@@ -1294,6 +1427,7 @@
                     db.configs = { ...db.configs, ...nuvemDB.configs, url: db.configs.url, modo: db.configs.modo, dadosBaixados: true };
                 }
 
+                normalizarSonsConfigurados();
                 db.configs.dadosBaixados = true;
 
                 salvarBancoLocal();
@@ -1388,6 +1522,7 @@
         db.configs.senhaModo = document.getElementById('configSenhaModo').value;
         db.configs.somCozinha = document.getElementById('configSomCozinha').value;
         db.configs.somPanelas = document.getElementById('configSomPanelas').value;
+        normalizarSonsConfigurados();
         db.configs.volumeCozinha = document.getElementById('configVolumeCozinha').value;
         db.configs.volumePanelas = document.getElementById('configVolumePanelas').value;
         db.configs.telaAtiva = document.getElementById('configTelaAtiva').value;
