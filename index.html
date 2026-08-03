@@ -8,9 +8,9 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
     <meta name="mobile-web-app-capable" content="yes">
     <meta name="theme-color" content="#1565C0" id="metaThemeColor">
-    <title>Alô Cozinha v1.4.2</title>
+    <title>Alô Cozinha v1.4.3</title>
 
-    <link rel="stylesheet" href="styles.css?v=1.4.2">
+    <link rel="stylesheet" href="styles.css?v=1.4.3">
 </head>
 <body class="theme-panelas" oncontextmenu="return false;">
 
@@ -19,7 +19,7 @@
 <div id="splashScreen">
     <img src="icon.png" alt="Logo" class="splash-icone" onerror="this.src='data:image/svg+xml;utf8,<svg xmlns=\'http://www.w3.org/2000/svg\' viewBox=\'0 0 100 100\'><text y=\'50\' font-size=\'40\'>🍲</text></svg>'">
     <div class="splash-titulo">Alô Cozinha</div>
-    <div class="splash-versao">v1.4.2</div>
+    <div class="splash-versao">v1.4.3</div>
 </div>
 
 <div class="app-container">
@@ -169,7 +169,7 @@
 
 <div class="modal-overlay" id="modalPainelUnificado">
     <div class="modal">
-        <div style="text-align: center; color: #666; font-size: 13px; font-weight: bold; margin-bottom: 20px;">Alô Cozinha - v1.4.2</div>
+        <div style="text-align: center; color: #666; font-size: 13px; font-weight: bold; margin-bottom: 20px;">Alô Cozinha - v1.4.3</div>
 
         <button class="btn-outline" onclick="abrirGerenciar('areas')">🗺️ Gerenciar Áreas</button>
         <button class="btn-outline" onclick="abrirGerenciar('produtos')">🍔 Gerenciar Produtos</button>
@@ -345,13 +345,13 @@
 <div class="modal-overlay" id="modalListagem"><div class="modal"><div class="modal-title" id="tituloListagem">Gerenciar</div><button class="btn-action" id="btnNovoListagem" style="width: 100%; margin-bottom: 15px;">+ Novo</button><div id="conteudoListagem" style="max-height: 50vh; overflow-y: auto; padding-right: 5px;"></div><div class="modal-actions"><button class="btn-cancel" onclick="voltarParaPainelGeral()">Voltar</button></div></div></div>
 <div class="modal-overlay" id="modalFormProduto"><div class="modal"><div class="modal-title">Produto</div><input type="hidden" id="prodIndexOriginal"><div class="form-group"><label>Nome do Produto:</label><input type="text" id="prodNome"></div><div class="form-group"><label>Categoria:</label><select id="prodCategoria"></select></div><div class="form-group"><label>Enviado por:</label><div id="prodAreasOrigem" class="area-checkbox-grid"></div></div><div class="form-group"><label>Recebido por:</label><select id="prodAreaDestino"></select></div><div class="form-group"><label>Observações Específicas <span style="font-size:11px; font-weight:normal;">(Separe por vírgula)</span>:</label><input type="text" id="prodObsEspec" placeholder="Ex: Ao ponto, Sem Gelo"></div><div class="modal-actions"><button class="btn-cancel" onclick="fecharModal('modalFormProduto'); abrirGerenciar('produtos')">Cancelar</button><button class="btn-action" onclick="salvarProduto()">Salvar</button></div></div></div>
 <div class="modal-overlay" id="modalFormCategoria"><div class="modal"><div class="modal-title">Categoria</div><input type="hidden" id="catIndexOriginal"><div class="form-group"><label>Nome da Categoria:</label><input type="text" id="catNome"></div><div style="display: flex; gap: 10px;"><div class="form-group" style="flex: 1;"><label>Cor do Fundo:</label><input type="color" id="catCor" value="#1976D2"></div><div class="form-group" style="flex: 1;"><label>Cor do Texto:</label><input type="color" id="catCorTexto" value="#ffffff"></div></div><div class="modal-actions"><button class="btn-cancel" onclick="fecharModal('modalFormCategoria'); abrirGerenciar('categorias')">Cancelar</button><button class="btn-action" onclick="salvarCategoria()">Salvar</button></div></div></div>
-<div class="modal-overlay" id="modalFormArea"><div class="modal"><div class="modal-title">Área</div><input type="hidden" id="areaIndexOriginal"><div class="form-group"><label>Nome da Área:</label><input type="text" id="areaNome" placeholder="Ex: Bar"></div><div class="form-group"><label>Emoji:</label><input type="text" id="areaEmoji" maxlength="12" inputmode="text" placeholder="Ex: 🍹"><div class="emoji-area-opcoes"><button type="button" onclick="selecionarEmojiArea('🥘')">🥘</button><button type="button" onclick="selecionarEmojiArea('🧑‍🍳')">🧑‍🍳</button><button type="button" onclick="selecionarEmojiArea('🍹')">🍹</button><button type="button" onclick="selecionarEmojiArea('🍽️')">🍽️</button><button type="button" onclick="selecionarEmojiArea('📦')">📦</button><button type="button" onclick="selecionarEmojiArea('🛵')">🛵</button><button type="button" onclick="selecionarEmojiArea('☕')">☕</button><button type="button" onclick="selecionarEmojiArea('🥣')" aria-label="Tigela"><span class="emoji-tigela-escura">🥣</span></button></div></div><div class="form-group"><label>Função:</label><select id="areaTipo"><option value="envio">Envia pedidos</option><option value="recebimento">Recebe pedidos</option></select></div><div class="modal-actions"><button class="btn-cancel" onclick="fecharModal('modalFormArea'); abrirGerenciar('areas')">Cancelar</button><button class="btn-action" onclick="salvarArea()">Salvar</button></div></div></div>
+<div class="modal-overlay" id="modalFormArea"><div class="modal"><div class="modal-title">Área</div><input type="hidden" id="areaIndexOriginal"><div class="form-group"><label>Nome da Área:</label><input type="text" id="areaNome" placeholder="Ex: Bar"></div><div class="form-group"><label>Emoji:</label><input type="text" id="areaEmoji" maxlength="12" inputmode="text" placeholder="Ex: 🍹"><div class="emoji-area-opcoes"><button type="button" onclick="selecionarEmojiArea('🥘')">🥘</button><button type="button" onclick="selecionarEmojiArea('🧑‍🍳')">🧑‍🍳</button><button type="button" onclick="selecionarEmojiArea('🍹')">🍹</button><button type="button" onclick="selecionarEmojiArea('🍽️')">🍽️</button><button type="button" onclick="selecionarEmojiArea('📦')">📦</button><button type="button" onclick="selecionarEmojiArea('🛵')">🛵</button><button type="button" onclick="selecionarEmojiArea('☕')">☕</button><button type="button" onclick="selecionarEmojiArea('🥣')" aria-label="Tigela">🥣</button></div></div><div class="form-group"><label>Função:</label><select id="areaTipo"><option value="envio">Envia pedidos</option><option value="recebimento">Recebe pedidos</option></select></div><div class="modal-actions"><button class="btn-cancel" onclick="fecharModal('modalFormArea'); abrirGerenciar('areas')">Cancelar</button><button class="btn-action" onclick="salvarArea()">Salvar</button></div></div></div>
 
-<script defer src="logic.js?v=1.4.2"></script>
-<script defer src="storage.js?v=1.4.2"></script>
-<script defer src="api.js?v=1.4.2"></script>
-<script defer src="audio.js?v=1.4.2"></script>
-<script defer src="sync.js?v=1.4.2"></script>
-<script defer src="app.js?v=1.4.2"></script>
+<script defer src="logic.js?v=1.4.3"></script>
+<script defer src="storage.js?v=1.4.3"></script>
+<script defer src="api.js?v=1.4.3"></script>
+<script defer src="audio.js?v=1.4.3"></script>
+<script defer src="sync.js?v=1.4.3"></script>
+<script defer src="app.js?v=1.4.3"></script>
 </body>
 </html>

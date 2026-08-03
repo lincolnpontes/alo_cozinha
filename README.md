@@ -1,9 +1,10 @@
-# Alô Cozinha v1.4.2
+# Alô Cozinha v1.4.3
 
 Aplicativo de pedidos entre áreas de envio e recebimento, com funcionamento local e sincronização por Google Apps Script.
 
-## Novidades da v1.4.2
+## Novidades da v1.4.3
 
+- Tigela com a mesma aparência vermelha nativa em toda a interface.
 - Seta de envio mais encorpada e seletor moderno por switches para as áreas de origem.
 - Nova opção de área com tigela escura e colher.
 - Cancelamentos piscam e emitem beep no setor solicitante até a confirmação, mesmo quando o som comum está desativado.
@@ -27,7 +28,7 @@ Aplicativo de pedidos entre áreas de envio e recebimento, com funcionamento loc
 
 ## Atualização sem perder dados
 
-> A v1.4.2 não altera o Google Apps Script. Quem já implantou o arquivo da v1.4.0 não precisa criar uma nova implantação.
+> A v1.4.3 não altera o Google Apps Script. Quem já implantou o arquivo da v1.4.0 não precisa criar uma nova implantação.
 
 1. Publique os arquivos do aplicativo no mesmo local de antes.
 2. Abra o app conectado uma vez em cada aparelho para baixar a atualização. Os pedidos, produtos, categorias e observações existentes são mantidos.

@@ -69,7 +69,7 @@ let db = carregarBanco();
     }
 
     function getEmojiAreaHtml(emoji) {
-        return emoji === '🥣' ? '<span class="emoji-tigela-escura">🥣</span>' : emoji;
+        return emoji;
     }
 
     function getAreasOrigemProduto(produto) {
@@ -1830,7 +1830,7 @@ let db = carregarBanco();
     };
 
     if ('serviceWorker' in navigator) {
-        window.addEventListener('load', () => navigator.serviceWorker.register('./service-worker.js?v=1.4.2').catch(() => {}));
+        window.addEventListener('load', () => navigator.serviceWorker.register('./service-worker.js?v=1.4.3').catch(() => {}));
     }
 
     iniciarComSyncConfiavel();
