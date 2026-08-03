@@ -1,6 +1,15 @@
-# Alô Cozinha v1.3.6
+# Alô Cozinha v1.4.0
 
-Aplicativo de pedidos entre Panelas e Cozinha, com funcionamento local e sincronização por Google Apps Script.
+Aplicativo de pedidos entre áreas de envio e recebimento, com funcionamento local e sincronização por Google Apps Script.
+
+## Novidades da v1.4.0
+
+- Ações visíveis na área que recebe pedidos: aceitar, enviar, vir buscar, cancelar e desfazer.
+- Botões responsivos com emoji no celular e emoji + texto em telas maiores.
+- Áreas configuráveis e rota de origem/destino por produto.
+- Produtos antigos migrados automaticamente para `Panelas → Cozinha`.
+- Relatório abre com os dados locais e atualiza somente o período escolhido em segundo plano.
+- Apps Script otimizado para consultar o histórico por período e guardar as áreas sem alterar pedidos antigos.
 
 ## Arquivos
 
@@ -21,6 +30,7 @@ Aplicativo de pedidos entre Panelas e Cozinha, com funcionamento local e sincron
 2. No Apps Script existente, substitua o código pelo conteúdo de `google-apps-script.gs`.
 3. Em `Implantar > Gerenciar implantações`, edite a implantação atual, escolha `Nova versão` e implante. Isso preserva a mesma URL.
 4. Abra o app conectado uma vez em cada aparelho para baixar a atualização. Os pedidos, produtos, categorias e observações existentes são mantidos.
+5. Em um aparelho administrador, use `Gerenciar Áreas`, ajuste as rotas dos novos produtos e salve tudo na nuvem para compartilhar a configuração.
 
 ## Como a fila funciona
 

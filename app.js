@@ -21,6 +21,70 @@ let db = carregarBanco();
 
     const hierarquiaStatus = { 'pendente': 1, 'fazendo': 2, 'enviado': 3, 'buscar': 3, 'cancelado': 4, 'concluido': 5 };
     const SYNC_INTERVALO_MS = 2000;
+    const AREAS_PADRAO = [
+        { id: 'panelas', nome: 'Panelas', tipo: 'envio', emoji: '🥘' },
+        { id: 'cozinha', nome: 'Cozinha', tipo: 'recebimento', emoji: '🧑‍🍳' }
+    ];
+
+    function normalizarAreasERotas() {
+        const recebidas = Array.isArray(db.areas) ? db.areas : [];
+        const porId = new Map();
+        [...AREAS_PADRAO, ...recebidas].forEach(area => {
+            if (!area || !area.id) return;
+            const id = String(area.id);
+            const tipo = id === 'panelas' ? 'envio' : (id === 'cozinha' ? 'recebimento' : (area.tipo === 'recebimento' ? 'recebimento' : 'envio'));
+            porId.set(String(area.id), {
+                id,
+                nome: String(area.nome || area.id),
+                tipo,
+                emoji: tipo === 'recebimento' ? '🧑‍🍳' : '🥘'
+            });
+        });
+        db.areas = Array.from(porId.values());
+        db.produtos = Array.isArray(db.produtos) ? db.produtos : [];
+        db.produtos.forEach(produto => {
+            if (!db.areas.some(area => area.id === produto.areaOrigem && area.tipo === 'envio')) produto.areaOrigem = 'panelas';
+            if (!db.areas.some(area => area.id === produto.areaDestino && area.tipo === 'recebimento')) produto.areaDestino = 'cozinha';
+        });
+        const areaSalva = db.areas.find(area => area.id === db.configs.areaAtual);
+        const areaLegada = db.areas.find(area => area.id === db.configs.modo);
+        db.configs.areaAtual = (areaSalva || areaLegada || db.areas[0]).id;
+        const atual = db.areas.find(area => area.id === db.configs.areaAtual);
+        db.configs.modo = atual && atual.tipo === 'recebimento' ? 'cozinha' : 'panelas';
+    }
+
+    function getAreaAtual() {
+        return db.areas.find(area => area.id === db.configs.areaAtual) || db.areas[0];
+    }
+
+    function getAreaNome(id) {
+        const area = db.areas.find(item => item.id === id);
+        return area ? area.nome : id;
+    }
+
+    function pedidoPertenceArea(pedido, area = getAreaAtual()) {
+        if (!area) return true;
+        return area.tipo === 'recebimento'
+            ? (pedido.areaDestino || 'cozinha') === area.id
+            : (pedido.areaOrigem || 'panelas') === area.id;
+    }
+
+    function pedidosDaAreaAtual() {
+        const area = getAreaAtual();
+        return pedidosServidor.filter(pedido => pedidoPertenceArea(pedido, area));
+    }
+
+    function renderizarSeletorAreas() {
+        const seletor = document.getElementById('seletorModo');
+        if (!seletor) return;
+        seletor.innerHTML = db.areas.map(area =>
+            `<option value="${area.id}">${area.emoji} ${area.nome}</option>`
+        ).join('');
+        seletor.value = db.configs.areaAtual;
+    }
+
+    normalizarAreasERotas();
+    salvarBancoLocal();
 
     const sonsDisponiveis = {
         "sem_som": { tipo: "silencio" },
@@ -251,7 +315,7 @@ let db = carregarBanco();
     function iniciarTrocaModo(selectElement) {
         const novoModo = selectElement.value;
         if (db.configs.senhaModo && db.configs.senhaModo.trim() !== "") {
-            modoPendente = novoModo; seletorGlobal = selectElement; document.getElementById('inputSenhaModo').value = ''; document.getElementById('modalSenhaModo').style.display = 'flex'; setTimeout(() => document.getElementById('inputSenhaModo').focus(), 100); selectElement.value = db.configs.modo;
+            modoPendente = novoModo; seletorGlobal = selectElement; document.getElementById('inputSenhaModo').value = ''; document.getElementById('modalSenhaModo').style.display = 'flex'; setTimeout(() => document.getElementById('inputSenhaModo').focus(), 100); selectElement.value = db.configs.areaAtual;
         } else { efetivarTrocaModo(novoModo); }
     }
 
@@ -265,12 +329,19 @@ let db = carregarBanco();
         }
     }
 
-    function cancelarTrocaModo() { document.getElementById('modalSenhaModo').style.display = 'none'; seletorGlobal.value = db.configs.modo; modoPendente = null; document.getElementById('inputSenhaModo').value = ''; }
-    function efetivarTrocaModo(modo) { db.configs.modo = modo; salvarBancoLocal(); aplicarModoVisual(modo); }
+    function cancelarTrocaModo() { document.getElementById('modalSenhaModo').style.display = 'none'; seletorGlobal.value = db.configs.areaAtual; modoPendente = null; document.getElementById('inputSenhaModo').value = ''; }
+    function efetivarTrocaModo(areaId) {
+        const area = db.areas.find(item => item.id === areaId) || getAreaAtual();
+        db.configs.areaAtual = area.id;
+        db.configs.modo = area.tipo === 'recebimento' ? 'cozinha' : 'panelas';
+        salvarBancoLocal();
+        aplicarModoVisual(area.id);
+    }
 
     function iniciar() {
+        normalizarAreasERotas();
         normalizarSonsConfigurados();
-        document.getElementById('seletorModo').value = db.configs.modo || 'panelas';
+        renderizarSeletorAreas();
         document.getElementById('configSomCozinha').value = db.configs.somCozinha || 'sem_som';
         document.getElementById('configSomPanelas').value = db.configs.somPanelas || 'sem_som';
         document.getElementById('configTelaAtiva').value = db.configs.telaAtiva || "sim";
@@ -278,7 +349,7 @@ let db = carregarBanco();
         document.getElementById('configVolumeCozinha').value = db.configs.volumeCozinha || "100";
         document.getElementById('configVolumePanelas').value = db.configs.volumePanelas || "70";
         atualizarLabelsVolume();
-        aplicarModoVisual(db.configs.modo || 'panelas');
+        aplicarModoVisual(db.configs.areaAtual);
         solicitarWakeLock(); resetInatividade();
         const splash = document.getElementById('splashScreen');
         if (!sessionStorage.getItem('splash_v1_shown')) {
@@ -286,9 +357,12 @@ let db = carregarBanco();
         } else { splash.style.display = 'none'; }
     }
 
-    function aplicarModoVisual(modo) {
+    function aplicarModoVisual(areaId) {
+        const area = db.areas.find(item => item.id === areaId) || getAreaAtual();
+        const modo = area.tipo === 'recebimento' ? 'cozinha' : 'panelas';
+        db.configs.areaAtual = area.id;
+        db.configs.modo = modo;
         const themeColor = document.getElementById('metaThemeColor'); document.body.className = modo === 'panelas' ? 'theme-panelas' : 'theme-cozinha';
-        document.getElementById('dicasCozinha').style.display = modo === 'cozinha' ? 'block' : 'none';
         if(loopSync) clearInterval(loopSync);
         if(modo === 'panelas') { if(themeColor) themeColor.content = '#1565C0'; document.getElementById('area-panelas').style.display = 'flex'; document.getElementById('area-cozinha').style.display = 'none'; pararAlarme(); renderizarFiltros(); renderizarListaPanelas(); syncGeral(); loopSync = setInterval(syncGeral, SYNC_INTERVALO_MS); } else { if(themeColor) themeColor.content = '#2e7d32'; document.getElementById('area-panelas').style.display = 'none'; document.getElementById('area-cozinha').style.display = 'flex'; pararAlarme(); syncGeral(); loopSync = setInterval(syncGeral, SYNC_INTERVALO_MS); }
     }
@@ -318,7 +392,7 @@ let db = carregarBanco();
         const timeHoje = hoje.getTime();
         const time30d = timeHoje - (30 * 86400000);
 
-        pedidosServidor.forEach(p => {
+        pedidosDaAreaAtual().forEach(p => {
             let t = new Date(p.timestamp).getTime();
             if (t >= time30d && t < timeHoje) {
                 let nomeBase = p.produto.split(" (Obs:")[0];
@@ -330,7 +404,9 @@ let db = carregarBanco();
 
     function renderizarListaPanelas() {
         const lista = document.getElementById('listaProdutosPanelas'); lista.innerHTML = '';
-        let filtrados = categoriaAtual === null ? [...db.produtos] : db.produtos.filter(p => p.categoria === categoriaAtual);
+        const areaAtual = getAreaAtual();
+        const produtosDaArea = db.produtos.filter(p => (p.areaOrigem || 'panelas') === areaAtual.id);
+        let filtrados = categoriaAtual === null ? [...produtosDaArea] : produtosDaArea.filter(p => p.categoria === categoriaAtual);
 
         if (categoriaAtual === null && ordemPopular) {
             let pop = getPopularidade30d();
@@ -685,7 +761,7 @@ let db = carregarBanco();
     function renderizarUltimosPedidos() {
         const lista = document.getElementById('listaUltimosPedidosPanelas'); const agora = Date.now(); lista.innerHTML = '';
         const dataHoje = new Date().toDateString();
-        let todosRecentes = pedidosServidor.filter(p => new Date(p.timestamp).toDateString() === dataHoje).filter(p => {
+        let todosRecentes = pedidosDaAreaAtual().filter(p => new Date(p.timestamp).toDateString() === dataHoje).filter(p => {
             if(p.status !== 'concluido' && p.status !== 'enviado' && p.status !== 'buscar' && p.status !== 'cancelado') return true;
             return (agora - new Date(p.finalizadoEm).getTime()) < 300000;
         }).reverse();
@@ -724,36 +800,52 @@ let db = carregarBanco();
         const lista = document.getElementById('listaPedidosCozinha'); const agora = Date.now(); lista.innerHTML = '';
         const dataHoje = new Date().toDateString();
 
-        pedidosServidor.filter(p => new Date(p.timestamp).toDateString() === dataHoje).filter(p => {
+        const visiveis = pedidosDaAreaAtual().filter(p => new Date(p.timestamp).toDateString() === dataHoje).filter(p => {
             if(p.status !== 'concluido' && p.status !== 'enviado' && p.status !== 'buscar' && p.status !== 'cancelado') return true;
             return (agora - new Date(p.finalizadoEm).getTime()) < 300000;
-        }).reverse().forEach(p => {
+        }).reverse();
+
+        if (visiveis.length === 0) {
+            lista.innerHTML = '<li style="padding: 24px; text-align: center; color: #777;">Nenhum pedido nesta área.</li>';
+            return;
+        }
+
+        visiveis.forEach(p => {
 
             let emoji = '🔔'; let isFinal = false;
-            // FONTE MAIOR NA COZINHA AQUI:
             let formatProduto = `<strong style="font-size: 22px;">${p.produto}</strong>`;
-            let acaoTxt = ""; let tempoStr = ""; let classeRiscar = "";
+            let statusTxt = ""; let tempoStr = ""; let classeRiscar = ""; let acoesHtml = "";
 
             if (p.status === 'pendente') {
                 emoji = '🔔';
-                acaoTxt = '👆 Toque para aceitar';
+                statusTxt = 'Novo pedido';
                 tempoStr = getTempoRelativo(p.timestamp);
+                acoesHtml = `<button class="btn-pedido-acao acao-aceitar" onclick="executarAcaoPedido(this, '${p.id}', 'fazendo')" aria-label="Aceitar pedido" title="Aceitar"><span>✅</span><span class="acao-label">Aceitar</span></button>`;
             }
             else if (p.status === 'fazendo') {
                 emoji = '🔥';
+                statusTxt = 'Em preparo';
                 tempoStr = getTempoRelativo(p.timestamp);
+                acoesHtml = `
+                    <button class="btn-pedido-acao acao-enviar" onclick="executarAcaoPedido(this, '${p.id}', 'enviado')" aria-label="Enviar pedido" title="Enviar"><span>📤</span><span class="acao-label">Enviar</span></button>
+                    <button class="btn-pedido-acao acao-buscar" onclick="executarAcaoPedido(this, '${p.id}', 'buscar')" aria-label="Pedir para vir buscar" title="Vir buscar"><span>🙋</span><span class="acao-label">Vir buscar</span></button>
+                    <button class="btn-pedido-acao acao-cancelar" onclick="cancelarPedidoPeloBotao(this, '${p.id}')" aria-label="Cancelar pedido" title="Cancelar"><span>❌</span><span class="acao-label">Cancelar</span></button>`;
             }
             else if (p.status === 'enviado') {
                 emoji = '✔️'; isFinal = true; classeRiscar = "riscar";
-                acaoTxt = '👈 Deslize: desfaz envio - <b>[Enviado]</b>';
+                statusTxt = 'Enviado';
             }
             else if (p.status === 'buscar') {
                 emoji = '✔️'; isFinal = true; classeRiscar = "riscar";
-                acaoTxt = '👈 Deslize: desfaz envio - <b>[Mandou Buscar]</b>';
+                statusTxt = 'Aguardando retirada';
             }
             else if (p.status === 'cancelado') {
                 emoji = '❌'; isFinal = true; classeRiscar = "riscar";
-                acaoTxt = p.motivo ? `👈 Deslize: desfaz envio (Motivo: ${p.motivo})` : '👈 Deslize: desfaz envio';
+                statusTxt = p.motivo ? `Cancelado: ${p.motivo}` : 'Cancelado';
+            }
+
+            if (isFinal) {
+                acoesHtml = `<button class="btn-pedido-acao acao-desfazer" onclick="executarAcaoPedido(this, '${p.id}', 'fazendo')" aria-label="Desfazer ação" title="Desfazer"><span>↩️</span><span class="acao-label">Desfazer</span></button>`;
             }
 
             let cssStatus = isFinal ? (p.status==='cancelado' ? 'cancelado' : 'concluido') : p.status;
@@ -764,62 +856,40 @@ let db = carregarBanco();
                 tempoStr = "";
             }
 
-            let subtitleHtml = acaoTxt ? `<div class="item-subtitle" style="text-decoration: none !important; opacity: 1 !important;">${acaoTxt}</div>` : '';
+            let subtitleHtml = `<div class="item-subtitle" style="text-decoration: none !important; opacity: 1 !important;">${statusTxt}</div>`;
 
             lista.innerHTML += `
-                <li class="item status-${cssStatus}" id="ped-${p.id}" data-id="${p.id}" data-status="${p.status}" data-nome="${p.produto}" onpointerdown="handlePointerStart(event, this)" onpointermove="handlePointerMove(event)" onpointerup="handlePointerEnd(event, this)" onpointercancel="handlePointerCancel()">
-                    <div class="item-avatar ${classeRiscar}" style="background:transparent; font-size:24px; margin-right: 10px;">${emoji}</div>
-                    <div class="item-info" style="display:flex; justify-content:space-between; align-items:center;">
-                        <div>
+                <li class="item pedido-cozinha status-${cssStatus}" id="ped-${p.id}" data-id="${p.id}" data-status="${p.status}">
+                    <div class="pedido-conteudo">
+                        <div class="item-avatar ${classeRiscar}" style="background:transparent; font-size:24px; margin-right: 10px;">${emoji}</div>
+                        <div class="item-info" style="display:flex; justify-content:space-between; align-items:center;">
+                          <div>
                             <div class="item-title ${classeRiscar}" style="margin: 0; line-height: 1.2;">${formatProduto}</div>
                             ${subtitleHtml}
+                          </div>
+                          <div style="font-size:13px; color:#888; font-weight:bold; white-space:nowrap; margin-left:10px;">${tempoStr}</div>
                         </div>
-                        <div style="font-size:13px; color:#888; font-weight:bold; white-space:nowrap; margin-left:10px;">${tempoStr}</div>
                     </div>
+                    <div class="pedido-acoes">${acoesHtml}</div>
                 </li>
             `;
         });
     }
 
-    let pointerStartX = 0; let pointerStartY = 0; let pressTimer; let isLongPress = false; let lastTap = 0; let lastTapId = '';
-    function handlePointerStart(e, elemento) {
-        pointerStartX = e.clientX;
-        pointerStartY = e.clientY;
-        isLongPress = false;
-        if (elemento.setPointerCapture) elemento.setPointerCapture(e.pointerId);
-        if (elemento.getAttribute('data-status') === 'fazendo') {
-            pressTimer = setTimeout(() => {
-                isLongPress = true;
-                alterarStatusPedido(elemento.getAttribute('data-id'), 'buscar');
-            }, 600);
-        }
+    function desabilitarAcoesPedido(botao) {
+        const container = botao && botao.closest('.pedido-acoes');
+        if (container) container.querySelectorAll('button').forEach(item => { item.disabled = true; });
     }
-    function handlePointerMove(e) {
-        if (Math.abs(e.clientX - pointerStartX) > 12 || Math.abs(e.clientY - pointerStartY) > 12) clearTimeout(pressTimer);
-    }
-    function handlePointerCancel() { clearTimeout(pressTimer); isLongPress = false; }
-    function handlePointerEnd(e, elemento) {
-        clearTimeout(pressTimer);
-        if (isLongPress) return;
-        const diff = e.clientX - pointerStartX;
-        const vertical = Math.abs(e.clientY - pointerStartY);
-        const id = elemento.getAttribute('data-id');
-        const statusAtual = elemento.getAttribute('data-status');
-        const nomeProd = elemento.getAttribute('data-nome');
 
-        if (Math.abs(diff) < 20 && vertical < 20) {
-            const currentTime = Date.now();
-            const segundoToque = lastTapId === id && currentTime - lastTap < 350;
-            lastTap = currentTime;
-            lastTapId = id;
-            if (statusAtual === 'pendente') alterarStatusPedido(id, 'fazendo');
-            else if (statusAtual === 'fazendo' && segundoToque) abrirModalCancelamento(id, nomeProd);
-        } else if (diff > 80) {
-            if (statusAtual === 'fazendo') alterarStatusPedido(id, 'enviado');
-            else if (statusAtual === 'pendente') alert('Toque para aceitar primeiro!');
-        } else if (diff < -80 && ['enviado', 'buscar', 'cancelado', 'concluido'].includes(statusAtual)) {
-            alterarStatusPedido(id, 'fazendo');
-        }
+    function executarAcaoPedido(botao, id, novoStatus) {
+        desabilitarAcoesPedido(botao);
+        alterarStatusPedido(id, novoStatus);
+    }
+
+    function cancelarPedidoPeloBotao(botao, id) {
+        const pedido = pedidosServidor.find(item => item.id === String(id));
+        if (!pedido) return;
+        abrirModalCancelamento(id, pedido.produto);
     }
 
     function gerenciarAlarme() {
@@ -1230,9 +1300,9 @@ let db = carregarBanco();
     function moverItem(tipo, index, direcao) { const lista = tipo === 'produtos' ? db.produtos : (tipo === 'categorias' ? db.categorias : (tipo === 'obsPedidos' ? db.obsPedidos : db.obsCancelamentos)); if(direcao === 'cima' && index > 0) { const temp = lista[index]; lista[index] = lista[index - 1]; lista[index - 1] = temp; } else if (direcao === 'baixo' && index < lista.length - 1) { const temp = lista[index]; lista[index] = lista[index + 1]; lista[index + 1] = temp; } salvarBancoLocal(); iniciar(); abrirGerenciar(tipo); }
 
     function abrirGerenciar(tipo) {
-        fecharModal('modalPainelUnificado'); fecharModal('modalFormProduto'); fecharModal('modalFormCategoria');
+        fecharModal('modalPainelUnificado'); fecharModal('modalFormProduto'); fecharModal('modalFormCategoria'); fecharModal('modalFormArea');
         const lista = document.getElementById('conteudoListagem'); const btnNovo = document.getElementById('btnNovoListagem'); const titulo = document.getElementById('tituloListagem'); lista.innerHTML = '';
-        if(tipo === 'produtos') { titulo.innerText = "Gerenciar Produtos"; btnNovo.onclick = () => abrirFormProduto(-1); db.produtos.forEach((p, idx) => { lista.innerHTML += `<div class="gerenciar-item"><div class="gerenciar-info"><strong>${p.nome}</strong><br><span style="color:#666">${p.categoria}</span></div><div class="gerenciar-actions"><button onclick="moverItem('produtos', ${idx}, 'cima')">🔼</button><button onclick="moverItem('produtos', ${idx}, 'baixo')">🔽</button><button onclick="abrirFormProduto(${idx})">✏️</button><button onclick="excluirItem('produtos', ${idx})">🗑️</button></div></div>`; }); } else if (tipo === 'categorias') { titulo.innerText = "Gerenciar Categorias"; btnNovo.onclick = () => abrirFormCategoria(-1); db.categorias.forEach((c, idx) => { lista.innerHTML += `<div class="gerenciar-item"><div class="gerenciar-info"><span class="color-preview" style="background:${c.cor}; color:${c.corTexto}">${c.nome}</span></div><div class="gerenciar-actions"><button onclick="moverItem('categorias', ${idx}, 'cima')">🔼</button><button onclick="moverItem('categorias', ${idx}, 'baixo')">🔽</button><button onclick="abrirFormCategoria(${idx})">✏️</button><button onclick="excluirItem('categorias', '${c.nome}')">🗑️</button></div></div>`; }); } else if (tipo === 'obsPedidos') { titulo.innerText = "Observação dos Produtos"; btnNovo.onclick = () => novaObservacao('obsPedidos'); db.obsPedidos.forEach((obs, idx) => { lista.innerHTML += `<div class="gerenciar-item"><div class="gerenciar-info"><strong>${obs}</strong></div><div class="gerenciar-actions"><button onclick="moverItem('obsPedidos', ${idx}, 'cima')">🔼</button><button onclick="moverItem('obsPedidos', ${idx}, 'baixo')">🔽</button><button onclick="excluirItem('obsPedidos', '${obs}')">🗑️</button></div></div>`; }); } else if (tipo === 'obsCancelamentos') { titulo.innerText = "Motivos Cancelamento"; btnNovo.onclick = () => novaObservacao('obsCancelamentos'); db.obsCancelamentos.forEach((obs, idx) => { lista.innerHTML += `<div class="gerenciar-item"><div class="gerenciar-info"><strong>${obs}</strong></div><div class="gerenciar-actions"><button onclick="moverItem('obsCancelamentos', ${idx}, 'cima')">🔼</button><button onclick="moverItem('obsCancelamentos', ${idx}, 'baixo')">🔽</button><button onclick="excluirItem('obsCancelamentos', '${obs}')">🗑️</button></div></div>`; }); }
+        if(tipo === 'areas') { titulo.innerText = "Gerenciar Áreas"; btnNovo.onclick = () => abrirFormArea(-1); db.areas.forEach((area, idx) => { const funcao = area.tipo === 'envio' ? 'Envia pedidos' : 'Recebe pedidos'; lista.innerHTML += `<div class="gerenciar-item"><div class="gerenciar-info"><strong>${area.emoji} ${area.nome}</strong><br><span style="color:#666">${funcao}</span></div><div class="gerenciar-actions"><button onclick="abrirFormArea(${idx})" title="Editar">✏️</button><button onclick="excluirArea(${idx})" title="Excluir">🗑️</button></div></div>`; }); } else if(tipo === 'produtos') { titulo.innerText = "Gerenciar Produtos"; btnNovo.onclick = () => abrirFormProduto(-1); db.produtos.forEach((p, idx) => { lista.innerHTML += `<div class="gerenciar-item"><div class="gerenciar-info"><strong>${p.nome}</strong><br><span style="color:#666">${p.categoria} · ${getAreaNome(p.areaOrigem || 'panelas')} → ${getAreaNome(p.areaDestino || 'cozinha')}</span></div><div class="gerenciar-actions"><button onclick="moverItem('produtos', ${idx}, 'cima')">🔼</button><button onclick="moverItem('produtos', ${idx}, 'baixo')">🔽</button><button onclick="abrirFormProduto(${idx})">✏️</button><button onclick="excluirItem('produtos', ${idx})">🗑️</button></div></div>`; }); } else if (tipo === 'categorias') { titulo.innerText = "Gerenciar Categorias"; btnNovo.onclick = () => abrirFormCategoria(-1); db.categorias.forEach((c, idx) => { lista.innerHTML += `<div class="gerenciar-item"><div class="gerenciar-info"><span class="color-preview" style="background:${c.cor}; color:${c.corTexto}">${c.nome}</span></div><div class="gerenciar-actions"><button onclick="moverItem('categorias', ${idx}, 'cima')">🔼</button><button onclick="moverItem('categorias', ${idx}, 'baixo')">🔽</button><button onclick="abrirFormCategoria(${idx})">✏️</button><button onclick="excluirItem('categorias', '${c.nome}')">🗑️</button></div></div>`; }); } else if (tipo === 'obsPedidos') { titulo.innerText = "Observação dos Produtos"; btnNovo.onclick = () => novaObservacao('obsPedidos'); db.obsPedidos.forEach((obs, idx) => { lista.innerHTML += `<div class="gerenciar-item"><div class="gerenciar-info"><strong>${obs}</strong></div><div class="gerenciar-actions"><button onclick="moverItem('obsPedidos', ${idx}, 'cima')">🔼</button><button onclick="moverItem('obsPedidos', ${idx}, 'baixo')">🔽</button><button onclick="excluirItem('obsPedidos', '${obs}')">🗑️</button></div></div>`; }); } else if (tipo === 'obsCancelamentos') { titulo.innerText = "Motivos Cancelamento"; btnNovo.onclick = () => novaObservacao('obsCancelamentos'); db.obsCancelamentos.forEach((obs, idx) => { lista.innerHTML += `<div class="gerenciar-item"><div class="gerenciar-info"><strong>${obs}</strong></div><div class="gerenciar-actions"><button onclick="moverItem('obsCancelamentos', ${idx}, 'cima')">🔼</button><button onclick="moverItem('obsCancelamentos', ${idx}, 'baixo')">🔽</button><button onclick="excluirItem('obsCancelamentos', '${obs}')">🗑️</button></div></div>`; }); }
         document.getElementById('modalListagem').style.display = 'flex';
     }
 
@@ -1243,15 +1313,23 @@ let db = carregarBanco();
         fecharModal('modalListagem');
         const combo = document.getElementById('prodCategoria'); combo.innerHTML = '';
         db.categorias.forEach(c => combo.innerHTML += `<option value="${c.nome}">${c.nome}</option>`);
+        const comboOrigem = document.getElementById('prodAreaOrigem');
+        const comboDestino = document.getElementById('prodAreaDestino');
+        comboOrigem.innerHTML = db.areas.filter(area => area.tipo === 'envio').map(area => `<option value="${area.id}">${area.emoji} ${area.nome}</option>`).join('');
+        comboDestino.innerHTML = db.areas.filter(area => area.tipo === 'recebimento').map(area => `<option value="${area.id}">${area.emoji} ${area.nome}</option>`).join('');
         if(idx >= 0) {
             const p = db.produtos[idx];
             document.getElementById('prodIndexOriginal').value = idx;
             document.getElementById('prodNome').value = p.nome;
             document.getElementById('prodCategoria').value = p.categoria;
+            comboOrigem.value = p.areaOrigem || 'panelas';
+            comboDestino.value = p.areaDestino || 'cozinha';
             document.getElementById('prodObsEspec').value = p.obsEspec ? p.obsEspec.join(', ') : '';
         } else {
             document.getElementById('prodIndexOriginal').value = '-1';
             document.getElementById('prodNome').value = '';
+            comboOrigem.value = getAreaAtual().tipo === 'envio' ? getAreaAtual().id : 'panelas';
+            comboDestino.value = 'cozinha';
             document.getElementById('prodObsEspec').value = '';
         }
         document.getElementById('modalFormProduto').style.display = 'flex';
@@ -1262,15 +1340,61 @@ let db = carregarBanco();
         const nome = document.getElementById('prodNome').value.trim();
         const cat = document.getElementById('prodCategoria').value;
         const obsStr = document.getElementById('prodObsEspec').value;
+        const areaOrigem = document.getElementById('prodAreaOrigem').value;
+        const areaDestino = document.getElementById('prodAreaDestino').value;
         const obsArray = obsStr.split(',').map(s => s.trim()).filter(s => s !== '');
 
         if(!nome || !cat) return alert("Preencha o nome e a categoria!");
         if(idx >= 0) {
-            db.produtos[idx] = { nome: nome, categoria: cat, obsEspec: obsArray };
+            db.produtos[idx] = { nome: nome, categoria: cat, obsEspec: obsArray, areaOrigem, areaDestino };
         } else {
-            db.produtos.push({ nome: nome, categoria: cat, obsEspec: obsArray });
+            db.produtos.push({ nome: nome, categoria: cat, obsEspec: obsArray, areaOrigem, areaDestino });
         }
         salvarBancoLocal(); iniciar(); abrirGerenciar('produtos');
+    }
+
+    function abrirFormArea(idx) {
+        fecharModal('modalListagem');
+        document.getElementById('areaIndexOriginal').value = idx;
+        if (idx >= 0) {
+            const area = db.areas[idx];
+            document.getElementById('areaNome').value = area.nome;
+            document.getElementById('areaTipo').value = area.tipo;
+        } else {
+            document.getElementById('areaNome').value = '';
+            document.getElementById('areaTipo').value = 'envio';
+        }
+        document.getElementById('modalFormArea').style.display = 'flex';
+    }
+
+    function salvarArea() {
+        const idx = parseInt(document.getElementById('areaIndexOriginal').value, 10);
+        const nome = document.getElementById('areaNome').value.trim();
+        const tipo = document.getElementById('areaTipo').value;
+        if (!nome) return alert('Preencha o nome da área.');
+        if (db.areas.some((area, areaIdx) => areaIdx !== idx && area.nome.toLowerCase() === nome.toLowerCase())) return alert('Já existe uma área com esse nome.');
+
+        if (idx >= 0) {
+            const atual = db.areas[idx];
+            if ((atual.id === 'panelas' || atual.id === 'cozinha') && atual.tipo !== tipo) return alert('A função das áreas padrão não pode ser alterada.');
+            const emUso = db.produtos.some(produto => produto.areaOrigem === atual.id || produto.areaDestino === atual.id);
+            if (emUso && atual.tipo !== tipo) return alert('Esta área está ligada a produtos. Altere primeiro a rota desses produtos.');
+            db.areas[idx] = { ...atual, nome, tipo, emoji: tipo === 'recebimento' ? '🧑‍🍳' : '🥘' };
+        } else {
+            db.areas.push({ id: `area_${Date.now()}`, nome, tipo, emoji: tipo === 'recebimento' ? '🧑‍🍳' : '🥘' });
+        }
+        normalizarAreasERotas(); salvarBancoLocal(); iniciar(); abrirGerenciar('areas');
+    }
+
+    function excluirArea(idx) {
+        const area = db.areas[idx];
+        if (!area) return;
+        if (area.id === 'panelas' || area.id === 'cozinha') return alert('As áreas padrão Panelas e Cozinha não podem ser excluídas.');
+        if (db.produtos.some(produto => produto.areaOrigem === area.id || produto.areaDestino === area.id)) return alert('Esta área está ligada a produtos. Altere primeiro a rota desses produtos.');
+        if (!confirm(`Excluir a área ${area.nome}?`)) return;
+        db.areas.splice(idx, 1);
+        if (db.configs.areaAtual === area.id) db.configs.areaAtual = 'panelas';
+        normalizarAreasERotas(); salvarBancoLocal(); iniciar(); abrirGerenciar('areas');
     }
 
     function abrirFormCategoria(idx) { fecharModal('modalListagem'); if(idx >= 0) { const c = db.categorias[idx]; document.getElementById('catIndexOriginal').value = idx; document.getElementById('catNome').value = c.nome; document.getElementById('catCor').value = c.cor; document.getElementById('catCorTexto').value = c.corTexto || '#000000'; } else { document.getElementById('catIndexOriginal').value = '-1'; document.getElementById('catNome').value = ''; document.getElementById('catCor').value = '#1976D2'; document.getElementById('catCorTexto').value = '#ffffff'; } document.getElementById('modalFormCategoria').style.display = 'flex'; }
@@ -1356,7 +1480,7 @@ let db = carregarBanco();
         db.configs.somPanelas = AloAudio.normalize(db.configs.somPanelas || 'sem_som', 'beep');
     };
     gerenciarAlarme = function() {
-        AloAudio.manage({ mode: db.configs.modo, configs: db.configs, orders: pedidosServidor, knownIds: pedidosCientes });
+        AloAudio.manage({ mode: db.configs.modo, configs: db.configs, orders: pedidosDaAreaAtual(), knownIds: pedidosCientes });
     };
     pararAlarme = function() { AloAudio.stop(); };
 
@@ -1440,8 +1564,13 @@ let db = carregarBanco();
         }
 
         const produto = obsText ? `${nome} (Obs: ${obsText})` : nome;
+        const cadastroProduto = db.produtos.find(item => item.nome === nome) || {};
         try {
-            const pedido = await syncConfiavel.enqueueNewOrder({ produto });
+            const pedido = await syncConfiavel.enqueueNewOrder({
+                produto,
+                areaOrigem: cadastroProduto.areaOrigem || 'panelas',
+                areaDestino: cadastroProduto.areaDestino || 'cozinha'
+            });
             pedidosServidor = syncConfiavel.orders;
             document.getElementById('modalFazerPedido').style.display = 'none';
             renderizarUltimosPedidos();
@@ -1469,20 +1598,64 @@ let db = carregarBanco();
     }
 
     const abrirModalMetricasOriginal = abrirModalMetricas;
-    abrirModalMetricas = async function() {
-        if (syncConfiavel && db.configs.url) {
-            try {
-                const resposta = await AloApi.getHistory(db.configs.url);
-                const historico = Array.isArray(resposta.pedidos) ? resposta.pedidos.map(AloLogic.normalizeOrder) : [];
-                const porId = new Map(syncConfiavel.orders.map(pedido => [pedido.id, pedido]));
-                historico.forEach(pedido => porId.set(pedido.id, pedido));
-                syncConfiavel.orders = Array.from(porId.values()).sort((a, b) => new Date(a.timestamp) - new Date(b.timestamp));
-                await AloStorage.putOrders(syncConfiavel.orders);
-                aplicarPedidosSincronizados(syncConfiavel.orders);
-            } catch (error) {
-                alert('Não foi possível atualizar o histórico completo agora.');
-            }
+    const renderizarMetricasDetalhesLocal = renderizarMetricasDetalhes;
+    const cacheRelatorios = new Map();
+    let requisicaoRelatorio = 0;
+
+    function intervaloDoRelatorio(periodo) {
+        const hoje = new Date();
+        hoje.setHours(0, 0, 0, 0);
+        let inicio = new Date(hoje);
+        let fim = new Date();
+        if (periodo === '7d') inicio.setDate(inicio.getDate() - 6);
+        else if (periodo === '15d') inicio.setDate(inicio.getDate() - 14);
+        else if (periodo === '30d') inicio.setDate(inicio.getDate() - 29);
+        else if (periodo === 'custom') {
+            const valorInicio = document.getElementById('filtroDataInicio').value;
+            const valorFim = document.getElementById('filtroDataFim').value;
+            if (!valorInicio || !valorFim) return null;
+            inicio = new Date(`${valorInicio}T00:00:00`);
+            fim = new Date(`${valorFim}T23:59:59.999`);
         }
+        return { start: inicio.toISOString(), end: fim.toISOString() };
+    }
+
+    async function atualizarHistoricoRelatorio(periodo) {
+        if (!syncConfiavel || !db.configs.url) return;
+        const intervalo = intervaloDoRelatorio(periodo);
+        if (!intervalo) return;
+        const chave = `${intervalo.start}|${intervalo.end}`;
+        const agora = Date.now();
+        if (agora - (cacheRelatorios.get(chave) || 0) < 30000) return;
+
+        const idRequisicao = ++requisicaoRelatorio;
+        const status = document.getElementById('statusRelatorio');
+        if (status) status.innerText = 'Atualizando dados...';
+        try {
+            const resposta = await AloApi.getHistory(db.configs.url, intervalo.start, intervalo.end);
+            if (idRequisicao !== requisicaoRelatorio) return;
+            const historico = Array.isArray(resposta.pedidos) ? resposta.pedidos.map(AloLogic.normalizeOrder) : [];
+            const porId = new Map(syncConfiavel.orders.map(pedido => [pedido.id, pedido]));
+            historico.forEach(pedido => porId.set(pedido.id, pedido));
+            syncConfiavel.orders = Array.from(porId.values()).sort((a, b) => new Date(a.timestamp) - new Date(b.timestamp));
+            await AloStorage.putOrders(syncConfiavel.orders);
+            aplicarPedidosSincronizados(syncConfiavel.orders);
+            cacheRelatorios.set(chave, Date.now());
+            renderizarMetricasDetalhesLocal(periodo);
+            if (status) status.innerText = 'Dados atualizados';
+        } catch (error) {
+            if (idRequisicao === requisicaoRelatorio && status) status.innerText = 'Exibindo os dados salvos neste aparelho';
+        }
+    }
+
+    renderizarMetricasDetalhes = function(periodo) {
+        renderizarMetricasDetalhesLocal(periodo);
+        atualizarHistoricoRelatorio(periodo);
+    };
+
+    abrirModalMetricas = function() {
+        const status = document.getElementById('statusRelatorio');
+        if (status) status.innerText = '';
         abrirModalMetricasOriginal();
     };
 
@@ -1492,6 +1665,7 @@ let db = carregarBanco();
             categorias: db.categorias,
             obsPedidos: db.obsPedidos,
             obsCancelamentos: db.obsCancelamentos,
+            areas: db.areas,
             configs: {
                 senhaModo: db.configs.senhaModo || '',
                 somCozinha: db.configs.somCozinha || 'sem_som',
@@ -1508,7 +1682,7 @@ let db = carregarBanco();
     function bancoNuvemIgual(nuvem, local) {
         return JSON.stringify({
             produtos: nuvem.produtos || [], categorias: nuvem.categorias || [],
-            obsPedidos: nuvem.obsPedidos || [], obsCancelamentos: nuvem.obsCancelamentos || [],
+            obsPedidos: nuvem.obsPedidos || [], obsCancelamentos: nuvem.obsCancelamentos || [], areas: nuvem.areas || [],
             configs: nuvem.configs || {}
         }) === JSON.stringify(local);
     }
@@ -1561,7 +1735,9 @@ let db = carregarBanco();
                 db.categorias = nuvemDB.categorias || [];
                 db.obsPedidos = nuvemDB.obsPedidos || [];
                 db.obsCancelamentos = nuvemDB.obsCancelamentos || [];
+                db.areas = nuvemDB.areas || db.areas;
                 db.configs = { ...db.configs, ...(nuvemDB.configs || {}), url: db.configs.url, modo: db.configs.modo, dadosBaixados: true, revisaoBanco: Number(nuvemDB._revision || 0) };
+                normalizarAreasERotas();
                 normalizarSonsConfigurados();
                 salvarBancoLocal();
                 if (pedirConfirmacao) {
@@ -1577,7 +1753,7 @@ let db = carregarBanco();
     };
 
     if ('serviceWorker' in navigator) {
-        window.addEventListener('load', () => navigator.serviceWorker.register('./service-worker.js?v=1.3.6').catch(() => {}));
+        window.addEventListener('load', () => navigator.serviceWorker.register('./service-worker.js?v=1.4.0').catch(() => {}));
     }
 
     iniciarComSyncConfiavel();

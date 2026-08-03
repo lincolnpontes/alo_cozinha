@@ -63,6 +63,7 @@ function createSyncHarness() {
             timestamp: order.timestamp || new Date().toISOString(), finalizadoEm: order.finalizadoEm || '',
             motivo: order.motivo || '', atualizadoEm: order.atualizadoEm || order.timestamp || new Date().toISOString(),
             revisao: Number(order.revisao || 0), operacaoId: order.operacaoId || '',
+            areaOrigem: order.areaOrigem || 'panelas', areaDestino: order.areaDestino || 'cozinha',
             syncState: order.syncState || 'confirmed', localOnly: Boolean(order.localOnly)
         })
     };
@@ -73,7 +74,13 @@ function createSyncHarness() {
         },
         async post(url, payload) {
             if (failPost) throw new Error('offline');
-            if (payload.action === 'atualizar_status_lote') {
+            if (payload.action === 'novo_pedido') {
+                remoteOrders.set(String(payload.id), {
+                    id: String(payload.id), produto: payload.produto, status: 'pendente',
+                    timestamp: new Date().toISOString(), areaOrigem: payload.areaOrigem,
+                    areaDestino: payload.areaDestino, operacaoId: payload.operationId
+                });
+            } else if (payload.action === 'atualizar_status_lote') {
                 payload.updates.forEach(update => {
                     const order = remoteOrders.get(String(update.id));
                     if (order) remoteOrders.set(String(update.id), { ...order, status: update.novoStatus, motivo: update.motivo || '', operacaoId: update.operationId });
@@ -164,6 +171,22 @@ async function testDeleteDoesNotReturn() {
     assert.equal(harness.operations.size, 0);
 }
 
+async function testNewOrderKeepsAreaRoute() {
+    const harness = createSyncHarness();
+    const local = await harness.manager.enqueueNewOrder({
+        produto: 'Suco', areaOrigem: 'caixa', areaDestino: 'bar'
+    });
+    assert.equal(local.areaOrigem, 'caixa');
+    assert.equal(local.areaDestino, 'bar');
+    const operation = [...harness.operations.values()][0];
+    assert.equal(operation.payload.areaOrigem, 'caixa');
+    assert.equal(operation.payload.areaDestino, 'bar');
+    await harness.manager.syncNow(true);
+    const remote = harness.remoteOrders.get(local.id);
+    assert.equal(remote.areaOrigem, 'caixa');
+    assert.equal(remote.areaDestino, 'bar');
+}
+
 function testAudioMode() {
     let playCount = 0;
     const classes = new Set();
@@ -203,8 +226,9 @@ function testAudioMode() {
     await testAcceptAndConfirm();
     await testOfflineRetry();
     await testDeleteDoesNotReturn();
+    await testNewOrderKeepsAreaRoute();
     testAudioMode();
-    console.log('Testes críticos da v1.3.6 passaram.');
+    console.log('Testes críticos da v1.4.0 passaram.');
 })().catch(error => {
     console.error(error);
     process.exitCode = 1;

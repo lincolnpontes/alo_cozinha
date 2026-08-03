@@ -10,16 +10,15 @@ body { font-family: Arial, sans-serif; background-color: #f0f2f5; margin: 0; pad
         .splash-titulo { font-size: 32px; font-weight: bold; margin-bottom: 5px; }
         .splash-versao { font-size: 16px; opacity: 0.8; }
 
-        .header { padding: 15px; display: flex; justify-content: space-between; align-items: center; color: white; background-color: #1565C0; flex-shrink: 0; z-index: 10; }
-        .header-select { background: transparent; color: white; border: none; font-size: 20px; font-weight: bold; outline: none; -webkit-appearance: none; appearance: none; padding-right: 5px; }
+        .header { min-height: 48px; padding: 6px 10px; display: flex; justify-content: space-between; align-items: center; color: white; background-color: #1565C0; flex-shrink: 0; z-index: 10; box-sizing: border-box; }
+        .header-select { max-width: calc(100% - 105px); background: transparent; color: white; border: none; font-size: 17px; font-weight: bold; outline: none; -webkit-appearance: none; appearance: none; padding-right: 5px; text-overflow: ellipsis; }
         .header-select option { color: black; font-size: 16px; }
 
-        .dicas-cozinha { display: none; font-size: 12px; line-height: 1.4; text-align: right; flex: 1; opacity: 0.95; margin-right: 10px; white-space: nowrap; }
-        .status-conexao { font-size: 12px; display: flex; align-items: center; margin-right: 15px; background: rgba(0,0,0,0.2); padding: 4px 8px; border-radius: 12px; border: 0; color: white; cursor: pointer; min-height: 25px; }
+        .status-conexao { font-size: 12px; display: flex; align-items: center; margin-right: 8px; background: rgba(0,0,0,0.2); padding: 4px 8px; border-radius: 12px; border: 0; color: white; cursor: pointer; min-height: 30px; }
         .status-conexao:active { background: rgba(0,0,0,0.35); }
         .sync-pendente { display: inline-block; margin-left: 6px; color: #a15b00; font-size: 11px; font-weight: bold; }
 
-        .header-actions button { background: none; border: none; color: white; font-size: 24px; cursor: pointer; }
+        .header-actions button { min-width: 36px; min-height: 36px; background: none; border: none; color: white; font-size: 21px; cursor: pointer; }
 
         body.theme-panelas .header { background-color: #1565C0 !important; }
         body.theme-cozinha .header { background-color: #2e7d32 !important; }
@@ -49,6 +48,32 @@ body { font-family: Arial, sans-serif; background-color: #f0f2f5; margin: 0; pad
         .painel-titulo { padding: 10px; background: #eee; font-weight: bold; color: #333; border-bottom: 1px solid #ddd; flex-shrink: 0; display: flex; justify-content: space-between; align-items: center; }
 
         .swipe-hint { color: #1976D2; font-size: 24px; font-weight: bold; pointer-events: none; }
+
+        .pedido-cozinha { align-items: stretch; gap: 10px; padding: 12px; cursor: default; touch-action: pan-y; }
+        .pedido-conteudo { min-width: 0; display: flex; align-items: center; flex: 1; }
+        .pedido-acoes { display: flex; align-items: stretch; justify-content: flex-end; gap: 6px; flex-shrink: 0; }
+        .btn-pedido-acao { min-width: 48px; min-height: 48px; padding: 7px 10px; border: 0; border-radius: 6px; color: #fff; cursor: pointer; font-size: 20px; font-weight: bold; display: inline-flex; align-items: center; justify-content: center; gap: 6px; }
+        .btn-pedido-acao:disabled { opacity: 0.55; cursor: wait; }
+        .acao-aceitar { background: #2e7d32; }
+        .acao-enviar { background: #1565c0; }
+        .acao-buscar { background: #b56a00; }
+        .acao-cancelar { background: #c62828; }
+        .acao-desfazer { background: #5f6368; }
+        .acao-label { display: none; font-size: 13px; white-space: nowrap; }
+        .rota-produto { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+        .status-relatorio { min-height: 18px; margin: -5px 0 8px; color: #666; font-size: 12px; text-align: center; }
+
+        @media (min-width: 700px) {
+            .acao-label { display: inline; }
+            .btn-pedido-acao { min-width: 104px; }
+        }
+
+        @media (max-width: 430px) {
+            .pedido-cozinha { flex-direction: column; gap: 8px; }
+            .pedido-acoes { width: 100%; }
+            .btn-pedido-acao { flex: 1; }
+            .rota-produto { grid-template-columns: 1fr; gap: 0; }
+        }
 
         .alerta-pisca { animation: bg-pisca 1s infinite; }
         @keyframes bg-pisca { 0% { opacity: 1; } 50% { opacity: 0.6; } 100% { opacity: 1; } }

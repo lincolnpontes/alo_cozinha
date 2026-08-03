@@ -30,7 +30,7 @@
             this.syncNow(true);
         }
 
-        async enqueueNewOrder({ produto }) {
+        async enqueueNewOrder({ produto, areaOrigem = 'panelas', areaDestino = 'cozinha' }) {
             const id = global.AloLogic.createId('pedido');
             const operationId = global.AloLogic.createId('novo');
             const now = new Date().toISOString();
@@ -41,11 +41,13 @@
                 timestamp: now,
                 atualizadoEm: now,
                 operacaoId: operationId,
+                areaOrigem,
+                areaDestino,
                 syncState: navigator.onLine ? 'queued' : 'offline',
                 localOnly: true
             });
             const operation = this.newOperation('create', id, {
-                action: 'novo_pedido', id, produto, operationId
+                action: 'novo_pedido', id, produto, areaOrigem, areaDestino, operationId
             }, operationId);
             await global.AloStorage.putOrderAndOperation(order, operation);
             this.upsertLocalOrder(order);

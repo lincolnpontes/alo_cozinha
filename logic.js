@@ -37,6 +37,8 @@
             atualizadoEm: order.atualizadoEm || order.timestamp || new Date().toISOString(),
             revisao: Number(order.revisao || 0),
             operacaoId: order.operacaoId || '',
+            areaOrigem: order.areaOrigem || 'panelas',
+            areaDestino: order.areaDestino || 'cozinha',
             syncState: order.syncState || 'confirmed',
             localOnly: Boolean(order.localOnly)
         };

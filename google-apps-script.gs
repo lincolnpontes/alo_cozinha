@@ -3,7 +3,7 @@ const PROP_BANCO = 'kds_banco';
 const PROP_BANCO_REVISION = 'kds_banco_revision';
 const PROP_PEDIDOS_REVISION = 'kds_pedidos_revision';
 const BASE_HEADERS = ['ID', 'Produto', 'Status', 'Timestamp', 'FinalizadoEm', 'Motivo'];
-const EXTRA_HEADERS = ['AtualizadoEm', 'Revisao', 'OperacaoId'];
+const EXTRA_HEADERS = ['AtualizadoEm', 'Revisao', 'OperacaoId', 'AreaOrigem', 'AreaDestino'];
 const HEADERS_PEDIDOS = BASE_HEADERS.concat(EXTRA_HEADERS);
 const FINAL_STATUSES = new Set(['enviado', 'buscar', 'cancelado', 'concluido']);
 const VALID_STATUSES = new Set(['pendente', 'fazendo', 'enviado', 'buscar', 'cancelado', 'concluido']);
@@ -58,7 +58,9 @@ function orderFromRow_(row) {
     motivo: row[5] || '',
     atualizadoEm: asIso_(row[6]) || asIso_(row[3]),
     revisao: Number(row[7] || 0),
-    operacaoId: row[8] || ''
+    operacaoId: row[8] || '',
+    areaOrigem: row[9] || 'panelas',
+    areaDestino: row[10] || 'cozinha'
   };
 }
 
@@ -126,6 +128,7 @@ function salvarBanco_(dados, expectedRevision) {
     categorias: dados.categorias || [],
     obsPedidos: dados.obsPedidos || [],
     obsCancelamentos: dados.obsCancelamentos || [],
+    areas: dados.areas || [],
     configs: dados.configs || {}
   };
   const revision = currentRevision + 1;
@@ -150,7 +153,22 @@ function pedidosVisiveis_(sheet) {
 function filtrarHistorico_(sheet, start, end) {
   const startTime = start ? new Date(start).getTime() : 0;
   const endTime = end ? new Date(end).getTime() : Number.MAX_SAFE_INTEGER;
-  return getPedidosData_(sheet)
+  const lastRow = sheet.getLastRow();
+  if (lastRow < 2) return [];
+
+  const timestamps = sheet.getRange(2, 4, lastRow - 1, 1).getValues();
+  let firstMatch = -1;
+  let lastMatch = -1;
+  timestamps.forEach((row, index) => {
+    const timestamp = new Date(row[0]).getTime();
+    if (timestamp >= startTime && timestamp <= endTime) {
+      if (firstMatch === -1) firstMatch = index + 2;
+      lastMatch = index + 2;
+    }
+  });
+  if (firstMatch === -1) return [];
+
+  return sheet.getRange(firstMatch, 1, lastMatch - firstMatch + 1, HEADERS_PEDIDOS.length).getValues()
     .map(orderFromRow_)
     .filter(order => {
       const timestamp = new Date(order.timestamp).getTime();
@@ -175,7 +193,10 @@ function doPost(e) {
       if (!records[id]) {
         const now = new Date().toISOString();
         const revision = nextPedidosRevision_();
-        sheetPedidos.appendRow([id, params.produto, 'pendente', now, '', '', now, revision, params.operationId || '']);
+        sheetPedidos.appendRow([
+          id, params.produto, 'pendente', now, '', '', now, revision, params.operationId || '',
+          params.areaOrigem || 'panelas', params.areaDestino || 'cozinha'
+        ]);
       }
       return json_({ status: 'ok', id: id, revision: getPedidosRevision_() });
     }
