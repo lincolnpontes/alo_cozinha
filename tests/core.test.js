@@ -25,6 +25,7 @@ function createSyncHarness() {
         async getMeta(key, fallback) { return meta.has(key) ? meta.get(key) : fallback; },
         async putMeta(key, value) { meta.set(key, value); },
         async putOrders(orders) { orders.forEach(order => localOrders.set(order.id, order)); },
+        async deleteOrders(ids) { ids.map(String).forEach(id => localOrders.delete(id)); },
         async putOrderAndOperation(order, operation) {
             localOrders.set(order.id, order);
             operations.set(operation.operationId, operation);
@@ -55,6 +56,7 @@ function createSyncHarness() {
     };
 
     const logic = {
+        ACTIVE_STATUSES: new Set(['pendente', 'fazendo']),
         createId: prefix => `${prefix}_${Math.random().toString(16).slice(2)}`,
         isToday: value => new Date(value).toDateString() === new Date().toDateString(),
         isStatusFinal: status => ['enviado', 'buscar', 'cancelado', 'concluido'].includes(status),
@@ -83,7 +85,16 @@ function createSyncHarness() {
             } else if (payload.action === 'atualizar_status_lote') {
                 payload.updates.forEach(update => {
                     const order = remoteOrders.get(String(update.id));
-                    if (order) remoteOrders.set(String(update.id), { ...order, status: update.novoStatus, motivo: update.motivo || '', operacaoId: update.operationId });
+                    if (!order) return;
+                    if (update.expectedStatus && order.status !== update.expectedStatus) return;
+                    if (update.expectedOrderRevision !== undefined && Number(order.revisao || 0) > Number(update.expectedOrderRevision)) return;
+                    remoteOrders.set(String(update.id), {
+                        ...order,
+                        status: update.novoStatus,
+                        motivo: update.motivo || '',
+                        operacaoId: update.operationId,
+                        revisao: revision + 1
+                    });
                 });
             } else if (payload.action === 'excluir_pedido') {
                 remoteOrders.delete(String(payload.id));
@@ -195,6 +206,87 @@ async function testNewOrderKeepsAreaRoute() {
     assert.equal(harness.remoteOrders.get(second.id).areaDestino, 'bar');
 }
 
+async function testSameStatusFromAnotherDeviceClearsQueue() {
+    const harness = createSyncHarness();
+    const order = { id: 'multi-1', produto: 'Feijão', status: 'pendente', revisao: 4, timestamp: new Date().toISOString() };
+    harness.manager.orders = [order];
+    harness.localOrders.set(order.id, order);
+    harness.remoteOrders.set(order.id, order);
+
+    await harness.manager.enqueueStatus(order.id, 'fazendo');
+    harness.remoteOrders.set(order.id, { ...order, status: 'fazendo', revisao: 5, operacaoId: 'outro_aparelho' });
+    await harness.manager.syncNow(false, true);
+
+    assert.equal(harness.operations.size, 0, 'o mesmo estado confirmado por outro aparelho deve limpar a fila');
+    assert.equal(harness.manager.orders[0].status, 'fazendo');
+    assert.equal(harness.manager.orders[0].syncState, 'confirmed');
+}
+
+async function testNewerRemoteActionWinsOverStaleTablet() {
+    const harness = createSyncHarness();
+    const order = { id: 'multi-2', produto: 'Arroz', status: 'pendente', revisao: 8, timestamp: new Date().toISOString() };
+    harness.manager.orders = [order];
+    harness.localOrders.set(order.id, order);
+    harness.remoteOrders.set(order.id, order);
+
+    await harness.manager.enqueueStatus(order.id, 'fazendo');
+    harness.remoteOrders.set(order.id, {
+        ...order,
+        status: 'enviado',
+        revisao: 9,
+        operacaoId: 'acao_mais_nova',
+        finalizadoEm: new Date().toISOString()
+    });
+    await harness.manager.syncNow(true, true);
+
+    assert.equal(harness.operations.size, 0, 'uma ação atrasada não deve permanecer reenviando');
+    assert.equal(harness.manager.orders[0].status, 'enviado', 'o estado mais novo do servidor deve prevalecer');
+    assert.equal(harness.remoteOrders.get(order.id).status, 'enviado');
+}
+
+async function testOldOrphanQueueIsCleaned() {
+    const harness = createSyncHarness();
+    const yesterday = new Date(Date.now() - 86400000).toISOString();
+    const order = { id: 'orphan-1', produto: 'Chá', status: 'fazendo', revisao: 2, timestamp: yesterday };
+    harness.manager.orders = [order];
+    harness.localOrders.set(order.id, order);
+    harness.operations.set('old-status', {
+        operationId: 'old-status',
+        type: 'status',
+        orderId: order.id,
+        payload: { id: order.id, novoStatus: 'fazendo' },
+        createdAt: Date.now() - 120000,
+        attempts: 3,
+        nextAttemptAt: Date.now() + 60000
+    });
+
+    await harness.manager.syncNow(false, true);
+
+    assert.equal(harness.operations.size, 0, 'pendência antiga sem pedido no servidor deve ser removida');
+    assert.equal(harness.manager.orders.length, 0, 'pedido ativo órfão não deve reaparecer no aparelho');
+}
+
+function testAppsScriptRejectsStaleStatus() {
+    const context = vm.createContext({ console, Date, Set });
+    loadScript(context, 'google-apps-script.gs');
+    context.testRow = ['srv-1', 'Feijão', 'fazendo', new Date().toISOString(), '', '', '', 5, 'acao_atual', 'panelas', 'cozinha'];
+
+    const staleApplied = vm.runInContext(
+        "applyStatus_(testRow, 'enviado', '', 'acao_atrasada', 'pendente', 4, 6)",
+        context
+    );
+    assert.equal(staleApplied, false);
+    assert.equal(context.testRow[2], 'fazendo');
+
+    const currentApplied = vm.runInContext(
+        "applyStatus_(testRow, 'enviado', '', 'acao_valida', 'fazendo', 5, 6)",
+        context
+    );
+    assert.equal(currentApplied, true);
+    assert.equal(context.testRow[2], 'enviado');
+    assert.equal(context.testRow[7], 6);
+}
+
 function testAudioMode() {
     let playCount = 0;
     const classes = new Set();
@@ -295,9 +387,13 @@ async function testCatalogAutoPublish() {
     await testOfflineRetry();
     await testDeleteDoesNotReturn();
     await testNewOrderKeepsAreaRoute();
+    await testSameStatusFromAnotherDeviceClearsQueue();
+    await testNewerRemoteActionWinsOverStaleTablet();
+    await testOldOrphanQueueIsCleaned();
+    testAppsScriptRejectsStaleStatus();
     testAudioMode();
     await testCatalogAutoPublish();
-    console.log('Testes críticos da v1.4.6 passaram.');
+    console.log('Testes críticos da v1.4.7 passaram.');
 })().catch(error => {
     console.error(error);
     process.exitCode = 1;

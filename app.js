@@ -22,7 +22,6 @@ let db = carregarBanco();
     if (savedCientes) { pedidosCientes = new Set(JSON.parse(savedCientes)); }
 
     const hierarquiaStatus = { 'pendente': 1, 'fazendo': 2, 'enviado': 3, 'buscar': 3, 'cancelado': 4, 'concluido': 5 };
-    const SYNC_INTERVALO_MS = 2000;
     const AREAS_PADRAO = [
         { id: 'panelas', nome: 'Panelas', tipo: 'envio', emoji: '🥘' },
         { id: 'cozinha', nome: 'Cozinha', tipo: 'recebimento', emoji: '🧑‍🍳' }
@@ -39,7 +38,7 @@ let db = carregarBanco();
                 id,
                 nome: String(area.nome || area.id),
                 tipo,
-                emoji: area.emoji === '🥣' ? '🏺' : (area.emoji || (tipo === 'recebimento' ? '🧑‍🍳' : '🥘'))
+                emoji: area.emoji === '🏺' ? '🥣' : (area.emoji || (tipo === 'recebimento' ? '🧑‍🍳' : '🥘'))
             });
         });
         db.areas = Array.from(porId.values());
@@ -71,7 +70,9 @@ let db = carregarBanco();
     }
 
     function getEmojiAreaHtml(emoji) {
-        return emoji;
+        return emoji === '🥣' || emoji === '🏺'
+            ? '<span class="emoji-panela-barro" role="img" aria-label="Panela de barro">🥣</span>'
+            : emoji;
     }
 
     function getAreasOrigemProduto(produto) {
@@ -95,9 +96,11 @@ let db = carregarBanco();
         const seletor = document.getElementById('seletorModo');
         if (!seletor) return;
         seletor.innerHTML = db.areas.map(area =>
-            `<option value="${area.id}">${area.emoji} ${area.nome}</option>`
+            `<option value="${area.id}">${area.nome}</option>`
         ).join('');
         seletor.value = db.configs.areaAtual;
+        const emojiAtual = document.getElementById('emojiAreaAtual');
+        if (emojiAtual) emojiAtual.innerHTML = getEmojiAreaHtml(getAreaAtual().emoji);
     }
 
     normalizarAreasERotas();
@@ -388,9 +391,12 @@ let db = carregarBanco();
         const modo = area.tipo === 'recebimento' ? 'cozinha' : 'panelas';
         db.configs.areaAtual = area.id;
         db.configs.modo = modo;
+        const emojiAtual = document.getElementById('emojiAreaAtual');
+        if (emojiAtual) emojiAtual.innerHTML = getEmojiAreaHtml(area.emoji);
         const themeColor = document.getElementById('metaThemeColor'); document.body.className = modo === 'panelas' ? 'theme-panelas' : 'theme-cozinha';
         if(loopSync) clearInterval(loopSync);
-        if(modo === 'panelas') { if(themeColor) themeColor.content = '#1565C0'; document.getElementById('area-panelas').style.display = 'flex'; document.getElementById('area-cozinha').style.display = 'none'; pararAlarme(); renderizarFiltros(); renderizarListaPanelas(); syncGeral(); loopSync = setInterval(syncGeral, SYNC_INTERVALO_MS); } else { if(themeColor) themeColor.content = '#2e7d32'; document.getElementById('area-panelas').style.display = 'none'; document.getElementById('area-cozinha').style.display = 'flex'; pararAlarme(); syncGeral(); loopSync = setInterval(syncGeral, SYNC_INTERVALO_MS); }
+        loopSync = null;
+        if(modo === 'panelas') { if(themeColor) themeColor.content = '#1565C0'; document.getElementById('area-panelas').style.display = 'flex'; document.getElementById('area-cozinha').style.display = 'none'; pararAlarme(); renderizarFiltros(); renderizarListaPanelas(); syncGeral(true); } else { if(themeColor) themeColor.content = '#2e7d32'; document.getElementById('area-panelas').style.display = 'none'; document.getElementById('area-cozinha').style.display = 'flex'; pararAlarme(); syncGeral(true); }
     }
 
     function renderizarFiltros() {
@@ -886,9 +892,12 @@ let db = carregarBanco();
             }
 
             let subtitleHtml = `<div class="item-subtitle" style="text-decoration: none !important; opacity: 1 !important;">${statusTxt}</div>`;
+            const atributosAceitar = p.status === 'pendente'
+                ? `class="item pedido-cozinha pedido-aceitavel status-${cssStatus}" role="button" tabindex="0" aria-label="Aceitar pedido" onclick="aceitarPedidoPelaCaixa(event, '${p.id}')" onkeydown="aceitarPedidoPelaCaixa(event, '${p.id}')"`
+                : `class="item pedido-cozinha status-${cssStatus}"`;
 
             lista.innerHTML += `
-                <li class="item pedido-cozinha status-${cssStatus}" id="ped-${p.id}" data-id="${p.id}" data-status="${p.status}">
+                <li ${atributosAceitar} id="ped-${p.id}" data-id="${p.id}" data-status="${p.status}">
                     <div class="pedido-conteudo">
                         <div class="item-avatar ${classeRiscar}" style="background:transparent; font-size:24px; margin-right: 10px;">${emoji}</div>
                         <div class="item-info" style="display:flex; justify-content:space-between; align-items:center;">
@@ -916,6 +925,16 @@ let db = carregarBanco();
     function executarAcaoPedido(botao, id, novoStatus) {
         desabilitarAcoesPedido(botao);
         alterarStatusPedido(id, novoStatus);
+    }
+
+    function aceitarPedidoPelaCaixa(event, id) {
+        if (!event || event.target.closest('.btn-pedido-acao')) return;
+        if (event.type === 'keydown' && event.key !== 'Enter' && event.key !== ' ') return;
+        if (event.type === 'keydown') event.preventDefault();
+        const card = event.currentTarget;
+        if (!card || card.dataset.status !== 'pendente') return;
+        card.dataset.status = 'processando';
+        executarAcaoPedido(card.querySelector('.acao-aceitar'), id, 'fazendo');
     }
 
     function cancelarPedidoPeloBotao(botao, id) {
@@ -1580,8 +1599,8 @@ let db = carregarBanco();
     };
     pararAlarme = function() { AloAudio.stop(); };
 
-    syncGeral = async function() {
-        if (syncConfiavel) await syncConfiavel.syncNow(true);
+    syncGeral = async function(forcarAtualizacao = false) {
+        if (syncConfiavel) await syncConfiavel.syncNow(true, Boolean(forcarAtualizacao));
     };
     processarFilaRetentativas = async function() {
         if (syncConfiavel) await syncConfiavel.syncNow(true);
@@ -1895,7 +1914,7 @@ let db = carregarBanco();
     };
 
     if ('serviceWorker' in navigator) {
-        window.addEventListener('load', () => navigator.serviceWorker.register('./service-worker.js?v=1.4.6').catch(() => {}));
+        window.addEventListener('load', () => navigator.serviceWorker.register('./service-worker.js?v=1.4.7').catch(() => {}));
     }
 
     iniciarComSyncConfiavel();

@@ -94,6 +94,14 @@
         });
     }
 
+    async function deleteOrders(orderIds) {
+        if (!orderIds.length) return;
+        return transaction([STORES.orders], 'readwrite', tx => {
+            const store = tx.objectStore(STORES.orders);
+            orderIds.map(String).forEach(id => store.delete(id));
+        });
+    }
+
     async function putOrderAndOperation(order, operation) {
         return transaction([STORES.orders, STORES.outbox], 'readwrite', tx => {
             tx.objectStore(STORES.orders).put(order);
@@ -220,6 +228,7 @@
         putMeta,
         putOrder,
         putOrders,
+        deleteOrders,
         putOrderAndOperation,
         replaceStatusOperation,
         deleteOrdersAndQueue,

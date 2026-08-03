@@ -10,10 +10,13 @@
             this.timer = null;
             this.lastError = '';
             this.lastSyncAt = 0;
+            this.lastFullPullAt = 0;
             this.serverProtocol = 'unknown';
-            this.boundOnline = () => this.syncNow(true);
+            this.rerunRequested = false;
+            this.forceNextPull = false;
+            this.boundOnline = () => this.syncNow(true, true);
             this.boundVisibility = () => {
-                if (document.visibilityState === 'visible') this.syncNow(true);
+                if (document.visibilityState === 'visible') this.syncNow(true, true);
                 this.schedule();
             };
         }
@@ -27,7 +30,7 @@
             global.addEventListener('offline', () => this.emit());
             document.addEventListener('visibilitychange', this.boundVisibility);
             this.emit();
-            this.syncNow(true);
+            await this.syncNow(true, true);
         }
 
         async enqueueNewOrder({ produto, areaOrigem = 'panelas', areaDestino = 'cozinha' }) {
@@ -59,6 +62,8 @@
         async enqueueStatus(id, novoStatus, motivo = '') {
             const current = this.orders.find(order => order.id === String(id));
             if (!current) return;
+            const operations = await global.AloStorage.getAllOperations();
+            const previousStatus = operations.find(operation => operation.type === 'status' && operation.orderId === String(id));
             const operationId = global.AloLogic.createId('status');
             const now = new Date().toISOString();
             const updated = global.AloLogic.normalizeOrder({
@@ -75,12 +80,14 @@
                 id: updated.id,
                 novoStatus,
                 motivo,
+                expectedStatus: previousStatus ? previousStatus.payload.expectedStatus : current.status,
+                expectedOrderRevision: previousStatus ? previousStatus.payload.expectedOrderRevision : current.revisao,
                 operationId
             }, operationId);
             await global.AloStorage.replaceStatusOperation(updated, operation);
             this.upsertLocalOrder(updated);
             this.emit();
-            this.schedule(120);
+            this.schedule(0);
         }
 
         async enqueueDelete(id) {
@@ -124,18 +131,25 @@
             this.schedule(0);
         }
 
-        async syncNow(flush = true) {
-            if (this.cycleRunning || !this.getUrl()) {
+        async syncNow(flush = true, force = false) {
+            if (!this.getUrl()) {
                 this.emit();
                 return;
             }
+            if (this.cycleRunning) {
+                this.rerunRequested = true;
+                if (force) this.forceNextPull = true;
+                return;
+            }
             this.cycleRunning = true;
+            const forcePull = force || this.forceNextPull || !this.lastFullPullAt || (Date.now() - this.lastFullPullAt) >= 12000;
+            this.forceNextPull = false;
             this.emit();
             try {
-                await this.pull();
+                await this.pull(forcePull);
                 if (flush) {
                     const sent = await this.flushDueOperations();
-                    if (sent) await this.pull();
+                    if (sent) await this.pull(true);
                 }
                 this.lastError = '';
                 this.lastSyncAt = Date.now();
@@ -145,12 +159,17 @@
             } finally {
                 this.cycleRunning = false;
                 this.emit();
-                this.schedule();
+                if (this.rerunRequested) {
+                    this.rerunRequested = false;
+                    this.schedule(0);
+                } else {
+                    this.schedule();
+                }
             }
         }
 
-        async pull() {
-            let data = await global.AloApi.sync(this.getUrl(), this.revision);
+        async pull(force = false) {
+            let data = await global.AloApi.sync(this.getUrl(), force ? '' : this.revision);
             if (Array.isArray(data)) {
                 this.serverProtocol = 'legacy';
                 data = { status: 'ok', changed: true, pedidos: data };
@@ -160,9 +179,10 @@
             if (!data || data.status !== 'ok') throw new Error('Resposta inválida do servidor.');
             if (data.changed) {
                 const remoteOrders = Array.isArray(data.pedidos) ? data.pedidos.map(global.AloLogic.normalizeOrder) : [];
-                await this.reconcile(remoteOrders);
-                await this.mergeRemoteOrders(remoteOrders);
+                await this.reconcile(remoteOrders, force);
+                await this.mergeRemoteOrders(remoteOrders, force);
             }
+            if (force) this.lastFullPullAt = Date.now();
             if (data.revision !== undefined) {
                 this.revision = String(data.revision);
                 await global.AloStorage.putMeta('ordersRevision', this.revision);
@@ -198,6 +218,8 @@
                     id: operation.payload.id,
                     novoStatus: operation.payload.novoStatus,
                     motivo: operation.payload.motivo || '',
+                    expectedStatus: operation.payload.expectedStatus,
+                    expectedOrderRevision: operation.payload.expectedOrderRevision,
                     operationId: operation.operationId
                 }));
                 await this.dispatch(statuses, { action: 'atualizar_status_lote', updates });
@@ -209,6 +231,8 @@
                         id: operation.payload.id,
                         novoStatus: operation.payload.novoStatus,
                         motivo: operation.payload.motivo || '',
+                        expectedStatus: operation.payload.expectedStatus,
+                        expectedOrderRevision: operation.payload.expectedOrderRevision,
                         operationId: operation.operationId
                     });
                     sent = true;
@@ -236,9 +260,10 @@
             }
         }
 
-        async reconcile(remoteOrders) {
+        async reconcile(remoteOrders, fullPull = false) {
             const remoteById = new Map(remoteOrders.map(order => [order.id, order]));
             const operations = await global.AloStorage.getAllOperations();
+            const createOrderIds = new Set(operations.filter(operation => operation.type === 'create').map(operation => String(operation.orderId)));
             const confirmed = [];
             operations.forEach(operation => {
                 if ((operation.type === 'delete' || operation.type === 'delete_today' || operation.type === 'delete_all') && operation.attempts > 0) {
@@ -247,21 +272,32 @@
                     return;
                 }
                 const remote = remoteById.get(String(operation.orderId));
-                if (!remote) return;
+                if (!remote) {
+                    const staleMissingStatus = fullPull && operation.type === 'status' && operation.attempts > 0
+                        && !createOrderIds.has(String(operation.orderId))
+                        && (Date.now() - Number(operation.createdAt || 0)) >= 60000;
+                    if (staleMissingStatus) confirmed.push(operation.operationId);
+                    return;
+                }
                 if (operation.type === 'create') {
                     confirmed.push(operation.operationId);
                     return;
                 }
-                if (operation.type === 'status' && remote.status === operation.payload.novoStatus &&
-                    (this.serverProtocol === 'legacy' || remote.operacaoId === operation.operationId)) {
-                    confirmed.push(operation.operationId);
-                    return;
+                if (operation.type === 'status') {
+                    const expectedRevision = Number(operation.payload.expectedOrderRevision);
+                    const remoteRevision = Number(remote.revisao || 0);
+                    const desiredStateReached = remote.status === operation.payload.novoStatus;
+                    const changedByAnotherAction = Number.isFinite(expectedRevision) && remoteRevision > expectedRevision;
+                    const activeActionAlreadyFinished = operation.payload.novoStatus === 'fazendo' && global.AloLogic.isStatusFinal(remote.status);
+                    if (desiredStateReached || changedByAnotherAction || activeActionAlreadyFinished) {
+                        confirmed.push(operation.operationId);
+                    }
                 }
             });
             await global.AloStorage.removeOperations(confirmed);
         }
 
-        async mergeRemoteOrders(remoteOrders) {
+        async mergeRemoteOrders(remoteOrders, fullPull = false) {
             const pending = await global.AloStorage.getAllOperations();
             const pendingByOrder = new Map();
             const pendingDeletedIds = new Set();
@@ -295,8 +331,22 @@
                 }
             });
 
+            const staleLocalIds = [];
+            if (fullPull) {
+                const remoteIds = new Set(remoteOrders.map(order => order.id));
+                localById.forEach((order, id) => {
+                    const shouldRemove = !remoteIds.has(id) && !activeOperationIds.has(id)
+                        && (global.AloLogic.isToday(order.timestamp) || global.AloLogic.ACTIVE_STATUSES.has(order.status));
+                    if (shouldRemove) {
+                        localById.delete(id);
+                        staleLocalIds.push(id);
+                    }
+                });
+            }
+
             this.orders = Array.from(localById.values()).sort((a, b) => new Date(a.timestamp) - new Date(b.timestamp));
             await global.AloStorage.putOrders(changes);
+            await global.AloStorage.deleteOrders(staleLocalIds);
         }
 
         async markPendingOffline() {
@@ -312,7 +362,7 @@
         async retryNow() {
             const operations = await global.AloStorage.getAllOperations();
             await Promise.all(operations.map(operation => global.AloStorage.updateOperation({ ...operation, nextAttemptAt: 0 })));
-            this.syncNow(true);
+            return this.syncNow(true, true);
         }
 
         newOperation(type, orderId, payload, operationId) {
@@ -360,7 +410,7 @@
             if (this.timer) clearTimeout(this.timer);
             const wait = delay !== undefined
                 ? delay
-                : (document.visibilityState === 'visible' ? 3000 : 15000);
+                : (document.visibilityState === 'visible' ? 1500 : 8000);
             this.timer = setTimeout(() => this.syncNow(true), wait);
         }
     }

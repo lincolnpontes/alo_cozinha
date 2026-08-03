@@ -83,31 +83,63 @@ function findRecordsById_(sheet) {
   return records;
 }
 
-function applyStatus_(values, novoStatus, motivo, operationId) {
+function applyStatus_(values, novoStatus, motivo, operationId, expectedStatus, expectedOrderRevision, revision) {
   if (!VALID_STATUSES.has(novoStatus)) throw new Error('Status inválido.');
-  if (operationId && values[8] === operationId) return false;
+  const currentStatus = values[2] || 'pendente';
+  const currentRevision = Number(values[7] || 0);
+  if (currentStatus === novoStatus) return false;
+  if (expectedStatus && currentStatus !== expectedStatus) return false;
+  if (expectedOrderRevision !== undefined && expectedOrderRevision !== null && currentRevision > Number(expectedOrderRevision)) return false;
 
   const now = new Date().toISOString();
   values[2] = novoStatus;
   values[4] = FINAL_STATUSES.has(novoStatus) ? now : '';
   values[5] = novoStatus === 'cancelado' ? (motivo || '') : values[5] || '';
   values[6] = now;
-  values[7] = nextPedidosRevision_();
+  values[7] = revision;
   values[8] = operationId || '';
   return true;
 }
 
 function updateStatuses_(sheet, updates) {
-  if (!updates || !updates.length) return;
+  if (!updates || !updates.length) return 0;
   const records = findRecordsById_(sheet);
+  let revision = getPedidosRevision_();
+  const changedRecords = [];
   updates.forEach(update => {
     if (!update || !update.id) return;
     const record = records[update.id.toString()];
     if (!record) return;
-    if (applyStatus_(record.values, update.novoStatus, update.motivo || '', update.operationId || '')) {
-      sheet.getRange(record.row, 1, 1, HEADERS_PEDIDOS.length).setValues([record.values]);
+    const nextRevision = revision + 1;
+    if (applyStatus_(
+      record.values,
+      update.novoStatus,
+      update.motivo || '',
+      update.operationId || '',
+      update.expectedStatus,
+      update.expectedOrderRevision,
+      nextRevision
+    )) {
+      revision = nextRevision;
+      changedRecords.push(record);
     }
   });
+  if (!changedRecords.length) return 0;
+
+  changedRecords.sort((a, b) => a.row - b.row);
+  let group = [];
+  const writeGroup = () => {
+    if (!group.length) return;
+    sheet.getRange(group[0].row, 1, group.length, HEADERS_PEDIDOS.length).setValues(group.map(record => record.values));
+    group = [];
+  };
+  changedRecords.forEach(record => {
+    if (group.length && record.row !== group[group.length - 1].row + 1) writeGroup();
+    group.push(record);
+  });
+  writeGroup();
+  PropertiesService.getDocumentProperties().setProperty(PROP_PEDIDOS_REVISION, String(revision));
+  return changedRecords.length;
 }
 
 function bancosComRevisao_() {
@@ -206,6 +238,8 @@ function doPost(e) {
         id: params.id,
         novoStatus: params.novoStatus,
         motivo: params.motivo || '',
+        expectedStatus: params.expectedStatus,
+        expectedOrderRevision: params.expectedOrderRevision,
         operationId: params.operationId || ''
       }]);
       return json_({ status: 'ok', revision: getPedidosRevision_() });
@@ -216,6 +250,8 @@ function doPost(e) {
         id: params.id,
         novoStatus: 'cancelado',
         motivo: params.motivo || '',
+        expectedStatus: params.expectedStatus,
+        expectedOrderRevision: params.expectedOrderRevision,
         operationId: params.operationId || ''
       }]);
       return json_({ status: 'ok', revision: getPedidosRevision_() });

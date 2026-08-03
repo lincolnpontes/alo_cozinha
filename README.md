@@ -1,14 +1,20 @@
-# Alô Cozinha v1.4.6
+# Alô Cozinha v1.4.7
 
 Aplicativo de pedidos entre áreas de envio e recebimento, com funcionamento local e sincronização por Google Apps Script.
 
-## Novidades da v1.4.6
+## Novidades da v1.4.7
 
+- A mesma tigela com colher `🥣` agora recebe tratamento visual marrom, lembrando uma panela de barro.
+- Ao abrir ou voltar ao aplicativo, os pedidos são conferidos integralmente com o servidor.
+- Dois aparelhos que aceitam o mesmo pedido reconhecem o mesmo resultado, sem fila presa ou reenvio contínuo.
+- Ações atrasadas não sobrescrevem mais um estado mais novo confirmado por outro aparelho.
+- A sincronização de pedidos ficou mais rápida em tela ativa e remove pendências antigas que já não existem no servidor.
+- No tablet em posição vertical, `Enviar`, `Vir buscar` e `Cancelar` ficam visíveis em botões maiores.
+- Pedidos pendentes podem ser aceitos tocando em qualquer ponto do cartão.
 - Cardápio, áreas, categorias, observações, sons e senhas são publicados automaticamente após cada alteração.
 - Alterações administrativas ficam salvas no aparelho e são reenviadas quando a internet voltar.
 - Outros aparelhos verificam atualizações administrativas a cada cinco segundos.
 - O botão manual `Publicar Cardápio e Áreas` foi removido.
-- A opção de tigela foi substituída pela cerâmica marrom `🏺`, com migração visual automática das áreas que usavam `🥣`.
 - Categorias agora fica dentro de `Gerenciar Produtos`, acima de `Produtos Cadastrados`.
 - Nova senha mestra configurável em `Configurações Avançadas`.
 - Instalações novas começam sem senha; aparelhos existentes preservam a senha mestra `1999` durante a atualização.
@@ -36,7 +42,7 @@ Aplicativo de pedidos entre áreas de envio e recebimento, com funcionamento loc
 
 ## Atualização sem perder dados
 
-> A v1.4.6 não altera o Google Apps Script. Quem já implantou o arquivo da v1.4.0 não precisa criar uma nova implantação.
+> A v1.4.7 altera o Google Apps Script para proteger ações concorrentes e acelerar atualizações em lote. Atualize o código do Apps Script e gere uma nova versão da implantação usando a mesma implantação existente; a URL permanece igual.
 
 1. Publique os arquivos do aplicativo no mesmo local de antes.
 2. Abra o app conectado uma vez em cada aparelho para baixar a atualização. Os pedidos, produtos, categorias e observações existentes são mantidos.
