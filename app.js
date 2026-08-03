@@ -12,6 +12,8 @@ let db = carregarBanco();
 
     let filaRetentativaStatus = JSON.parse(localStorage.getItem('kds_fila_status') || '[]');
     let processandoFilaStatus = false;
+    let bancoPublicacaoTimer = null;
+    let estadoSyncPedidosAtual = { pendingCount: 0, online: navigator.onLine };
 
     // CARREGAR HISTÓRICO SALVO LOCALMENTE (Evita perda de dados em reloads)
     let savedPedidos = localStorage.getItem('kds_pedidos_local');
@@ -37,7 +39,7 @@ let db = carregarBanco();
                 id,
                 nome: String(area.nome || area.id),
                 tipo,
-                emoji: area.emoji || (tipo === 'recebimento' ? '🧑‍🍳' : '🥘')
+                emoji: area.emoji === '🥣' ? '🏺' : (area.emoji || (tipo === 'recebimento' ? '🧑‍🍳' : '🥘'))
             });
         });
         db.areas = Array.from(porId.values());
@@ -313,7 +315,12 @@ let db = carregarBanco();
         return defaultDB;
     }
     function salvarBancoLocal() { localStorage.setItem('kds_v1_db', JSON.stringify(db)); }
-    function marcarBancoAlterado() { db.configs.bancoPendente = true; salvarBancoLocal(); }
+    function marcarBancoAlterado() {
+        db.configs.bancoPendente = true;
+        salvarBancoLocal();
+        atualizarIndicadorSincronizacao(estadoSyncPedidosAtual);
+        agendarSincronizacaoBanco(450);
+    }
     function salvarFilaStatus() { localStorage.setItem('kds_fila_status', JSON.stringify(filaRetentativaStatus)); }
 
     function salvarHistoricoLocal() {
@@ -1198,7 +1205,6 @@ let db = carregarBanco();
         });
     }
 
-    var sincronizarSalvarNuvem;
     var sincronizarPuxarNuvem;
 
     function exportarDadosFisicos() {
@@ -1253,8 +1259,7 @@ let db = carregarBanco();
                 }
 
                 db.configs.dadosBaixados = true;
-                db.configs.bancoPendente = true;
-                salvarBancoLocal();
+                marcarBancoAlterado();
 
                 alert("✅ Banco de dados restaurado com sucesso! O aplicativo será recarregado.");
                 location.reload();
@@ -1280,7 +1285,6 @@ let db = carregarBanco();
             ]);
             if(!bancoNuvemValido(nuvemDB) || !respostaSync || respostaSync.status !== 'ok') throw new Error('Servidor incompatível.');
 
-            const mudouUrl = urlInput !== db.configs.url;
             db.configs.url = urlInput;
             db.configs.dadosBaixados = true;
             db.configs.revisaoBanco = Number(nuvemDB._revision || 0);
@@ -1288,13 +1292,14 @@ let db = carregarBanco();
                 aplicarBancoDaNuvem(nuvemDB);
                 iniciar();
             } else {
-                db.configs.bancoPendente = mudouUrl && db.produtos.length > 0;
+                db.configs.bancoPendente = true;
                 salvarBancoLocal();
+                agendarSincronizacaoBanco(0);
             }
             if(syncConfiavel) await syncConfiavel.retryNow();
             alert(Array.isArray(nuvemDB.produtos)
                 ? 'URL validada. Cardápio, áreas e pedidos estão sincronizados.'
-                : 'URL validada. O servidor ainda não possui cardápio; use Publicar Cardápio e Áreas.');
+                : 'URL validada. Os dados deste aparelho serão publicados automaticamente.');
         } catch(error) {
             document.getElementById('configUrlApp').value = db.configs.url || '';
             alert('Não foi possível validar esta URL. Confira se é a implantação correta do Alô Cozinha e se a internet está funcionando.');
@@ -1532,20 +1537,27 @@ let db = carregarBanco();
     let bancoSyncEmAndamento = false;
 
     function atualizarIndicadorSincronizacao(estado) {
+        estadoSyncPedidosAtual = estado || estadoSyncPedidosAtual;
         const indicador = document.getElementById('indicadorConexao');
         if (!indicador) return;
-        if (estado.pendingCount > 0) {
-            indicador.innerText = `📤 ${estado.pendingCount}`;
-            indicador.title = estado.online ? `${estado.pendingCount} operação(ões) aguardando confirmação` : `${estado.pendingCount} operação(ões) aguardando internet`;
+        const pendingPedidos = Number(estadoSyncPedidosAtual.pendingCount || 0);
+        if (pendingPedidos > 0) {
+            indicador.innerText = `📤 ${pendingPedidos}`;
+            indicador.title = estadoSyncPedidosAtual.online ? `${pendingPedidos} operação(ões) aguardando confirmação` : `${pendingPedidos} operação(ões) aguardando internet`;
             return;
         }
-        indicador.innerText = estado.online ? '🟢' : '🔴';
-        indicador.title = estado.online ? 'Sincronizado' : 'Sem conexão';
+        if (db.configs.bancoPendente) {
+            indicador.innerText = '☁️';
+            indicador.title = estadoSyncPedidosAtual.online ? 'Publicando cardápio e configurações' : 'Alterações aguardando internet';
+            return;
+        }
+        indicador.innerText = estadoSyncPedidosAtual.online ? '🟢' : '🔴';
+        indicador.title = estadoSyncPedidosAtual.online ? 'Sincronizado' : 'Sem conexão';
     }
 
     async function tentarSincronizarAgora() {
-        if (!syncConfiavel) return;
-        await syncConfiavel.retryNow();
+        if (syncConfiavel) await syncConfiavel.retryNow();
+        await sincronizarBancoAutomaticamente();
     }
 
     function aplicarPedidosSincronizados(novosPedidos) {
@@ -1684,7 +1696,8 @@ let db = carregarBanco();
         });
         await syncConfiavel.start();
         await sincronizarBancoAutomaticamente();
-        if(!bancoSyncTimer) bancoSyncTimer = setInterval(sincronizarBancoAutomaticamente, 30000);
+        if(!bancoSyncTimer) bancoSyncTimer = setInterval(sincronizarBancoAutomaticamente, 5000);
+        window.addEventListener('online', () => agendarSincronizacaoBanco(0));
     }
 
     const abrirModalMetricasOriginal = abrirModalMetricas;
@@ -1770,14 +1783,6 @@ let db = carregarBanco();
         };
     }
 
-    function bancoNuvemIgual(nuvem, local) {
-        return JSON.stringify({
-            produtos: nuvem.produtos || [], categorias: nuvem.categorias || [],
-            obsPedidos: nuvem.obsPedidos || [], obsCancelamentos: nuvem.obsCancelamentos || [], areas: nuvem.areas || [],
-            configs: nuvem.configs || {}
-        }) === JSON.stringify(local);
-    }
-
     function ehUrlAppsScript(valor) {
         try {
             const url = new URL(valor);
@@ -1820,70 +1825,51 @@ let db = carregarBanco();
         salvarBancoLocal();
     }
 
-    async function sincronizarBancoAutomaticamente() {
-        if(bancoSyncEmAndamento || !db.configs.url || db.configs.bancoPendente || !navigator.onLine) return;
-        bancoSyncEmAndamento = true;
-        try {
-            const nuvemDB = await AloApi.getBank(db.configs.url);
-            if(!bancoNuvemValido(nuvemDB) || !Array.isArray(nuvemDB.produtos)) return;
-            const revisaoNuvem = Number(nuvemDB._revision || 0);
-            const revisaoLocal = Number(db.configs.revisaoBanco || 0);
-            if(!db.configs.dadosBaixados || revisaoNuvem > revisaoLocal) {
-                aplicarBancoDaNuvem(nuvemDB);
-                iniciar();
-            }
-        } catch(error) {
-            // A fila de pedidos continua operando; o catálogo tenta novamente depois.
-        } finally {
-            bancoSyncEmAndamento = false;
-        }
+    function agendarSincronizacaoBanco(atraso = 450) {
+        if(bancoPublicacaoTimer) clearTimeout(bancoPublicacaoTimer);
+        bancoPublicacaoTimer = setTimeout(() => {
+            bancoPublicacaoTimer = null;
+            sincronizarBancoAutomaticamente();
+        }, atraso);
     }
 
-    sincronizarSalvarNuvem = async function() {
-        if (!db.configs.url) return alert('Salve a URL primeiro!');
-        const btn = document.getElementById('btnSalvarNuvem');
-        const textoOriginal = btn.innerText;
+    async function publicarBancoPendente() {
+        const dadosEnviados = dadosBancoParaNuvem();
+        const assinaturaEnviada = JSON.stringify(dadosEnviados);
+        const resultado = await AloCatalogSync.publish({ api: AloApi, url: db.configs.url, data: dadosEnviados });
+        if(!resultado.confirmed) return;
+
+        const nenhumaEdicaoNova = JSON.stringify(dadosBancoParaNuvem()) === assinaturaEnviada;
+        db.configs.dadosBaixados = true;
+        db.configs.bancoPendente = !nenhumaEdicaoNova;
+        db.configs.revisaoBanco = resultado.revision;
+        salvarBancoLocal();
+    }
+
+    async function sincronizarBancoAutomaticamente() {
+        if(bancoSyncEmAndamento || !db.configs.url || !navigator.onLine) return;
+        bancoSyncEmAndamento = true;
         try {
-            btn.disabled = true;
-            btn.innerText = 'Verificando...';
-            const bancoAtual = await AloApi.getBank(db.configs.url);
-            if(!bancoNuvemValido(bancoAtual)) throw new Error('Banco incompatível.');
-            const revisaoAtual = Number(bancoAtual._revision || 0);
-            const revisaoConhecida = Number(db.configs.revisaoBanco || 0);
-            if(Array.isArray(bancoAtual.produtos) && bancoAtual.produtos.length > 0 && (!db.configs.dadosBaixados || revisaoAtual !== revisaoConhecida)) {
-                if(confirm('Outro aparelho publicou mudanças no cardápio ou nas áreas. Carregar essas mudanças e descartar as alterações ainda não publicadas deste aparelho?')) {
-                    aplicarBancoDaNuvem(bancoAtual);
+            if(db.configs.bancoPendente) {
+                await publicarBancoPendente();
+            } else {
+                const nuvemDB = await AloApi.getBank(db.configs.url);
+                if(!bancoNuvemValido(nuvemDB) || !Array.isArray(nuvemDB.produtos)) return;
+                const revisaoNuvem = Number(nuvemDB._revision || 0);
+                const revisaoLocal = Number(db.configs.revisaoBanco || 0);
+                if(!db.configs.dadosBaixados || revisaoNuvem > revisaoLocal) {
+                    aplicarBancoDaNuvem(nuvemDB);
                     iniciar();
-                    alert('Este aparelho foi atualizado com os dados mais recentes da nuvem.');
-                } else {
-                    alert('Publicação cancelada para proteger as alterações dos outros aparelhos.');
                 }
-                return;
             }
-            const dados = dadosBancoParaNuvem();
-            btn.innerText = 'Publicando...';
-            await AloApi.post(db.configs.url, {
-                action: 'salvar_banco', dados,
-                expectedRevision: revisaoAtual
-            });
-            await new Promise(resolve => setTimeout(resolve, 500));
-            const confirmado = await AloApi.getBank(db.configs.url);
-            if (!bancoNuvemIgual(confirmado, dados)) {
-                alert('Outro aparelho publicou uma alteração ao mesmo tempo. Nada foi apagado neste aparelho; tente publicar novamente após a sincronização automática.');
-                return;
-            }
-            db.configs.dadosBaixados = true;
-            db.configs.bancoPendente = false;
-            db.configs.revisaoBanco = Number(confirmado._revision || 0);
-            salvarBancoLocal();
-            alert('Cardápio, áreas e configurações publicados com sucesso!');
-        } catch (error) {
-            alert('Não foi possível confirmar a publicação. Verifique a internet e tente novamente.');
+        } catch(error) {
+            // O banco permanece marcado e tenta novamente ao recuperar a conexão.
         } finally {
-            btn.disabled = false;
-            btn.innerText = textoOriginal;
+            bancoSyncEmAndamento = false;
+            atualizarIndicadorSincronizacao(estadoSyncPedidosAtual);
+            if(db.configs.bancoPendente && navigator.onLine) agendarSincronizacaoBanco(2200);
         }
-    };
+    }
 
     sincronizarPuxarNuvem = async function(pedirConfirmacao) {
         if (!db.configs.url) return;
@@ -1909,7 +1895,7 @@ let db = carregarBanco();
     };
 
     if ('serviceWorker' in navigator) {
-        window.addEventListener('load', () => navigator.serviceWorker.register('./service-worker.js?v=1.4.5').catch(() => {}));
+        window.addEventListener('load', () => navigator.serviceWorker.register('./service-worker.js?v=1.4.6').catch(() => {}));
     }
 
     iniciarComSyncConfiavel();

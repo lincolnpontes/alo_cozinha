@@ -1,15 +1,16 @@
-const VERSION = '1.4.5';
+const VERSION = '1.4.6';
 const CACHE_NAME = `alo-cozinha-${VERSION}`;
 const APP_SHELL = [
   './',
   './index.html',
-  './styles.css?v=1.4.5',
-  './logic.js?v=1.4.5',
-  './storage.js?v=1.4.5',
-  './api.js?v=1.4.5',
-  './audio.js?v=1.4.5',
-  './sync.js?v=1.4.5',
-  './app.js?v=1.4.5',
+  './styles.css?v=1.4.6',
+  './logic.js?v=1.4.6',
+  './storage.js?v=1.4.6',
+  './api.js?v=1.4.6',
+  './audio.js?v=1.4.6',
+  './sync.js?v=1.4.6',
+  './catalog-sync.js?v=1.4.6',
+  './app.js?v=1.4.6',
   './assets/sounds/alarme-curto.ogg',
   './assets/sounds/beep-classico.ogg',
   './assets/sounds/sino-forte.ogg',

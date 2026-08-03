@@ -248,13 +248,56 @@ function testAudioMode() {
     context.AloAudio.stop();
 }
 
+async function testCatalogAutoPublish() {
+    let revision = 4;
+    let postCount = 0;
+    let remote = { _revision: revision, produtos: [], categorias: [], obsPedidos: [], obsCancelamentos: [], areas: [], configs: {} };
+    let conflict = false;
+    const context = vm.createContext({ console, setTimeout, clearTimeout });
+    context.window = context;
+    loadScript(context, 'catalog-sync.js');
+
+    const api = {
+        async getBank() { return JSON.parse(JSON.stringify(remote)); },
+        async post(url, payload) {
+            postCount += 1;
+            if (conflict) {
+                revision += 1;
+                remote = { ...remote, _revision: revision, produtos: [{ nome: 'Outro aparelho' }] };
+                return;
+            }
+            revision += 1;
+            remote = { ...JSON.parse(JSON.stringify(payload.dados)), _revision: revision };
+        }
+    };
+    const data = {
+        produtos: [{ nome: 'Feijão' }], categorias: [], obsPedidos: [], obsCancelamentos: [], areas: [], configs: { volumeCozinha: '100' }
+    };
+
+    const published = await context.AloCatalogSync.publish({ api, url: 'https://server.test', data, wait: async () => {} });
+    assert.equal(published.confirmed, true);
+    assert.equal(published.revision, 5);
+    assert.equal(postCount, 1);
+
+    const alreadyCurrent = await context.AloCatalogSync.publish({ api, url: 'https://server.test', data, wait: async () => {} });
+    assert.equal(alreadyCurrent.confirmed, true);
+    assert.equal(alreadyCurrent.sent, false);
+    assert.equal(postCount, 1);
+
+    conflict = true;
+    const changedData = { ...data, produtos: [{ nome: 'Arroz' }] };
+    const conflicted = await context.AloCatalogSync.publish({ api, url: 'https://server.test', data: changedData, wait: async () => {} });
+    assert.equal(conflicted.confirmed, false);
+}
+
 (async () => {
     await testAcceptAndConfirm();
     await testOfflineRetry();
     await testDeleteDoesNotReturn();
     await testNewOrderKeepsAreaRoute();
     testAudioMode();
-    console.log('Testes críticos da v1.4.5 passaram.');
+    await testCatalogAutoPublish();
+    console.log('Testes críticos da v1.4.6 passaram.');
 })().catch(error => {
     console.error(error);
     process.exitCode = 1;
