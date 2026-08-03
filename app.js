@@ -24,9 +24,9 @@ let db = carregarBanco();
 
     const sonsDisponiveis = {
         "sem_som": { tipo: "silencio" },
-        "alarme": { tipo: "audio", url: "https://actions.google.com/sounds/v1/alarms/alarm_clock.ogg" },
-        "beep": { tipo: "audio", url: "https://actions.google.com/sounds/v1/alarms/beep_short.ogg" },
-        "sino_forte": { tipo: "audio", url: "https://actions.google.com/sounds/v1/alarms/medium_bell_ringing_near.ogg" },
+        "alarme": { tipo: "audio", url: "./assets/sounds/alarme-curto.ogg" },
+        "beep": { tipo: "audio", url: "./assets/sounds/beep-classico.ogg" },
+        "sino_forte": { tipo: "audio", url: "./assets/sounds/sino-forte.ogg" },
         "sirene_cozinha": { tipo: "sintetico", intervalo: 950 },
         "alerta_triplo": { tipo: "sintetico", intervalo: 850 },
         "campainha_forte": { tipo: "sintetico", intervalo: 1000 },
@@ -1508,7 +1508,7 @@ let db = carregarBanco();
     };
 
     if ('serviceWorker' in navigator) {
-        window.addEventListener('load', () => navigator.serviceWorker.register('./service-worker.js?v=1.3.4').catch(() => {}));
+        window.addEventListener('load', () => navigator.serviceWorker.register('./service-worker.js?v=1.3.5').catch(() => {}));
     }
 
     iniciarComSyncConfiavel();

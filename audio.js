@@ -1,9 +1,9 @@
 (function (global) {
     const sounds = {
         sem_som: { type: 'silent' },
-        alarme: { type: 'audio', url: 'https://actions.google.com/sounds/v1/alarms/alarm_clock.ogg' },
-        beep: { type: 'audio', url: 'https://actions.google.com/sounds/v1/alarms/beep_short.ogg' },
-        sino_forte: { type: 'audio', url: 'https://actions.google.com/sounds/v1/alarms/medium_bell_ringing_near.ogg' },
+        alarme: { type: 'audio', url: './assets/sounds/alarme-curto.ogg' },
+        beep: { type: 'audio', url: './assets/sounds/beep-classico.ogg' },
+        sino_forte: { type: 'audio', url: './assets/sounds/sino-forte.ogg' },
         sirene_cozinha: { type: 'synthetic', interval: 950 },
         alerta_triplo: { type: 'synthetic', interval: 850 },
         campainha_forte: { type: 'synthetic', interval: 1000 },
