@@ -1260,7 +1260,25 @@ let db = carregarBanco();
         }
     }
 
-    function fecharPainelUnificado() {
+    function preencherConfiguracoesBasicas() {
+        document.getElementById('configSenhaModo').value = db.configs.senhaModo || '';
+        document.getElementById('configSomCozinha').value = db.configs.somCozinha || 'sem_som';
+        document.getElementById('configSomPanelas').value = db.configs.somPanelas || 'sem_som';
+        document.getElementById('configVolumeCozinha').value = db.configs.volumeCozinha || '100';
+        document.getElementById('configVolumePanelas').value = db.configs.volumePanelas || '70';
+        document.getElementById('configTelaAtiva').value = db.configs.telaAtiva || 'sim';
+        document.getElementById('configInatividade').value = db.configs.inatividade || '0';
+        document.getElementById('configReenvio').value = db.configs.reenvio || 'permitido';
+        atualizarLabelsVolume();
+    }
+
+    function abrirConfiguracoesBasicas() {
+        preencherConfiguracoesBasicas();
+        fecharModal('modalPainelUnificado');
+        abrirModalNoTopo('modalConfigBasicas');
+    }
+
+    function salvarConfiguracoesBasicas() {
         const configuracoesAnteriores = JSON.stringify(dadosBancoParaNuvem().configs);
         db.configs.senhaModo = document.getElementById('configSenhaModo').value;
         db.configs.somCozinha = document.getElementById('configSomCozinha').value;
@@ -1278,15 +1296,43 @@ let db = carregarBanco();
         resetInatividade();
         gerenciarAlarme();
         if(previewAudio) { previewAudio.pause(); }
+        fecharModal('modalConfigBasicas');
+        abrirModalNoTopo('modalPainelUnificado');
+    }
+
+    function cancelarConfiguracoesBasicas() {
+        if(previewAudio) previewAudio.pause();
+        fecharModal('modalConfigBasicas');
+        abrirModalNoTopo('modalPainelUnificado');
+    }
+
+    function fecharPainelUnificado() {
+        if(previewAudio) previewAudio.pause();
         fecharModal('modalPainelUnificado');
     }
 
-    function voltarParaPainelGeral() { fecharModal('modalListagem'); abrirModalNoTopo('modalPainelUnificado'); }
+    function abrirMenuProdutos() {
+        fecharModal('modalPainelUnificado');
+        abrirModalNoTopo('modalMenuProdutos');
+    }
+
+    function voltarDoMenuProdutos() {
+        fecharModal('modalMenuProdutos');
+        abrirModalNoTopo('modalPainelUnificado');
+    }
+
+    let tipoGerenciamentoAtual = '';
+    function voltarDaListagem() {
+        fecharModal('modalListagem');
+        if(['produtos', 'obsPedidos', 'obsCancelamentos'].includes(tipoGerenciamentoAtual)) abrirModalNoTopo('modalMenuProdutos');
+        else abrirModalNoTopo('modalPainelUnificado');
+    }
 
     function moverItem(tipo, index, direcao) { const lista = tipo === 'produtos' ? db.produtos : (tipo === 'categorias' ? db.categorias : (tipo === 'obsPedidos' ? db.obsPedidos : db.obsCancelamentos)); if(direcao === 'cima' && index > 0) { const temp = lista[index]; lista[index] = lista[index - 1]; lista[index - 1] = temp; } else if (direcao === 'baixo' && index < lista.length - 1) { const temp = lista[index]; lista[index] = lista[index + 1]; lista[index + 1] = temp; } marcarBancoAlterado(); iniciar(); abrirGerenciar(tipo); }
 
     function abrirGerenciar(tipo) {
-        fecharModal('modalPainelUnificado'); fecharModal('modalFormProduto'); fecharModal('modalFormCategoria'); fecharModal('modalFormArea');
+        tipoGerenciamentoAtual = tipo;
+        fecharModal('modalPainelUnificado'); fecharModal('modalMenuProdutos'); fecharModal('modalFormProduto'); fecharModal('modalFormCategoria'); fecharModal('modalFormArea');
         const lista = document.getElementById('conteudoListagem'); const btnNovo = document.getElementById('btnNovoListagem'); const titulo = document.getElementById('tituloListagem'); lista.innerHTML = '';
         if(tipo === 'areas') { titulo.innerText = "Gerenciar Áreas"; btnNovo.onclick = () => abrirFormArea(-1); db.areas.forEach((area, idx) => { const funcao = area.tipo === 'envio' ? 'Envia pedidos' : 'Recebe pedidos'; lista.innerHTML += `<div class="gerenciar-item"><div class="gerenciar-info"><strong>${getEmojiAreaHtml(area.emoji)} ${area.nome}</strong><br><span style="color:#666">${funcao}</span></div><div class="gerenciar-actions"><button onclick="abrirFormArea(${idx})" title="Editar">✏️</button><button onclick="excluirArea(${idx})" title="Excluir">🗑️</button></div></div>`; }); } else if(tipo === 'produtos') { titulo.innerText = "Gerenciar Produtos"; btnNovo.onclick = () => abrirFormProduto(-1); db.produtos.forEach((p, idx) => { const origens = getAreasOrigemProduto(p).map(getAreaNome).join(', '); lista.innerHTML += `<div class="gerenciar-item"><div class="gerenciar-info"><strong>${p.nome}</strong><br><span style="color:#666">${p.categoria} · ${origens} → ${getAreaNome(p.areaDestino || 'cozinha')}</span></div><div class="gerenciar-actions"><button onclick="moverItem('produtos', ${idx}, 'cima')">🔼</button><button onclick="moverItem('produtos', ${idx}, 'baixo')">🔽</button><button onclick="abrirFormProduto(${idx})">✏️</button><button onclick="excluirItem('produtos', ${idx})">🗑️</button></div></div>`; }); } else if (tipo === 'categorias') { titulo.innerText = "Gerenciar Categorias"; btnNovo.onclick = () => abrirFormCategoria(-1); db.categorias.forEach((c, idx) => { lista.innerHTML += `<div class="gerenciar-item"><div class="gerenciar-info"><span class="color-preview" style="background:${c.cor}; color:${c.corTexto}">${c.nome}</span></div><div class="gerenciar-actions"><button onclick="moverItem('categorias', ${idx}, 'cima')">🔼</button><button onclick="moverItem('categorias', ${idx}, 'baixo')">🔽</button><button onclick="abrirFormCategoria(${idx})">✏️</button><button onclick="excluirItem('categorias', '${c.nome}')">🗑️</button></div></div>`; }); } else if (tipo === 'obsPedidos') { titulo.innerText = "Observação dos Produtos"; btnNovo.onclick = () => novaObservacao('obsPedidos'); db.obsPedidos.forEach((obs, idx) => { lista.innerHTML += `<div class="gerenciar-item"><div class="gerenciar-info"><strong>${obs}</strong></div><div class="gerenciar-actions"><button onclick="moverItem('obsPedidos', ${idx}, 'cima')">🔼</button><button onclick="moverItem('obsPedidos', ${idx}, 'baixo')">🔽</button><button onclick="excluirItem('obsPedidos', '${obs}')">🗑️</button></div></div>`; }); } else if (tipo === 'obsCancelamentos') { titulo.innerText = "Motivos Cancelamento"; btnNovo.onclick = () => novaObservacao('obsCancelamentos'); db.obsCancelamentos.forEach((obs, idx) => { lista.innerHTML += `<div class="gerenciar-item"><div class="gerenciar-info"><strong>${obs}</strong></div><div class="gerenciar-actions"><button onclick="moverItem('obsCancelamentos', ${idx}, 'cima')">🔼</button><button onclick="moverItem('obsCancelamentos', ${idx}, 'baixo')">🔽</button><button onclick="excluirItem('obsCancelamentos', '${obs}')">🗑️</button></div></div>`; }); }
         document.getElementById('modalListagem').style.display = 'flex';
@@ -1408,15 +1454,6 @@ let db = carregarBanco();
         if(this.value === "1999" || (db.configs.senhaModo && this.value === db.configs.senhaModo)) {
             this.blur(); document.getElementById('modalLoginAdmin').style.display = 'none';
             document.getElementById('configUrlApp').value = db.configs.url || '';
-            document.getElementById('configSenhaModo').value = db.configs.senhaModo || '';
-            document.getElementById('configSomCozinha').value = db.configs.somCozinha || 'sem_som';
-            document.getElementById('configSomPanelas').value = db.configs.somPanelas || 'sem_som';
-            document.getElementById('configVolumeCozinha').value = db.configs.volumeCozinha || '100';
-            document.getElementById('configVolumePanelas').value = db.configs.volumePanelas || '70';
-            document.getElementById('configTelaAtiva').value = db.configs.telaAtiva || 'sim';
-            document.getElementById('configInatividade').value = db.configs.inatividade || '0';
-            document.getElementById('configReenvio').value = db.configs.reenvio || 'permitido';
-            atualizarLabelsVolume();
             abrirModalNoTopo('modalPainelUnificado');
             this.value = '';
         }
@@ -1830,7 +1867,7 @@ let db = carregarBanco();
     };
 
     if ('serviceWorker' in navigator) {
-        window.addEventListener('load', () => navigator.serviceWorker.register('./service-worker.js?v=1.4.3').catch(() => {}));
+        window.addEventListener('load', () => navigator.serviceWorker.register('./service-worker.js?v=1.4.4').catch(() => {}));
     }
 
     iniciarComSyncConfiavel();
