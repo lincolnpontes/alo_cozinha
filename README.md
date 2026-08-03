@@ -1,9 +1,15 @@
-# Alô Cozinha v1.4.7
+# Alô Cozinha v1.4.8
 
 Aplicativo de pedidos entre áreas de envio e recebimento, com funcionamento local e sincronização por Google Apps Script.
 
-## Novidades da v1.4.7
+## Novidades da v1.4.8
 
+- Pedidos pendentes são enviados antes da consulta de confirmação, reduzindo a espera no caminho principal.
+- Vários pedidos acumulados são enviados em um único lote em vez de uma chamada por item.
+- O Apps Script mantém por alguns minutos um cache da lista atual para acelerar a chegada nos outros aparelhos.
+- A verificação em tela ativa acontece a cada 1,2 segundo, além da atualização completa ao abrir ou retornar ao app.
+- No tablet, produto e ações voltam a ocupar uma única linha, com espaços mais compactos ao redor do fogo.
+- O botão de cancelar mostra somente `❌`; `Enviar` e `Vir buscar` mantêm os textos.
 - A mesma tigela com colher `🥣` agora recebe tratamento visual marrom, lembrando uma panela de barro.
 - Ao abrir ou voltar ao aplicativo, os pedidos são conferidos integralmente com o servidor.
 - Dois aparelhos que aceitam o mesmo pedido reconhecem o mesmo resultado, sem fila presa ou reenvio contínuo.
@@ -42,7 +48,7 @@ Aplicativo de pedidos entre áreas de envio e recebimento, com funcionamento loc
 
 ## Atualização sem perder dados
 
-> A v1.4.7 altera o Google Apps Script para proteger ações concorrentes e acelerar atualizações em lote. Atualize o código do Apps Script e gere uma nova versão da implantação usando a mesma implantação existente; a URL permanece igual.
+> A v1.4.8 altera novamente o Google Apps Script para receber novos pedidos em lote e acelerar a leitura entre aparelhos. Atualize o código e gere uma nova versão da mesma implantação; a URL permanece igual.
 
 1. Publique os arquivos do aplicativo no mesmo local de antes.
 2. Abra o app conectado uma vez em cada aparelho para baixar a atualização. Os pedidos, produtos, categorias e observações existentes são mantidos.

@@ -14,6 +14,8 @@ function createSyncHarness() {
     const operations = new Map();
     const meta = new Map();
     const remoteOrders = new Map();
+    const postPayloads = [];
+    const requestLog = [];
     let revision = 1;
     let failPost = false;
 
@@ -72,15 +74,26 @@ function createSyncHarness() {
 
     const api = {
         async sync() {
+            requestLog.push('get');
             return { status: 'ok', changed: true, revision, pedidos: [...remoteOrders.values()] };
         },
         async post(url, payload) {
+            requestLog.push(`post:${payload.action}`);
+            postPayloads.push(payload);
             if (failPost) throw new Error('offline');
             if (payload.action === 'novo_pedido') {
                 remoteOrders.set(String(payload.id), {
                     id: String(payload.id), produto: payload.produto, status: 'pendente',
                     timestamp: new Date().toISOString(), areaOrigem: payload.areaOrigem,
                     areaDestino: payload.areaDestino, operacaoId: payload.operationId
+                });
+            } else if (payload.action === 'novo_pedido_lote') {
+                payload.pedidos.forEach(order => {
+                    remoteOrders.set(String(order.id), {
+                        id: String(order.id), produto: order.produto, status: 'pendente', revisao: revision + 1,
+                        timestamp: new Date().toISOString(), areaOrigem: order.areaOrigem,
+                        areaDestino: order.areaDestino, operacaoId: order.operationId
+                    });
                 });
             } else if (payload.action === 'atualizar_status_lote') {
                 payload.updates.forEach(update => {
@@ -129,6 +142,8 @@ function createSyncHarness() {
         localOrders,
         operations,
         remoteOrders,
+        postPayloads,
+        requestLog,
         setFailPost(value) { failPost = value; }
     };
 }
@@ -204,6 +219,23 @@ async function testNewOrderKeepsAreaRoute() {
     await harness.manager.syncNow(true);
     assert.equal(harness.remoteOrders.get(second.id).areaOrigem, 'panelas');
     assert.equal(harness.remoteOrders.get(second.id).areaDestino, 'bar');
+}
+
+async function testNewOrdersUseSingleBatch() {
+    const harness = createSyncHarness();
+    harness.manager.serverProtocol = 'modern';
+    await harness.manager.enqueueNewOrder({ produto: 'Feijão', areaOrigem: 'panelas', areaDestino: 'cozinha' });
+    await harness.manager.enqueueNewOrder({ produto: 'Arroz', areaOrigem: 'panelas', areaDestino: 'cozinha' });
+    await harness.manager.enqueueNewOrder({ produto: 'Couve', areaOrigem: 'panelas', areaDestino: 'cozinha' });
+
+    await harness.manager.syncNow(true, true);
+
+    assert.equal(harness.postPayloads.length, 1, 'pedidos acumulados devem usar uma única chamada');
+    assert.equal(harness.postPayloads[0].action, 'novo_pedido_lote');
+    assert.equal(harness.postPayloads[0].pedidos.length, 3);
+    assert.deepEqual(harness.requestLog.slice(0, 2), ['post:novo_pedido_lote', 'get'], 'o envio deve acontecer antes da confirmação');
+    assert.equal(harness.remoteOrders.size, 3);
+    assert.equal(harness.operations.size, 0);
 }
 
 async function testSameStatusFromAnotherDeviceClearsQueue() {
@@ -285,6 +317,42 @@ function testAppsScriptRejectsStaleStatus() {
     assert.equal(currentApplied, true);
     assert.equal(context.testRow[2], 'enviado');
     assert.equal(context.testRow[7], 6);
+}
+
+function testAppsScriptAppendsOrderBatchOnce() {
+    const properties = new Map([['kds_pedidos_revision', '7']]);
+    const writes = [];
+    const context = vm.createContext({
+        console,
+        Date,
+        Set,
+        PropertiesService: {
+            getDocumentProperties() {
+                return {
+                    getProperty(key) { return properties.get(key) || null; },
+                    setProperty(key, value) { properties.set(key, String(value)); }
+                };
+            }
+        }
+    });
+    loadScript(context, 'google-apps-script.gs');
+    context.testSheet = {
+        getLastRow() { return 1; },
+        getRange(row, column, rowCount, columnCount) {
+            return { setValues(values) { writes.push({ row, column, rowCount, columnCount, values }); } };
+        }
+    };
+    context.testBatch = [
+        { id: 'lote-1', produto: 'Feijão', areaOrigem: 'panelas', areaDestino: 'cozinha' },
+        { id: 'lote-2', produto: 'Arroz', areaOrigem: 'panelas', areaDestino: 'cozinha' },
+        { id: 'lote-1', produto: 'Duplicado', areaOrigem: 'panelas', areaDestino: 'cozinha' }
+    ];
+
+    const result = vm.runInContext('appendNewOrders_(testSheet, testBatch)', context);
+    assert.equal(result.count, 2);
+    assert.equal(result.revision, 9);
+    assert.equal(writes.length, 1, 'o lote deve gerar uma única gravação na planilha');
+    assert.equal(writes[0].values.length, 2);
 }
 
 function testAudioMode() {
@@ -387,13 +455,15 @@ async function testCatalogAutoPublish() {
     await testOfflineRetry();
     await testDeleteDoesNotReturn();
     await testNewOrderKeepsAreaRoute();
+    await testNewOrdersUseSingleBatch();
     await testSameStatusFromAnotherDeviceClearsQueue();
     await testNewerRemoteActionWinsOverStaleTablet();
     await testOldOrphanQueueIsCleaned();
     testAppsScriptRejectsStaleStatus();
+    testAppsScriptAppendsOrderBatchOnce();
     testAudioMode();
     await testCatalogAutoPublish();
-    console.log('Testes críticos da v1.4.7 passaram.');
+    console.log('Testes críticos da v1.4.8 passaram.');
 })().catch(error => {
     console.error(error);
     process.exitCode = 1;

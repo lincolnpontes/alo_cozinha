@@ -146,10 +146,14 @@
             this.forceNextPull = false;
             this.emit();
             try {
-                await this.pull(forcePull);
+                let sent = false;
                 if (flush) {
-                    const sent = await this.flushDueOperations();
-                    if (sent) await this.pull(true);
+                    sent = await this.flushDueOperations();
+                }
+                await this.pull(sent ? true : forcePull);
+                if (flush) {
+                    const sentAfterPull = await this.flushDueOperations();
+                    if (sentAfterPull) await this.pull(true);
                 }
                 this.lastError = '';
                 this.lastSyncAt = Date.now();
@@ -203,9 +207,17 @@
             const deletions = due.filter(operation => operation.type === 'delete' || operation.type === 'delete_today' || operation.type === 'delete_all');
             let sent = false;
 
-            for (const operation of creates) {
-                await this.dispatch([operation], operation.payload);
+            if (creates.length > 1 && this.serverProtocol !== 'legacy') {
+                await this.dispatch(creates, {
+                    action: 'novo_pedido_lote',
+                    pedidos: creates.map(operation => operation.payload)
+                });
                 sent = true;
+            } else {
+                for (const operation of creates) {
+                    await this.dispatch([operation], operation.payload);
+                    sent = true;
+                }
             }
 
             for (const operation of deletions) {
@@ -410,7 +422,7 @@
             if (this.timer) clearTimeout(this.timer);
             const wait = delay !== undefined
                 ? delay
-                : (document.visibilityState === 'visible' ? 1500 : 8000);
+                : (document.visibilityState === 'visible' ? 1200 : 6000);
             this.timer = setTimeout(() => this.syncNow(true), wait);
         }
     }

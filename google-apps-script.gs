@@ -2,6 +2,7 @@ const SHEET_PEDIDOS = 'Pedidos';
 const PROP_BANCO = 'kds_banco';
 const PROP_BANCO_REVISION = 'kds_banco_revision';
 const PROP_PEDIDOS_REVISION = 'kds_pedidos_revision';
+const CACHE_PEDIDOS_PREFIX = 'kds_pedidos_visiveis_';
 const BASE_HEADERS = ['ID', 'Produto', 'Status', 'Timestamp', 'FinalizadoEm', 'Motivo'];
 const EXTRA_HEADERS = ['AtualizadoEm', 'Revisao', 'OperacaoId', 'AreaOrigem', 'AreaDestino'];
 const HEADERS_PEDIDOS = BASE_HEADERS.concat(EXTRA_HEADERS);
@@ -81,6 +82,33 @@ function findRecordsById_(sheet) {
     records[values[0].toString()] = { row: index + 2, values: values };
   });
   return records;
+}
+
+function appendNewOrders_(sheet, orders) {
+  if (!orders || !orders.length) return { count: 0, revision: getPedidosRevision_() };
+  const records = findRecordsById_(sheet);
+  const knownIds = new Set(Object.keys(records));
+  const rows = [];
+  let revision = getPedidosRevision_();
+
+  orders.forEach(order => {
+    if (!order || !order.id || !order.produto) return;
+    const id = order.id.toString();
+    if (knownIds.has(id)) return;
+    knownIds.add(id);
+    const now = new Date().toISOString();
+    revision += 1;
+    rows.push([
+      id, order.produto, 'pendente', now, '', '', now, revision, order.operationId || '',
+      order.areaOrigem || 'panelas', order.areaDestino || 'cozinha'
+    ]);
+  });
+
+  if (rows.length) {
+    sheet.getRange(sheet.getLastRow() + 1, 1, rows.length, HEADERS_PEDIDOS.length).setValues(rows);
+    PropertiesService.getDocumentProperties().setProperty(PROP_PEDIDOS_REVISION, String(revision));
+  }
+  return { count: rows.length, revision: revision };
 }
 
 function applyStatus_(values, novoStatus, motivo, operationId, expectedStatus, expectedOrderRevision, revision) {
@@ -182,6 +210,18 @@ function pedidosVisiveis_(sheet) {
     });
 }
 
+function pedidosVisiveisCached_(sheet, revision) {
+  const cache = CacheService.getScriptCache();
+  const key = CACHE_PEDIDOS_PREFIX + revision;
+  const cached = cache.get(key);
+  if (cached) {
+    try { return JSON.parse(cached); } catch (error) {}
+  }
+  const pedidos = pedidosVisiveis_(sheet);
+  try { cache.put(key, JSON.stringify(pedidos), 300); } catch (error) {}
+  return pedidos;
+}
+
 function filtrarHistorico_(sheet, start, end) {
   const startTime = start ? new Date(start).getTime() : 0;
   const endTime = end ? new Date(end).getTime() : Number.MAX_SAFE_INTEGER;
@@ -220,17 +260,13 @@ function doPost(e) {
 
     if (action === 'novo_pedido') {
       if (!params.id || !params.produto) return json_({ status: 'error', message: 'ID e produto são obrigatórios.' });
-      const records = findRecordsById_(sheetPedidos);
-      const id = params.id.toString();
-      if (!records[id]) {
-        const now = new Date().toISOString();
-        const revision = nextPedidosRevision_();
-        sheetPedidos.appendRow([
-          id, params.produto, 'pendente', now, '', '', now, revision, params.operationId || '',
-          params.areaOrigem || 'panelas', params.areaDestino || 'cozinha'
-        ]);
-      }
-      return json_({ status: 'ok', id: id, revision: getPedidosRevision_() });
+      const result = appendNewOrders_(sheetPedidos, [params]);
+      return json_({ status: 'ok', id: params.id.toString(), revision: result.revision });
+    }
+
+    if (action === 'novo_pedido_lote') {
+      const result = appendNewOrders_(sheetPedidos, params.pedidos || []);
+      return json_({ status: 'ok', count: result.count, revision: result.revision });
     }
 
     if (action === 'atualizar_status') {
@@ -322,7 +358,7 @@ function doGet(e) {
       changed: true,
       revision: revision,
       serverTime: new Date().toISOString(),
-      pedidos: pedidosVisiveis_(sheetPedidos)
+      pedidos: pedidosVisiveisCached_(sheetPedidos, revision)
     });
   }
 

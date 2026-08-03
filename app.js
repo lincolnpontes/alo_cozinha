@@ -848,7 +848,7 @@ let db = carregarBanco();
 
             let emoji = '🔔'; let isFinal = false;
             const areaOrigemPedido = db.areas.find(area => area.id === (p.areaOrigem || 'panelas')) || AREAS_PADRAO[0];
-            let formatProduto = `<strong style="font-size: 22px;">${p.produto}</strong>`;
+            let formatProduto = `<strong class="pedido-produto-nome">${p.produto}</strong>`;
             let statusTxt = ""; let tempoStr = ""; let classeRiscar = ""; let acoesHtml = "";
 
             if (p.status === 'pendente') {
@@ -864,7 +864,7 @@ let db = carregarBanco();
                 acoesHtml = `
                     <button class="btn-pedido-acao acao-enviar" onclick="executarAcaoPedido(this, '${p.id}', 'enviado')" aria-label="Enviar pedido" title="Enviar"><span class="emoji-enviar">⬆</span><span class="acao-label">Enviar</span></button>
                     <button class="btn-pedido-acao acao-buscar" onclick="executarAcaoPedido(this, '${p.id}', 'buscar')" aria-label="Pedir para vir buscar" title="Vir buscar"><span>🏃🏻‍♀️</span><span class="acao-label">Vir buscar</span></button>
-                    <button class="btn-pedido-acao acao-cancelar" onclick="cancelarPedidoPeloBotao(this, '${p.id}')" aria-label="Cancelar pedido" title="Cancelar"><span>❌</span><span class="acao-label">Cancelar</span></button>`;
+                    <button class="btn-pedido-acao acao-cancelar" onclick="cancelarPedidoPeloBotao(this, '${p.id}')" aria-label="Cancelar pedido" title="Cancelar"><span>❌</span></button>`;
             }
             else if (p.status === 'enviado') {
                 emoji = '✔️'; isFinal = true; classeRiscar = "riscar";
@@ -899,7 +899,7 @@ let db = carregarBanco();
             lista.innerHTML += `
                 <li ${atributosAceitar} id="ped-${p.id}" data-id="${p.id}" data-status="${p.status}">
                     <div class="pedido-conteudo">
-                        <div class="item-avatar ${classeRiscar}" style="background:transparent; font-size:24px; margin-right: 10px;">${emoji}</div>
+                        <div class="item-avatar pedido-status-emoji ${classeRiscar}">${emoji}</div>
                         <div class="item-info" style="display:flex; justify-content:space-between; align-items:center;">
                           <div>
                             <div class="item-title ${classeRiscar}" style="margin: 0; line-height: 1.2;">${formatProduto}</div>
@@ -1914,7 +1914,7 @@ let db = carregarBanco();
     };
 
     if ('serviceWorker' in navigator) {
-        window.addEventListener('load', () => navigator.serviceWorker.register('./service-worker.js?v=1.4.7').catch(() => {}));
+        window.addEventListener('load', () => navigator.serviceWorker.register('./service-worker.js?v=1.4.8').catch(() => {}));
     }
 
     iniciarComSyncConfiavel();
