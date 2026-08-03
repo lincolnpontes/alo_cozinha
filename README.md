@@ -1,9 +1,13 @@
-# Alô Cozinha v1.4.4
+# Alô Cozinha v1.4.5
 
 Aplicativo de pedidos entre áreas de envio e recebimento, com funcionamento local e sincronização por Google Apps Script.
 
-## Novidades da v1.4.4
+## Novidades da v1.4.5
 
+- Categorias agora fica dentro de `Gerenciar Produtos`, acima de `Produtos Cadastrados`.
+- Nova senha mestra configurável em `Configurações Avançadas`.
+- Instalações novas começam sem senha; aparelhos existentes preservam a senha mestra `1999` durante a atualização.
+- Sem senha mestra, painel e configurações avançadas abrem diretamente, mantendo confirmação para exclusões.
 - Observações dos produtos e motivos de cancelamento agora ficam dentro de `Gerenciar Produtos`.
 - Categorias aparecem antes de produtos no painel administrativo.
 - Configurações básicas foram movidas para uma tela própria, deixando o painel principal mais compacto.
@@ -32,7 +36,7 @@ Aplicativo de pedidos entre áreas de envio e recebimento, com funcionamento loc
 
 ## Atualização sem perder dados
 
-> A v1.4.4 não altera o Google Apps Script. Quem já implantou o arquivo da v1.4.0 não precisa criar uma nova implantação.
+> A v1.4.5 não altera o Google Apps Script. Quem já implantou o arquivo da v1.4.0 não precisa criar uma nova implantação.
 
 1. Publique os arquivos do aplicativo no mesmo local de antes.
 2. Abra o app conectado uma vez em cada aparelho para baixar a atualização. Os pedidos, produtos, categorias e observações existentes são mantidos.

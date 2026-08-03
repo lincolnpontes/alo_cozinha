@@ -254,7 +254,7 @@ function testAudioMode() {
     await testDeleteDoesNotReturn();
     await testNewOrderKeepsAreaRoute();
     testAudioMode();
-    console.log('Testes críticos da v1.4.4 passaram.');
+    console.log('Testes críticos da v1.4.5 passaram.');
 })().catch(error => {
     console.error(error);
     process.exitCode = 1;
