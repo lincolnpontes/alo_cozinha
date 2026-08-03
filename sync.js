@@ -12,6 +12,7 @@
             this.lastSyncAt = 0;
             this.lastFullPullAt = 0;
             this.serverProtocol = 'unknown';
+            this.supportsCreateBatch = false;
             this.rerunRequested = false;
             this.forceNextPull = false;
             this.boundOnline = () => this.syncNow(true, true);
@@ -181,6 +182,7 @@
                 this.serverProtocol = 'modern';
             }
             if (!data || data.status !== 'ok') throw new Error('Resposta inválida do servidor.');
+            this.supportsCreateBatch = Boolean(data.capabilities && data.capabilities.novoPedidoLote);
             if (data.changed) {
                 const remoteOrders = Array.isArray(data.pedidos) ? data.pedidos.map(global.AloLogic.normalizeOrder) : [];
                 await this.reconcile(remoteOrders, force);
@@ -207,7 +209,7 @@
             const deletions = due.filter(operation => operation.type === 'delete' || operation.type === 'delete_today' || operation.type === 'delete_all');
             let sent = false;
 
-            if (creates.length > 1 && this.serverProtocol !== 'legacy') {
+            if (creates.length > 1 && this.supportsCreateBatch) {
                 await this.dispatch(creates, {
                     action: 'novo_pedido_lote',
                     pedidos: creates.map(operation => operation.payload)

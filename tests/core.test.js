@@ -75,7 +75,11 @@ function createSyncHarness() {
     const api = {
         async sync() {
             requestLog.push('get');
-            return { status: 'ok', changed: true, revision, pedidos: [...remoteOrders.values()] };
+            return {
+                status: 'ok', changed: true, revision,
+                capabilities: { novoPedidoLote: true },
+                pedidos: [...remoteOrders.values()]
+            };
         },
         async post(url, payload) {
             requestLog.push(`post:${payload.action}`);
@@ -224,6 +228,7 @@ async function testNewOrderKeepsAreaRoute() {
 async function testNewOrdersUseSingleBatch() {
     const harness = createSyncHarness();
     harness.manager.serverProtocol = 'modern';
+    harness.manager.supportsCreateBatch = true;
     await harness.manager.enqueueNewOrder({ produto: 'Feijão', areaOrigem: 'panelas', areaDestino: 'cozinha' });
     await harness.manager.enqueueNewOrder({ produto: 'Arroz', areaOrigem: 'panelas', areaDestino: 'cozinha' });
     await harness.manager.enqueueNewOrder({ produto: 'Couve', areaOrigem: 'panelas', areaDestino: 'cozinha' });
@@ -235,6 +240,20 @@ async function testNewOrdersUseSingleBatch() {
     assert.equal(harness.postPayloads[0].pedidos.length, 3);
     assert.deepEqual(harness.requestLog.slice(0, 2), ['post:novo_pedido_lote', 'get'], 'o envio deve acontecer antes da confirmação');
     assert.equal(harness.remoteOrders.size, 3);
+    assert.equal(harness.operations.size, 0);
+}
+
+async function testOldServerFallsBackToIndividualOrders() {
+    const harness = createSyncHarness();
+    harness.manager.serverProtocol = 'modern';
+    harness.manager.supportsCreateBatch = false;
+    await harness.manager.enqueueNewOrder({ produto: 'Feijão', areaOrigem: 'panelas', areaDestino: 'cozinha' });
+    await harness.manager.enqueueNewOrder({ produto: 'Arroz', areaOrigem: 'panelas', areaDestino: 'cozinha' });
+
+    await harness.manager.syncNow(true, true);
+
+    assert.deepEqual(harness.postPayloads.map(payload => payload.action), ['novo_pedido', 'novo_pedido']);
+    assert.equal(harness.remoteOrders.size, 2);
     assert.equal(harness.operations.size, 0);
 }
 
@@ -456,6 +475,7 @@ async function testCatalogAutoPublish() {
     await testDeleteDoesNotReturn();
     await testNewOrderKeepsAreaRoute();
     await testNewOrdersUseSingleBatch();
+    await testOldServerFallsBackToIndividualOrders();
     await testSameStatusFromAnotherDeviceClearsQueue();
     await testNewerRemoteActionWinsOverStaleTablet();
     await testOldOrphanQueueIsCleaned();

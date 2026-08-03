@@ -351,13 +351,17 @@ function doGet(e) {
   if (action === 'sincronizar') {
     const revision = getPedidosRevision_();
     if (String(e.parameter.revision || '') === String(revision)) {
-      return json_({ status: 'ok', changed: false, revision: revision, serverTime: new Date().toISOString() });
+      return json_({
+        status: 'ok', changed: false, revision: revision, serverTime: new Date().toISOString(),
+        capabilities: { novoPedidoLote: true }
+      });
     }
     return json_({
       status: 'ok',
       changed: true,
       revision: revision,
       serverTime: new Date().toISOString(),
+      capabilities: { novoPedidoLote: true },
       pedidos: pedidosVisiveisCached_(sheetPedidos, revision)
     });
   }
