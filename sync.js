@@ -10,6 +10,7 @@
             this.timer = null;
             this.lastError = '';
             this.lastSyncAt = 0;
+            this.serverProtocol = 'unknown';
             this.boundOnline = () => this.syncNow(true);
             this.boundVisibility = () => {
                 if (document.visibilityState === 'visible') this.syncNow(true);
@@ -106,7 +107,13 @@
         }
 
         async pull() {
-            const data = await global.AloApi.sync(this.getUrl(), this.revision);
+            let data = await global.AloApi.sync(this.getUrl(), this.revision);
+            if (Array.isArray(data)) {
+                this.serverProtocol = 'legacy';
+                data = { status: 'ok', changed: true, pedidos: data };
+            } else if (data && data.status === 'ok') {
+                this.serverProtocol = 'modern';
+            }
             if (!data || data.status !== 'ok') throw new Error('Resposta inválida do servidor.');
             if (data.changed) {
                 const remoteOrders = Array.isArray(data.pedidos) ? data.pedidos.map(global.AloLogic.normalizeOrder) : [];
@@ -137,7 +144,7 @@
                 sent = true;
             }
 
-            if (statuses.length) {
+            if (statuses.length && this.serverProtocol !== 'legacy') {
                 const updates = statuses.map(operation => ({
                     id: operation.payload.id,
                     novoStatus: operation.payload.novoStatus,
@@ -146,6 +153,17 @@
                 }));
                 await this.dispatch(statuses, { action: 'atualizar_status_lote', updates });
                 sent = true;
+            } else if (statuses.length) {
+                for (const operation of statuses) {
+                    await this.dispatch([operation], {
+                        action: operation.payload.novoStatus === 'cancelado' ? 'cancelar_pedido' : 'atualizar_status',
+                        id: operation.payload.id,
+                        novoStatus: operation.payload.novoStatus,
+                        motivo: operation.payload.motivo || '',
+                        operationId: operation.operationId
+                    });
+                    sent = true;
+                }
             }
             return sent;
         }
@@ -180,7 +198,8 @@
                     confirmed.push(operation.operationId);
                     return;
                 }
-                if (operation.type === 'status' && remote.status === operation.payload.novoStatus && remote.operacaoId === operation.operationId) {
+                if (operation.type === 'status' && remote.status === operation.payload.novoStatus &&
+                    (this.serverProtocol === 'legacy' || remote.operacaoId === operation.operationId)) {
                     confirmed.push(operation.operationId);
                 }
             });

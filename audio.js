@@ -92,7 +92,15 @@
 
     function playSynthetic(key, volume) {
         if (navigator.vibrate) navigator.vibrate(key === 'toque_urgente' ? [120, 60, 120, 60, 220] : [180, 70, 180]);
-        if (key === 'sirene_cozinha') {
+        if (key === 'alarme') {
+            playPulse(920, 1550, 0, 0.16, volume, 'square', 3);
+            playPulse(1550, 920, 0.22, 0.16, volume, 'square', 3);
+        } else if (key === 'beep') {
+            playPulse(1100, 1100, 0, 0.10, volume, 'square', 2);
+        } else if (key === 'sino_forte') {
+            playPulse(1250, 840, 0, 0.55, volume, 'sine', 4);
+            playPulse(1650, 1100, 0.08, 0.42, volume, 'triangle', 3);
+        } else if (key === 'sirene_cozinha') {
             playPulse(560, 1420, 0, 0.34, volume, 'square', 3);
             playNoise(0.02, 0.18, volume);
             playPulse(1420, 560, 0.38, 0.34, volume, 'square', 3);
@@ -117,6 +125,11 @@
         syntheticTimer = null;
     }
 
+    function startSyntheticLoop(key, volume, interval) {
+        playSynthetic(key, volume);
+        syntheticTimer = setInterval(() => playSynthetic(key, volume), interval);
+    }
+
     function stop() {
         player.pause();
         stopSynthetic();
@@ -136,7 +149,8 @@
         if (sound.type === 'audio') {
             preview = new Audio(sound.url);
             preview.volume = volume;
-            preview.play().catch(() => {});
+            preview.play().catch(() => playSynthetic(key, volume));
+            preview.onerror = () => playSynthetic(key, volume);
             previewTimer = setTimeout(() => preview && preview.pause(), 3000);
         } else {
             playSynthetic(key, volume);
@@ -171,10 +185,15 @@
             player.src = sound.url;
             player.loop = true;
             player.volume = volume;
-            player.play().catch(() => {});
+            const usarSomLocal = () => {
+                if (playingKey !== key || syntheticTimer) return;
+                player.pause();
+                startSyntheticLoop(key, volume, key === 'beep' ? 1000 : 1200);
+            };
+            player.onerror = usarSomLocal;
+            player.play().catch(usarSomLocal);
         } else {
-            playSynthetic(key, volume);
-            syntheticTimer = setInterval(() => playSynthetic(key, volume), sound.interval);
+            startSyntheticLoop(key, volume, sound.interval);
         }
     }
 
