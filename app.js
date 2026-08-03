@@ -68,6 +68,10 @@ let db = carregarBanco();
         return area ? area.nome : id;
     }
 
+    function getEmojiAreaHtml(emoji) {
+        return emoji === '🥣' ? '<span class="emoji-tigela-escura">🥣</span>' : emoji;
+    }
+
     function getAreasOrigemProduto(produto) {
         if (Array.isArray(produto.areasOrigem) && produto.areasOrigem.length) return produto.areasOrigem;
         return [produto.areaOrigem || 'panelas'];
@@ -291,11 +295,13 @@ let db = carregarBanco();
     }
 
     function carregarBanco() {
-        let defaultDB = { produtos: [], categorias: [], obsPedidos: ["Sem sal", "Pouco óleo"], obsCancelamentos: ["Falta de insumo", "Queimou"], configs: { modo: "panelas", url: "", senhaModo: "", somCozinha: "sem_som", somPanelas: "sem_som", volumeCozinha: "100", volumePanelas: "70", dadosBaixados: false, telaAtiva: "sim", inatividade: "0", reenvio: "permitido" } };
+        let defaultDB = { produtos: [], categorias: [], obsPedidos: ["Sem sal", "Pouco óleo"], obsCancelamentos: ["Falta de insumo", "Queimou"], configs: { modo: "panelas", url: "", senhaModo: "", somCozinha: "sem_som", somPanelas: "sem_som", volumeCozinha: "100", volumePanelas: "70", dadosBaixados: false, bancoPendente: false, revisaoBanco: 0, telaAtiva: "sim", inatividade: "0", reenvio: "permitido" } };
         let local = JSON.parse(localStorage.getItem('kds_v1_db'));
         if(local) {
             if(!local.configs) local.configs = defaultDB.configs;
             if(typeof local.configs.dadosBaixados === 'undefined') local.configs.dadosBaixados = false;
+            if(typeof local.configs.bancoPendente === 'undefined') local.configs.bancoPendente = false;
+            if(typeof local.configs.revisaoBanco === 'undefined') local.configs.revisaoBanco = 0;
             if(!local.configs.telaAtiva) local.configs.telaAtiva = "sim";
             if(!local.configs.inatividade) local.configs.inatividade = "0";
             if(!local.configs.reenvio) local.configs.reenvio = "permitido";
@@ -306,6 +312,7 @@ let db = carregarBanco();
         return defaultDB;
     }
     function salvarBancoLocal() { localStorage.setItem('kds_v1_db', JSON.stringify(db)); }
+    function marcarBancoAlterado() { db.configs.bancoPendente = true; salvarBancoLocal(); }
     function salvarFilaStatus() { localStorage.setItem('kds_fila_status', JSON.stringify(filaRetentativaStatus)); }
 
     function salvarHistoricoLocal() {
@@ -794,7 +801,7 @@ let db = carregarBanco();
             else if (p.status === 'enviado') { statusTraduzido = 'Enviado'; corStatus = '#9e9e9e'; exibirTempo = false; }
             else if (p.status === 'cancelado') {
                 exibirTempo = false; let motivoTxt = p.motivo ? ` (Motivo: ${p.motivo})` : '';
-                if(!pedidosCientes.has(p.id.toString())) { statusTraduzido = 'Cancelado' + motivoTxt; corStatus = '#000000'; piscaClass = 'alerta-pisca-buscar'; onclickHtml = `onclick="darCiencia('${p.id}')"`; } else { statusTraduzido = 'Cancelado' + motivoTxt; corStatus = '#9e9e9e'; }
+                if(!pedidosCientes.has(p.id.toString())) { statusTraduzido = 'Cancelado' + motivoTxt; corStatus = '#d32f2f'; piscaClass = 'alerta-pisca-buscar'; onclickHtml = `onclick="darCiencia('${p.id}')"`; } else { statusTraduzido = 'Cancelado' + motivoTxt; corStatus = '#d32f2f'; }
             }
             else if (p.status === 'buscar') {
                 exibirTempo = false;
@@ -885,7 +892,7 @@ let db = carregarBanco();
                         </div>
                     </div>
                     <div class="pedido-meta-acoes">
-                        <div class="pedido-origem" aria-label="Área de origem">${areaOrigemPedido.emoji}</div>
+                        <div class="pedido-origem" aria-label="Área de origem">${getEmojiAreaHtml(areaOrigemPedido.emoji)}</div>
                         <div class="pedido-acoes">${acoesHtml}</div>
                     </div>
                 </li>
@@ -1148,80 +1155,8 @@ let db = carregarBanco();
         });
     }
 
-    async function sincronizarSalvarNuvem() {
-        if(!db.configs.url) return alert("Salve a URL primeiro!");
-
-        try {
-            const btn = document.getElementById('btnSalvarNuvem');
-            btn.innerText = "Verificando...";
-
-            let fetchUrl = db.configs.url;
-            fetchUrl += fetchUrl.includes('?') ? '&' : '?';
-            fetchUrl += "action=carregar_banco&cb=" + Date.now();
-
-            let res = await fetch(fetchUrl);
-            let nuvemDB = await res.json();
-
-            if (!db.configs.dadosBaixados && nuvemDB.produtos && nuvemDB.produtos.length > 0) {
-                btn.innerText = "⬆️ Salvar Tudo na Nuvem";
-                return alert("🚨 OPERAÇÃO ABORTADA (PROTEÇÃO ATIVADA)!\n\nFoi detectado que o servidor já possui um cardápio salvo. Se você continuar, vai APAGAR O CARDÁPIO de todos os outros tablets.\n\nPor favor, clique obrigatoriamente em '⬇️ Puxar Tudo da Nuvem' primeiro para se sincronizar com a equipe.");
-            }
-
-            btn.innerText = "Salvando...";
-            await enviarPayloadServidor({ action: 'salvar_banco', dados: { produtos: db.produtos, categorias: db.categorias, obsPedidos: db.obsPedidos, obsCancelamentos: db.obsCancelamentos, configs: { senhaModo: db.configs.senhaModo || '', somCozinha: db.configs.somCozinha || 'sem_som', somPanelas: db.configs.somPanelas || 'sem_som', volumeCozinha: db.configs.volumeCozinha || '100', volumePanelas: db.configs.volumePanelas || '70', telaAtiva: db.configs.telaAtiva || 'sim', inatividade: db.configs.inatividade || '0', reenvio: db.configs.reenvio || 'permitido' } } });
-
-            db.configs.dadosBaixados = true;
-            salvarBancoLocal();
-
-            alert("✅ Salvo na Nuvem com sucesso!");
-            btn.innerText = "⬆️ Salvar Tudo na Nuvem";
-        } catch(e) {
-            alert("❌ Erro de conexão ao salvar ou ao verificar a segurança da nuvem.");
-            const btn = document.getElementById('btnSalvarNuvem');
-            if(btn) btn.innerText = "⬆️ Salvar Tudo na Nuvem";
-        }
-    }
-
-    async function sincronizarPuxarNuvem(pedirConfirmacao) {
-        if(!db.configs.url) return;
-        if(pedirConfirmacao && !confirm("ATENÇÃO: Este aparelho será atualizado com o cardápio e os itens que estão na nuvem. Deseja continuar?")) return;
-        try {
-            let urlAction = db.configs.url;
-            urlAction += urlAction.includes('?') ? '&' : '?';
-            urlAction += "action=carregar_banco&cb=" + Date.now();
-
-            let res = await fetch(urlAction);
-            let nuvemDB = await res.json();
-
-            if(!nuvemDB.obsCancelamentos && nuvemDB.produtos === undefined) {
-                alert("⛔ ERRO DE URL (BANCO INCOMPATÍVEL)!\n\nEste link não pertence ao banco de dados do Alô Cozinha. A operação foi abortada para proteger seu equipamento.\n\nVerifique a URL colada.");
-                return;
-            }
-
-            if(nuvemDB.produtos) {
-                db.produtos = nuvemDB.produtos;
-                db.categorias = nuvemDB.categorias || [];
-                db.obsPedidos = nuvemDB.obsPedidos || ["Sem sal", "Pouco óleo"];
-                db.obsCancelamentos = nuvemDB.obsCancelamentos || ["Falta de insumo", "Queimou"];
-
-                if(nuvemDB.configs) {
-                    db.configs = { ...db.configs, ...nuvemDB.configs, url: db.configs.url, modo: db.configs.modo, dadosBaixados: true };
-                }
-
-                normalizarSonsConfigurados();
-                db.configs.dadosBaixados = true;
-
-                salvarBancoLocal();
-
-                if(pedirConfirmacao) {
-                    alert("✅ Cardápio e configurações puxados com sucesso!");
-                    location.reload();
-                } else {
-                    iniciar();
-                }
-            }
-        } catch(e) { console.log("Erro nuvem.", e); alert("❌ Falha ao puxar. O cache do servidor ou erro de internet impediu o download."); }
-    }
+    var sincronizarSalvarNuvem;
+    var sincronizarPuxarNuvem;
 
     function exportarDadosFisicos() {
         try {
@@ -1275,6 +1210,7 @@ let db = carregarBanco();
                 }
 
                 db.configs.dadosBaixados = true;
+                db.configs.bancoPendente = true;
                 salvarBancoLocal();
 
                 alert("✅ Banco de dados restaurado com sucesso! O aplicativo será recarregado.");
@@ -1286,20 +1222,46 @@ let db = carregarBanco();
         reader.readAsText(file);
     }
 
-    function salvarURL() {
+    async function salvarURL() {
         const urlInput = document.getElementById('configUrlApp').value.trim();
-        if(urlInput === "") return alert("Vazio.");
+        if(!urlInput) return alert('Cole a URL do Google Apps Script.');
+        if(!ehUrlAppsScript(urlInput)) return alert('URL inválida. Use o endereço de implantação que termina em /exec.');
 
-        if (urlInput !== db.configs.url) {
-            db.configs.dadosBaixados = false;
+        const btn = document.getElementById('btnSalvarUrl');
+        const textoOriginal = btn ? btn.innerText : '';
+        if(btn) { btn.disabled = true; btn.innerText = 'Validando...'; }
+        try {
+            const [nuvemDB, respostaSync] = await Promise.all([
+                AloApi.getBank(urlInput),
+                AloApi.sync(urlInput, '')
+            ]);
+            if(!bancoNuvemValido(nuvemDB) || !respostaSync || respostaSync.status !== 'ok') throw new Error('Servidor incompatível.');
+
+            const mudouUrl = urlInput !== db.configs.url;
+            db.configs.url = urlInput;
+            db.configs.dadosBaixados = true;
+            db.configs.revisaoBanco = Number(nuvemDB._revision || 0);
+            if(Array.isArray(nuvemDB.produtos)) {
+                aplicarBancoDaNuvem(nuvemDB);
+                iniciar();
+            } else {
+                db.configs.bancoPendente = mudouUrl && db.produtos.length > 0;
+                salvarBancoLocal();
+            }
+            if(syncConfiavel) await syncConfiavel.retryNow();
+            alert(Array.isArray(nuvemDB.produtos)
+                ? 'URL validada. Cardápio, áreas e pedidos estão sincronizados.'
+                : 'URL validada. O servidor ainda não possui cardápio; use Publicar Cardápio e Áreas.');
+        } catch(error) {
+            document.getElementById('configUrlApp').value = db.configs.url || '';
+            alert('Não foi possível validar esta URL. Confira se é a implantação correta do Alô Cozinha e se a internet está funcionando.');
+        } finally {
+            if(btn) { btn.disabled = false; btn.innerText = textoOriginal; }
         }
-
-        db.configs.url = urlInput;
-        salvarBancoLocal();
-        alert("URL salva no sistema! Clique obrigatoriamente em 'Puxar Tudo da Nuvem' para iniciar.");
     }
 
     function fecharPainelUnificado() {
+        const configuracoesAnteriores = JSON.stringify(dadosBancoParaNuvem().configs);
         db.configs.senhaModo = document.getElementById('configSenhaModo').value;
         db.configs.somCozinha = document.getElementById('configSomCozinha').value;
         db.configs.somPanelas = document.getElementById('configSomPanelas').value;
@@ -1309,7 +1271,8 @@ let db = carregarBanco();
         db.configs.telaAtiva = document.getElementById('configTelaAtiva').value;
         db.configs.inatividade = document.getElementById('configInatividade').value;
         db.configs.reenvio = document.getElementById('configReenvio').value;
-        salvarBancoLocal();
+        if(configuracoesAnteriores !== JSON.stringify(dadosBancoParaNuvem().configs)) marcarBancoAlterado();
+        else salvarBancoLocal();
 
         solicitarWakeLock();
         resetInatividade();
@@ -1320,17 +1283,17 @@ let db = carregarBanco();
 
     function voltarParaPainelGeral() { fecharModal('modalListagem'); abrirModalNoTopo('modalPainelUnificado'); }
 
-    function moverItem(tipo, index, direcao) { const lista = tipo === 'produtos' ? db.produtos : (tipo === 'categorias' ? db.categorias : (tipo === 'obsPedidos' ? db.obsPedidos : db.obsCancelamentos)); if(direcao === 'cima' && index > 0) { const temp = lista[index]; lista[index] = lista[index - 1]; lista[index - 1] = temp; } else if (direcao === 'baixo' && index < lista.length - 1) { const temp = lista[index]; lista[index] = lista[index + 1]; lista[index + 1] = temp; } salvarBancoLocal(); iniciar(); abrirGerenciar(tipo); }
+    function moverItem(tipo, index, direcao) { const lista = tipo === 'produtos' ? db.produtos : (tipo === 'categorias' ? db.categorias : (tipo === 'obsPedidos' ? db.obsPedidos : db.obsCancelamentos)); if(direcao === 'cima' && index > 0) { const temp = lista[index]; lista[index] = lista[index - 1]; lista[index - 1] = temp; } else if (direcao === 'baixo' && index < lista.length - 1) { const temp = lista[index]; lista[index] = lista[index + 1]; lista[index + 1] = temp; } marcarBancoAlterado(); iniciar(); abrirGerenciar(tipo); }
 
     function abrirGerenciar(tipo) {
         fecharModal('modalPainelUnificado'); fecharModal('modalFormProduto'); fecharModal('modalFormCategoria'); fecharModal('modalFormArea');
         const lista = document.getElementById('conteudoListagem'); const btnNovo = document.getElementById('btnNovoListagem'); const titulo = document.getElementById('tituloListagem'); lista.innerHTML = '';
-        if(tipo === 'areas') { titulo.innerText = "Gerenciar Áreas"; btnNovo.onclick = () => abrirFormArea(-1); db.areas.forEach((area, idx) => { const funcao = area.tipo === 'envio' ? 'Envia pedidos' : 'Recebe pedidos'; lista.innerHTML += `<div class="gerenciar-item"><div class="gerenciar-info"><strong>${area.emoji} ${area.nome}</strong><br><span style="color:#666">${funcao}</span></div><div class="gerenciar-actions"><button onclick="abrirFormArea(${idx})" title="Editar">✏️</button><button onclick="excluirArea(${idx})" title="Excluir">🗑️</button></div></div>`; }); } else if(tipo === 'produtos') { titulo.innerText = "Gerenciar Produtos"; btnNovo.onclick = () => abrirFormProduto(-1); db.produtos.forEach((p, idx) => { const origens = getAreasOrigemProduto(p).map(getAreaNome).join(', '); lista.innerHTML += `<div class="gerenciar-item"><div class="gerenciar-info"><strong>${p.nome}</strong><br><span style="color:#666">${p.categoria} · ${origens} → ${getAreaNome(p.areaDestino || 'cozinha')}</span></div><div class="gerenciar-actions"><button onclick="moverItem('produtos', ${idx}, 'cima')">🔼</button><button onclick="moverItem('produtos', ${idx}, 'baixo')">🔽</button><button onclick="abrirFormProduto(${idx})">✏️</button><button onclick="excluirItem('produtos', ${idx})">🗑️</button></div></div>`; }); } else if (tipo === 'categorias') { titulo.innerText = "Gerenciar Categorias"; btnNovo.onclick = () => abrirFormCategoria(-1); db.categorias.forEach((c, idx) => { lista.innerHTML += `<div class="gerenciar-item"><div class="gerenciar-info"><span class="color-preview" style="background:${c.cor}; color:${c.corTexto}">${c.nome}</span></div><div class="gerenciar-actions"><button onclick="moverItem('categorias', ${idx}, 'cima')">🔼</button><button onclick="moverItem('categorias', ${idx}, 'baixo')">🔽</button><button onclick="abrirFormCategoria(${idx})">✏️</button><button onclick="excluirItem('categorias', '${c.nome}')">🗑️</button></div></div>`; }); } else if (tipo === 'obsPedidos') { titulo.innerText = "Observação dos Produtos"; btnNovo.onclick = () => novaObservacao('obsPedidos'); db.obsPedidos.forEach((obs, idx) => { lista.innerHTML += `<div class="gerenciar-item"><div class="gerenciar-info"><strong>${obs}</strong></div><div class="gerenciar-actions"><button onclick="moverItem('obsPedidos', ${idx}, 'cima')">🔼</button><button onclick="moverItem('obsPedidos', ${idx}, 'baixo')">🔽</button><button onclick="excluirItem('obsPedidos', '${obs}')">🗑️</button></div></div>`; }); } else if (tipo === 'obsCancelamentos') { titulo.innerText = "Motivos Cancelamento"; btnNovo.onclick = () => novaObservacao('obsCancelamentos'); db.obsCancelamentos.forEach((obs, idx) => { lista.innerHTML += `<div class="gerenciar-item"><div class="gerenciar-info"><strong>${obs}</strong></div><div class="gerenciar-actions"><button onclick="moverItem('obsCancelamentos', ${idx}, 'cima')">🔼</button><button onclick="moverItem('obsCancelamentos', ${idx}, 'baixo')">🔽</button><button onclick="excluirItem('obsCancelamentos', '${obs}')">🗑️</button></div></div>`; }); }
+        if(tipo === 'areas') { titulo.innerText = "Gerenciar Áreas"; btnNovo.onclick = () => abrirFormArea(-1); db.areas.forEach((area, idx) => { const funcao = area.tipo === 'envio' ? 'Envia pedidos' : 'Recebe pedidos'; lista.innerHTML += `<div class="gerenciar-item"><div class="gerenciar-info"><strong>${getEmojiAreaHtml(area.emoji)} ${area.nome}</strong><br><span style="color:#666">${funcao}</span></div><div class="gerenciar-actions"><button onclick="abrirFormArea(${idx})" title="Editar">✏️</button><button onclick="excluirArea(${idx})" title="Excluir">🗑️</button></div></div>`; }); } else if(tipo === 'produtos') { titulo.innerText = "Gerenciar Produtos"; btnNovo.onclick = () => abrirFormProduto(-1); db.produtos.forEach((p, idx) => { const origens = getAreasOrigemProduto(p).map(getAreaNome).join(', '); lista.innerHTML += `<div class="gerenciar-item"><div class="gerenciar-info"><strong>${p.nome}</strong><br><span style="color:#666">${p.categoria} · ${origens} → ${getAreaNome(p.areaDestino || 'cozinha')}</span></div><div class="gerenciar-actions"><button onclick="moverItem('produtos', ${idx}, 'cima')">🔼</button><button onclick="moverItem('produtos', ${idx}, 'baixo')">🔽</button><button onclick="abrirFormProduto(${idx})">✏️</button><button onclick="excluirItem('produtos', ${idx})">🗑️</button></div></div>`; }); } else if (tipo === 'categorias') { titulo.innerText = "Gerenciar Categorias"; btnNovo.onclick = () => abrirFormCategoria(-1); db.categorias.forEach((c, idx) => { lista.innerHTML += `<div class="gerenciar-item"><div class="gerenciar-info"><span class="color-preview" style="background:${c.cor}; color:${c.corTexto}">${c.nome}</span></div><div class="gerenciar-actions"><button onclick="moverItem('categorias', ${idx}, 'cima')">🔼</button><button onclick="moverItem('categorias', ${idx}, 'baixo')">🔽</button><button onclick="abrirFormCategoria(${idx})">✏️</button><button onclick="excluirItem('categorias', '${c.nome}')">🗑️</button></div></div>`; }); } else if (tipo === 'obsPedidos') { titulo.innerText = "Observação dos Produtos"; btnNovo.onclick = () => novaObservacao('obsPedidos'); db.obsPedidos.forEach((obs, idx) => { lista.innerHTML += `<div class="gerenciar-item"><div class="gerenciar-info"><strong>${obs}</strong></div><div class="gerenciar-actions"><button onclick="moverItem('obsPedidos', ${idx}, 'cima')">🔼</button><button onclick="moverItem('obsPedidos', ${idx}, 'baixo')">🔽</button><button onclick="excluirItem('obsPedidos', '${obs}')">🗑️</button></div></div>`; }); } else if (tipo === 'obsCancelamentos') { titulo.innerText = "Motivos Cancelamento"; btnNovo.onclick = () => novaObservacao('obsCancelamentos'); db.obsCancelamentos.forEach((obs, idx) => { lista.innerHTML += `<div class="gerenciar-item"><div class="gerenciar-info"><strong>${obs}</strong></div><div class="gerenciar-actions"><button onclick="moverItem('obsCancelamentos', ${idx}, 'cima')">🔼</button><button onclick="moverItem('obsCancelamentos', ${idx}, 'baixo')">🔽</button><button onclick="excluirItem('obsCancelamentos', '${obs}')">🗑️</button></div></div>`; }); }
         document.getElementById('modalListagem').style.display = 'flex';
     }
 
-    function novaObservacao(tipo) { const obs = prompt(tipo === 'obsPedidos' ? "Nova observação global:" : "Novo motivo de cancelamento:"); if(obs) { db[tipo].push(obs); salvarBancoLocal(); abrirGerenciar(tipo); } }
-    function excluirItem(tipo, id) { if(!confirm("Certeza?")) return; if(tipo === 'produtos') db.produtos.splice(id, 1); if(tipo === 'categorias') db.categorias = db.categorias.filter(i => i.nome !== id); if(tipo === 'obsPedidos') db.obsPedidos = db.obsPedidos.filter(i => i !== id); if(tipo === 'obsCancelamentos') db.obsCancelamentos = db.obsCancelamentos.filter(i => i !== id); salvarBancoLocal(); iniciar(); abrirGerenciar(tipo); }
+    function novaObservacao(tipo) { const obs = prompt(tipo === 'obsPedidos' ? "Nova observação global:" : "Novo motivo de cancelamento:"); if(obs) { db[tipo].push(obs); marcarBancoAlterado(); abrirGerenciar(tipo); } }
+    function excluirItem(tipo, id) { if(!confirm("Certeza?")) return; if(tipo === 'produtos') db.produtos.splice(id, 1); if(tipo === 'categorias') db.categorias = db.categorias.filter(i => i.nome !== id); if(tipo === 'obsPedidos') db.obsPedidos = db.obsPedidos.filter(i => i !== id); if(tipo === 'obsCancelamentos') db.obsCancelamentos = db.obsCancelamentos.filter(i => i !== id); marcarBancoAlterado(); iniciar(); abrirGerenciar(tipo); }
 
     function abrirFormProduto(idx) {
         fecharModal('modalListagem');
@@ -1355,9 +1318,12 @@ let db = carregarBanco();
             document.getElementById('prodObsEspec').value = '';
         }
         document.getElementById('prodAreasOrigem').innerHTML = db.areas.filter(area => area.tipo === 'envio').map(area => `
-            <label class="area-checkbox">
-                <input class="area-origem-checkbox" type="checkbox" value="${area.id}" ${origensSelecionadas.includes(area.id) ? 'checked' : ''}>
-                <span>${area.emoji} ${area.nome}</span>
+            <label class="area-switch-row">
+                <span class="area-switch-identidade"><span class="area-switch-emoji">${getEmojiAreaHtml(area.emoji)}</span><span>${area.nome}</span></span>
+                <span class="switch-moderno">
+                    <input class="area-origem-checkbox" type="checkbox" value="${area.id}" ${origensSelecionadas.includes(area.id) ? 'checked' : ''}>
+                    <span class="switch-trilho"></span>
+                </span>
             </label>
         `).join('');
         document.getElementById('modalFormProduto').style.display = 'flex';
@@ -1380,7 +1346,7 @@ let db = carregarBanco();
         } else {
             db.produtos.push({ nome: nome, categoria: cat, obsEspec: obsArray, areasOrigem, areaOrigem, areaDestino });
         }
-        salvarBancoLocal(); iniciar(); abrirGerenciar('produtos');
+        marcarBancoAlterado(); iniciar(); abrirGerenciar('produtos');
     }
 
     function abrirFormArea(idx) {
@@ -1421,7 +1387,7 @@ let db = carregarBanco();
         } else {
             db.areas.push({ id: `area_${Date.now()}`, nome, tipo, emoji });
         }
-        normalizarAreasERotas(); salvarBancoLocal(); iniciar(); abrirGerenciar('areas');
+        normalizarAreasERotas(); marcarBancoAlterado(); iniciar(); abrirGerenciar('areas');
     }
 
     function excluirArea(idx) {
@@ -1432,11 +1398,11 @@ let db = carregarBanco();
         if (!confirm(`Excluir a área ${area.nome}?`)) return;
         db.areas.splice(idx, 1);
         if (db.configs.areaAtual === area.id) db.configs.areaAtual = 'panelas';
-        normalizarAreasERotas(); salvarBancoLocal(); iniciar(); abrirGerenciar('areas');
+        normalizarAreasERotas(); marcarBancoAlterado(); iniciar(); abrirGerenciar('areas');
     }
 
     function abrirFormCategoria(idx) { fecharModal('modalListagem'); if(idx >= 0) { const c = db.categorias[idx]; document.getElementById('catIndexOriginal').value = idx; document.getElementById('catNome').value = c.nome; document.getElementById('catCor').value = c.cor; document.getElementById('catCorTexto').value = c.corTexto || '#000000'; } else { document.getElementById('catIndexOriginal').value = '-1'; document.getElementById('catNome').value = ''; document.getElementById('catCor').value = '#1976D2'; document.getElementById('catCorTexto').value = '#ffffff'; } document.getElementById('modalFormCategoria').style.display = 'flex'; }
-    function salvarCategoria() { const idx = parseInt(document.getElementById('catIndexOriginal').value); const nome = document.getElementById('catNome').value.trim(); const cor = document.getElementById('catCor').value; const corTexto = document.getElementById('catCorTexto').value; if(!nome) return alert("Preencha o nome!"); if(idx >= 0) { const nomeAntigo = db.categorias[idx].nome; db.categorias[idx] = { nome, cor, corTexto }; db.produtos.forEach(p => { if(p.categoria === nomeAntigo) p.categoria = nome; }); } else { db.categorias.push({ nome, cor, corTexto }); } salvarBancoLocal(); iniciar(); abrirGerenciar('categorias'); }
+    function salvarCategoria() { const idx = parseInt(document.getElementById('catIndexOriginal').value); const nome = document.getElementById('catNome').value.trim(); const cor = document.getElementById('catCor').value; const corTexto = document.getElementById('catCorTexto').value; if(!nome) return alert("Preencha o nome!"); if(idx >= 0) { const nomeAntigo = db.categorias[idx].nome; db.categorias[idx] = { nome, cor, corTexto }; db.produtos.forEach(p => { if(p.categoria === nomeAntigo) p.categoria = nome; }); } else { db.categorias.push({ nome, cor, corTexto }); } marcarBancoAlterado(); iniciar(); abrirGerenciar('categorias'); }
 
     document.getElementById('senhaAdmin').addEventListener('input', function(e) {
         if(this.value === "1999" || (db.configs.senhaModo && this.value === db.configs.senhaModo)) {
@@ -1484,6 +1450,8 @@ let db = carregarBanco();
     });
 
     let syncConfiavel = null;
+    let bancoSyncTimer = null;
+    let bancoSyncEmAndamento = false;
 
     function atualizarIndicadorSincronizacao(estado) {
         const indicador = document.getElementById('indicadorConexao');
@@ -1637,6 +1605,8 @@ let db = carregarBanco();
             onState: atualizarIndicadorSincronizacao
         });
         await syncConfiavel.start();
+        await sincronizarBancoAutomaticamente();
+        if(!bancoSyncTimer) bancoSyncTimer = setInterval(sincronizarBancoAutomaticamente, 30000);
     }
 
     const abrirModalMetricasOriginal = abrirModalMetricas;
@@ -1729,36 +1699,109 @@ let db = carregarBanco();
         }) === JSON.stringify(local);
     }
 
+    function ehUrlAppsScript(valor) {
+        try {
+            const url = new URL(valor);
+            return url.protocol === 'https:'
+                && url.hostname === 'script.google.com'
+                && /^\/macros\/s\/[^/]+\/exec\/?$/.test(url.pathname);
+        } catch(error) {
+            return false;
+        }
+    }
+
+    function bancoNuvemValido(nuvemDB) {
+        return Boolean(nuvemDB)
+            && !Array.isArray(nuvemDB)
+            && typeof nuvemDB === 'object'
+            && Object.prototype.hasOwnProperty.call(nuvemDB, '_revision');
+    }
+
+    function aplicarBancoDaNuvem(nuvemDB) {
+        const configuracaoLocal = {
+            url: db.configs.url,
+            modo: db.configs.modo,
+            areaAtual: db.configs.areaAtual
+        };
+        db.produtos = Array.isArray(nuvemDB.produtos) ? nuvemDB.produtos : db.produtos;
+        db.categorias = Array.isArray(nuvemDB.categorias) ? nuvemDB.categorias : db.categorias;
+        db.obsPedidos = Array.isArray(nuvemDB.obsPedidos) ? nuvemDB.obsPedidos : db.obsPedidos;
+        db.obsCancelamentos = Array.isArray(nuvemDB.obsCancelamentos) ? nuvemDB.obsCancelamentos : db.obsCancelamentos;
+        db.areas = Array.isArray(nuvemDB.areas) && nuvemDB.areas.length ? nuvemDB.areas : db.areas;
+        db.configs = {
+            ...db.configs,
+            ...(nuvemDB.configs || {}),
+            ...configuracaoLocal,
+            dadosBaixados: true,
+            bancoPendente: false,
+            revisaoBanco: Number(nuvemDB._revision || 0)
+        };
+        normalizarAreasERotas();
+        normalizarSonsConfigurados();
+        salvarBancoLocal();
+    }
+
+    async function sincronizarBancoAutomaticamente() {
+        if(bancoSyncEmAndamento || !db.configs.url || db.configs.bancoPendente || !navigator.onLine) return;
+        bancoSyncEmAndamento = true;
+        try {
+            const nuvemDB = await AloApi.getBank(db.configs.url);
+            if(!bancoNuvemValido(nuvemDB) || !Array.isArray(nuvemDB.produtos)) return;
+            const revisaoNuvem = Number(nuvemDB._revision || 0);
+            const revisaoLocal = Number(db.configs.revisaoBanco || 0);
+            if(!db.configs.dadosBaixados || revisaoNuvem > revisaoLocal) {
+                aplicarBancoDaNuvem(nuvemDB);
+                iniciar();
+            }
+        } catch(error) {
+            // A fila de pedidos continua operando; o catálogo tenta novamente depois.
+        } finally {
+            bancoSyncEmAndamento = false;
+        }
+    }
+
     sincronizarSalvarNuvem = async function() {
         if (!db.configs.url) return alert('Salve a URL primeiro!');
         const btn = document.getElementById('btnSalvarNuvem');
         const textoOriginal = btn.innerText;
         try {
+            btn.disabled = true;
             btn.innerText = 'Verificando...';
             const bancoAtual = await AloApi.getBank(db.configs.url);
-            if (!db.configs.dadosBaixados && bancoAtual.produtos && bancoAtual.produtos.length > 0) {
-                alert('Operacao cancelada: este servidor ja possui cardapio. Puxe os dados da nuvem antes de salvar.');
+            if(!bancoNuvemValido(bancoAtual)) throw new Error('Banco incompatível.');
+            const revisaoAtual = Number(bancoAtual._revision || 0);
+            const revisaoConhecida = Number(db.configs.revisaoBanco || 0);
+            if(Array.isArray(bancoAtual.produtos) && bancoAtual.produtos.length > 0 && (!db.configs.dadosBaixados || revisaoAtual !== revisaoConhecida)) {
+                if(confirm('Outro aparelho publicou mudanças no cardápio ou nas áreas. Carregar essas mudanças e descartar as alterações ainda não publicadas deste aparelho?')) {
+                    aplicarBancoDaNuvem(bancoAtual);
+                    iniciar();
+                    alert('Este aparelho foi atualizado com os dados mais recentes da nuvem.');
+                } else {
+                    alert('Publicação cancelada para proteger as alterações dos outros aparelhos.');
+                }
                 return;
             }
             const dados = dadosBancoParaNuvem();
-            btn.innerText = 'Salvando...';
+            btn.innerText = 'Publicando...';
             await AloApi.post(db.configs.url, {
                 action: 'salvar_banco', dados,
-                expectedRevision: Number(bancoAtual._revision || 0)
+                expectedRevision: revisaoAtual
             });
             await new Promise(resolve => setTimeout(resolve, 500));
             const confirmado = await AloApi.getBank(db.configs.url);
             if (!bancoNuvemIgual(confirmado, dados)) {
-                alert('O cardapio foi alterado em outro aparelho durante este salvamento. Puxe os dados da nuvem, confira e tente novamente.');
+                alert('Outro aparelho publicou uma alteração ao mesmo tempo. Nada foi apagado neste aparelho; tente publicar novamente após a sincronização automática.');
                 return;
             }
             db.configs.dadosBaixados = true;
+            db.configs.bancoPendente = false;
             db.configs.revisaoBanco = Number(confirmado._revision || 0);
             salvarBancoLocal();
-            alert('Salvo na nuvem com sucesso!');
+            alert('Cardápio, áreas e configurações publicados com sucesso!');
         } catch (error) {
-            alert('Nao foi possivel confirmar o salvamento. Verifique a internet e tente novamente.');
+            alert('Não foi possível confirmar a publicação. Verifique a internet e tente novamente.');
         } finally {
+            btn.disabled = false;
             btn.innerText = textoOriginal;
         }
     };
@@ -1768,34 +1811,26 @@ let db = carregarBanco();
         if (pedirConfirmacao && !confirm('Este aparelho recebera o cardapio salvo na nuvem. Deseja continuar?')) return;
         try {
             const nuvemDB = await AloApi.getBank(db.configs.url);
-            if (!nuvemDB.obsCancelamentos && nuvemDB.produtos === undefined) {
-                alert('URL incompativel com o banco do Alo Cozinha.');
+            if (!bancoNuvemValido(nuvemDB)) {
+                alert('URL incompatível com o banco do Alô Cozinha.');
                 return;
             }
-            if (nuvemDB.produtos) {
-                db.produtos = nuvemDB.produtos;
-                db.categorias = nuvemDB.categorias || [];
-                db.obsPedidos = nuvemDB.obsPedidos || [];
-                db.obsCancelamentos = nuvemDB.obsCancelamentos || [];
-                db.areas = nuvemDB.areas || db.areas;
-                db.configs = { ...db.configs, ...(nuvemDB.configs || {}), url: db.configs.url, modo: db.configs.modo, dadosBaixados: true, revisaoBanco: Number(nuvemDB._revision || 0) };
-                normalizarAreasERotas();
-                normalizarSonsConfigurados();
-                salvarBancoLocal();
+            if (Array.isArray(nuvemDB.produtos)) {
+                aplicarBancoDaNuvem(nuvemDB);
                 if (pedirConfirmacao) {
-                    alert('Cardapio e configuracoes atualizados.');
+                    alert('Cardápio e configurações atualizados.');
                     location.reload();
                 } else {
                     iniciar();
                 }
             }
         } catch (error) {
-            alert('Falha ao puxar os dados. O que ja esta neste aparelho foi preservado.');
+            if(pedirConfirmacao) alert('Falha ao receber os dados. O que já está neste aparelho foi preservado.');
         }
     };
 
     if ('serviceWorker' in navigator) {
-        window.addEventListener('load', () => navigator.serviceWorker.register('./service-worker.js?v=1.4.1').catch(() => {}));
+        window.addEventListener('load', () => navigator.serviceWorker.register('./service-worker.js?v=1.4.2').catch(() => {}));
     }
 
     iniciarComSyncConfiavel();

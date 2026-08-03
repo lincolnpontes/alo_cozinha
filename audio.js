@@ -170,9 +170,12 @@
             }
         } else {
             const now = Date.now();
-            if (orders.some(order => (order.status === 'buscar' || order.status === 'cancelado') && (now - new Date(order.finalizadoEm).getTime()) < 300000 && !knownIds.has(String(order.id)))) {
+            const precisaConfirmar = order => (now - new Date(order.finalizadoEm).getTime()) < 300000 && !knownIds.has(String(order.id));
+            const cancelamentoNovo = orders.some(order => order.status === 'cancelado' && precisaConfirmar(order));
+            const retiradaNova = orders.some(order => order.status === 'buscar' && precisaConfirmar(order));
+            if (cancelamentoNovo || retiradaNova) {
                 header.classList.add('alerta-pisca-buscar');
-                key = normalize(configs.somPanelas || 'sem_som', 'beep');
+                key = cancelamentoNovo ? 'beep' : normalize(configs.somPanelas || 'sem_som', 'beep');
             }
         }
         if (key === 'sem_som') return stop();

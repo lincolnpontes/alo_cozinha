@@ -228,6 +228,24 @@ function testAudioMode() {
     assert.equal(classes.has('alerta-pisca'), true);
     assert.equal(playCount, 1);
     context.AloAudio.stop();
+
+    context.AloAudio.manage({
+        mode: 'panelas',
+        configs: { somPanelas: 'sem_som', volumePanelas: 70 },
+        orders: [{ id: '5', status: 'cancelado', finalizadoEm: new Date().toISOString() }],
+        knownIds: new Set()
+    });
+    assert.equal(classes.has('alerta-pisca-buscar'), true);
+    assert.equal(playCount, 2, 'cancelamento novo deve beepar mesmo com o som comum desativado');
+
+    context.AloAudio.manage({
+        mode: 'panelas',
+        configs: { somPanelas: 'sem_som', volumePanelas: 70 },
+        orders: [{ id: '5', status: 'cancelado', finalizadoEm: new Date().toISOString() }],
+        knownIds: new Set(['5'])
+    });
+    assert.equal(classes.has('alerta-pisca-buscar'), false);
+    context.AloAudio.stop();
 }
 
 (async () => {
@@ -236,7 +254,7 @@ function testAudioMode() {
     await testDeleteDoesNotReturn();
     await testNewOrderKeepsAreaRoute();
     testAudioMode();
-    console.log('Testes críticos da v1.4.1 passaram.');
+    console.log('Testes críticos da v1.4.2 passaram.');
 })().catch(error => {
     console.error(error);
     process.exitCode = 1;
