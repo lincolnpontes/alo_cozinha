@@ -767,7 +767,7 @@ let db = carregarBanco();
             let subtitleHtml = acaoTxt ? `<div class="item-subtitle" style="text-decoration: none !important; opacity: 1 !important;">${acaoTxt}</div>` : '';
 
             lista.innerHTML += `
-                <li class="item status-${cssStatus}" id="ped-${p.id}" data-id="${p.id}" data-status="${p.status}" data-nome="${p.produto}" ontouchstart="handleTouchStart(event, this)" ontouchmove="handleTouchMove(event)" ontouchend="handleTouchEnd(event, this)">
+                <li class="item status-${cssStatus}" id="ped-${p.id}" data-id="${p.id}" data-status="${p.status}" data-nome="${p.produto}" onpointerdown="handlePointerStart(event, this)" onpointermove="handlePointerMove(event)" onpointerup="handlePointerEnd(event, this)" onpointercancel="handlePointerCancel()">
                     <div class="item-avatar ${classeRiscar}" style="background:transparent; font-size:24px; margin-right: 10px;">${emoji}</div>
                     <div class="item-info" style="display:flex; justify-content:space-between; align-items:center;">
                         <div>
@@ -781,16 +781,45 @@ let db = carregarBanco();
         });
     }
 
-    let touchStartX = 0; let pressTimer; let isLongPress = false; let lastTap = 0; let tapTimer;
-    function handleTouchStart(e, elemento) { touchStartX = e.changedTouches[0].screenX; isLongPress = false; let statusAtual = elemento.getAttribute('data-status'); if(statusAtual === 'fazendo') { pressTimer = setTimeout(() => { isLongPress = true; alterarStatusPedido(elemento.getAttribute('data-id'), 'buscar'); }, 600); } }
-    function handleTouchMove(e) { clearTimeout(pressTimer); }
-    function handleTouchEnd(e, elemento) {
-        clearTimeout(pressTimer); if(isLongPress) return;
-        let diff = e.changedTouches[0].screenX - touchStartX; const id = elemento.getAttribute('data-id'); const statusAtual = elemento.getAttribute('data-status'); const nomeProd = elemento.getAttribute('data-nome');
-        if (Math.abs(diff) < 20) {
-            let currentTime = new Date().getTime(); let tapLength = currentTime - lastTap;
-            if (tapLength < 350 && tapLength > 0) { clearTimeout(tapTimer); if(statusAtual === 'fazendo' || statusAtual === 'pendente') abrirModalCancelamento(id, nomeProd); } else { tapTimer = setTimeout(() => { if(statusAtual === 'pendente') alterarStatusPedido(id, 'fazendo'); }, 350); } lastTap = currentTime;
-        } else if (diff > 80) { if(statusAtual === 'fazendo') alterarStatusPedido(id, 'enviado'); else if (statusAtual === 'pendente') alert("⚠️ Toque para aceitar primeiro!"); } else if (diff < -80) { if(statusAtual === 'enviado' || statusAtual === 'buscar' || statusAtual === 'cancelado' || statusAtual === 'concluido') alterarStatusPedido(id, 'fazendo'); }
+    let pointerStartX = 0; let pointerStartY = 0; let pressTimer; let isLongPress = false; let lastTap = 0; let lastTapId = '';
+    function handlePointerStart(e, elemento) {
+        pointerStartX = e.clientX;
+        pointerStartY = e.clientY;
+        isLongPress = false;
+        if (elemento.setPointerCapture) elemento.setPointerCapture(e.pointerId);
+        if (elemento.getAttribute('data-status') === 'fazendo') {
+            pressTimer = setTimeout(() => {
+                isLongPress = true;
+                alterarStatusPedido(elemento.getAttribute('data-id'), 'buscar');
+            }, 600);
+        }
+    }
+    function handlePointerMove(e) {
+        if (Math.abs(e.clientX - pointerStartX) > 12 || Math.abs(e.clientY - pointerStartY) > 12) clearTimeout(pressTimer);
+    }
+    function handlePointerCancel() { clearTimeout(pressTimer); isLongPress = false; }
+    function handlePointerEnd(e, elemento) {
+        clearTimeout(pressTimer);
+        if (isLongPress) return;
+        const diff = e.clientX - pointerStartX;
+        const vertical = Math.abs(e.clientY - pointerStartY);
+        const id = elemento.getAttribute('data-id');
+        const statusAtual = elemento.getAttribute('data-status');
+        const nomeProd = elemento.getAttribute('data-nome');
+
+        if (Math.abs(diff) < 20 && vertical < 20) {
+            const currentTime = Date.now();
+            const segundoToque = lastTapId === id && currentTime - lastTap < 350;
+            lastTap = currentTime;
+            lastTapId = id;
+            if (statusAtual === 'pendente') alterarStatusPedido(id, 'fazendo');
+            else if (statusAtual === 'fazendo' && segundoToque) abrirModalCancelamento(id, nomeProd);
+        } else if (diff > 80) {
+            if (statusAtual === 'fazendo') alterarStatusPedido(id, 'enviado');
+            else if (statusAtual === 'pendente') alert('Toque para aceitar primeiro!');
+        } else if (diff < -80 && ['enviado', 'buscar', 'cancelado', 'concluido'].includes(statusAtual)) {
+            alterarStatusPedido(id, 'fazendo');
+        }
     }
 
     function gerenciarAlarme() {
@@ -1275,22 +1304,16 @@ let db = carregarBanco();
         }
     });
 
-    document.getElementById('inputSenhaAcao').addEventListener('input', function(e) {
+    document.getElementById('inputSenhaAcao').addEventListener('input', async function(e) {
         if(this.value === "1999") {
             this.blur();
             fecharModal('modalSenhaAcao');
             this.value = '';
 
             if (acaoPendente === 'zerar_expediente') {
-                const dataHoje = new Date().toDateString();
-                pedidosServidor = pedidosServidor.filter(p => new Date(p.timestamp).toDateString() !== dataHoje);
-                abrirHistorico(); renderizarUltimosPedidos(); renderizarListaCozinha();
-                fetch(db.configs.url, { method: 'POST', mode: 'no-cors', body: JSON.stringify({ action: 'excluir_hoje' }) });
-                alert("Expediente zerado com sucesso!");
+                await excluirHojeConfiavel();
             } else if (acaoPendente === 'excluir_item') {
-                pedidosServidor = pedidosServidor.filter(p => p.id != parametroAcao);
-                abrirHistorico();
-                fetch(db.configs.url, { method: 'POST', mode: 'no-cors', body: JSON.stringify({ action: 'excluir_pedido', id: parametroAcao }) });
+                await excluirPedidoConfiavel(parametroAcao);
             }
 
             acaoPendente = null;
@@ -1333,7 +1356,7 @@ let db = carregarBanco();
         db.configs.somPanelas = AloAudio.normalize(db.configs.somPanelas || 'sem_som', 'beep');
     };
     gerenciarAlarme = function() {
-        AloAudio.manage({ modo: db.configs.modo, configs: db.configs, orders: pedidosServidor, knownIds: pedidosCientes });
+        AloAudio.manage({ mode: db.configs.modo, configs: db.configs, orders: pedidosServidor, knownIds: pedidosCientes });
     };
     pararAlarme = function() { AloAudio.stop(); };
 
@@ -1345,10 +1368,56 @@ let db = carregarBanco();
     };
     alterarStatusPedido = async function(id, novoStatus, motivo = '') {
         pedidosBloqueados.add(String(id));
-        if (!syncConfiavel) return;
-        await syncConfiavel.enqueueStatus(String(id), novoStatus, motivo);
-        aplicarPedidosSincronizados(syncConfiavel.orders);
-        setTimeout(() => pedidosBloqueados.delete(String(id)), 15000);
+        if (!syncConfiavel) {
+            pedidosBloqueados.delete(String(id));
+            alert('O armazenamento do aplicativo ainda está iniciando. Toque novamente.');
+            return;
+        }
+        try {
+            await syncConfiavel.enqueueStatus(String(id), novoStatus, motivo);
+            aplicarPedidosSincronizados(syncConfiavel.orders);
+        } catch (error) {
+            alert('Não foi possível guardar essa alteração neste aparelho. Toque novamente.');
+        } finally {
+            setTimeout(() => pedidosBloqueados.delete(String(id)), 15000);
+        }
+    };
+
+    async function excluirPedidoConfiavel(id) {
+        if (!syncConfiavel) return alert('O armazenamento do aplicativo ainda está iniciando. Tente novamente.');
+        try {
+            await syncConfiavel.enqueueDelete(String(id));
+            aplicarPedidosSincronizados(syncConfiavel.orders);
+            abrirHistorico();
+        } catch (error) {
+            alert('Não foi possível guardar a exclusão. O pedido foi preservado; tente novamente.');
+        }
+    }
+
+    async function excluirHojeConfiavel() {
+        if (!syncConfiavel) return alert('O armazenamento do aplicativo ainda está iniciando. Tente novamente.');
+        try {
+            await syncConfiavel.enqueueDeleteToday();
+            aplicarPedidosSincronizados(syncConfiavel.orders);
+            abrirHistorico();
+            alert(navigator.onLine ? 'Expediente removido. Confirmando no servidor.' : 'Expediente removido deste aparelho. A exclusão será enviada quando a internet voltar.');
+        } catch (error) {
+            alert('Não foi possível guardar a exclusão. Os pedidos foram preservados; tente novamente.');
+        }
+    }
+
+    excluirTodoHistorico = async function() {
+        const frase = document.getElementById('inputExcluirTudo').value;
+        if (frase !== 'quero excluir todo o histórico') return alert('Frase de segurança incorreta.');
+        if (!syncConfiavel) return alert('O armazenamento do aplicativo ainda está iniciando. Tente novamente.');
+        try {
+            await syncConfiavel.enqueueDeleteAll();
+            aplicarPedidosSincronizados(syncConfiavel.orders);
+            fecharModal('modalConfigAvancadas');
+            alert(navigator.onLine ? 'Histórico removido. Confirmando no servidor.' : 'Histórico removido deste aparelho. A exclusão será enviada quando a internet voltar.');
+        } catch (error) {
+            alert('Não foi possível guardar a exclusão. O histórico foi preservado; tente novamente.');
+        }
     };
     enviarPedidoConfirmado = async function() {
         if (envioPedidoEmAndamento || !syncConfiavel) return;
@@ -1508,7 +1577,7 @@ let db = carregarBanco();
     };
 
     if ('serviceWorker' in navigator) {
-        window.addEventListener('load', () => navigator.serviceWorker.register('./service-worker.js?v=1.3.5').catch(() => {}));
+        window.addEventListener('load', () => navigator.serviceWorker.register('./service-worker.js?v=1.3.6').catch(() => {}));
     }
 
     iniciarComSyncConfiavel();

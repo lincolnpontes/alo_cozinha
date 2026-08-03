@@ -119,6 +119,32 @@
         });
     }
 
+    async function deleteOrdersAndQueue(orderIds, operation, clearAll = false) {
+        const ids = new Set((orderIds || []).map(String));
+        return transaction([STORES.orders, STORES.outbox], 'readwrite', tx => {
+            const orders = tx.objectStore(STORES.orders);
+            const outbox = tx.objectStore(STORES.outbox);
+
+            if (clearAll) {
+                orders.clear();
+                outbox.clear();
+                outbox.put(operation);
+            } else {
+                ids.forEach(id => orders.delete(id));
+                const cursorRequest = outbox.openCursor();
+                cursorRequest.onsuccess = () => {
+                    const cursor = cursorRequest.result;
+                    if (!cursor) {
+                        outbox.put(operation);
+                        return;
+                    }
+                    if (ids.has(String(cursor.value.orderId))) cursor.delete();
+                    cursor.continue();
+                };
+            }
+        });
+    }
+
     async function updateOperation(operation) {
         return transaction([STORES.outbox], 'readwrite', tx => {
             tx.objectStore(STORES.outbox).put(operation);
@@ -196,6 +222,7 @@
         putOrders,
         putOrderAndOperation,
         replaceStatusOperation,
+        deleteOrdersAndQueue,
         updateOperation,
         removeOperations,
         migrateLegacy

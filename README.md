@@ -1,4 +1,4 @@
-# Alô Cozinha v1.3.5
+# Alô Cozinha v1.3.6
 
 Aplicativo de pedidos entre Panelas e Cozinha, com funcionamento local e sincronização por Google Apps Script.
 

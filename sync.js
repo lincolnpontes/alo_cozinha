@@ -65,7 +65,7 @@
                 motivo: novoStatus === 'cancelado' ? motivo : current.motivo,
                 finalizadoEm: global.AloLogic.isStatusFinal(novoStatus) ? now : '',
                 atualizadoEm: now,
-                operacaoId,
+                operacaoId: operationId,
                 syncState: navigator.onLine ? 'queued' : 'offline'
             });
             const operation = this.newOperation('status', updated.id, {
@@ -79,6 +79,47 @@
             this.upsertLocalOrder(updated);
             this.emit();
             this.schedule(120);
+        }
+
+        async enqueueDelete(id) {
+            const orderId = String(id);
+            const current = this.orders.find(order => order.id === orderId);
+            if (!current) return;
+            const operationId = global.AloLogic.createId('excluir');
+            const operation = this.newOperation('delete', orderId, {
+                action: 'excluir_pedido', id: orderId, operationId, ids: [orderId]
+            }, operationId);
+            await global.AloStorage.deleteOrdersAndQueue([orderId], operation);
+            this.orders = this.orders.filter(order => order.id !== orderId);
+            this.emit();
+            this.schedule(0);
+        }
+
+        async enqueueDeleteToday() {
+            const ids = this.orders.filter(order => global.AloLogic.isToday(order.timestamp)).map(order => order.id);
+            const operationId = global.AloLogic.createId('excluir_hoje');
+            const operation = this.newOperation('delete_today', operationId, {
+                action: 'excluir_hoje', operationId, ids
+            }, operationId);
+            await global.AloStorage.deleteOrdersAndQueue(ids, operation);
+            const deleted = new Set(ids);
+            this.orders = this.orders.filter(order => !deleted.has(order.id));
+            this.emit();
+            this.schedule(0);
+        }
+
+        async enqueueDeleteAll() {
+            const ids = this.orders.map(order => order.id);
+            const operationId = global.AloLogic.createId('excluir_tudo');
+            const operation = this.newOperation('delete_all', operationId, {
+                action: 'excluir_tudo', operationId, ids
+            }, operationId);
+            await global.AloStorage.deleteOrdersAndQueue(ids, operation, true);
+            this.orders = [];
+            this.revision = '';
+            await global.AloStorage.putMeta('ordersRevision', '');
+            this.emit();
+            this.schedule(0);
         }
 
         async syncNow(flush = true) {
@@ -137,9 +178,15 @@
             const creates = due.filter(operation => operation.type === 'create');
             const createOrderIds = new Set(creates.map(operation => operation.orderId));
             const statuses = due.filter(operation => operation.type === 'status' && !createOrderIds.has(operation.orderId));
+            const deletions = due.filter(operation => operation.type === 'delete' || operation.type === 'delete_today' || operation.type === 'delete_all');
             let sent = false;
 
             for (const operation of creates) {
+                await this.dispatch([operation], operation.payload);
+                sent = true;
+            }
+
+            for (const operation of deletions) {
                 await this.dispatch([operation], operation.payload);
                 sent = true;
             }
@@ -192,6 +239,11 @@
             const operations = await global.AloStorage.getAllOperations();
             const confirmed = [];
             operations.forEach(operation => {
+                if ((operation.type === 'delete' || operation.type === 'delete_today' || operation.type === 'delete_all') && operation.attempts > 0) {
+                    const ids = Array.isArray(operation.payload.ids) ? operation.payload.ids.map(String) : [];
+                    if (ids.every(id => !remoteById.has(id))) confirmed.push(operation.operationId);
+                    return;
+                }
                 const remote = remoteById.get(String(operation.orderId));
                 if (!remote) return;
                 if (operation.type === 'create') {
@@ -201,6 +253,7 @@
                 if (operation.type === 'status' && remote.status === operation.payload.novoStatus &&
                     (this.serverProtocol === 'legacy' || remote.operacaoId === operation.operationId)) {
                     confirmed.push(operation.operationId);
+                    return;
                 }
             });
             await global.AloStorage.removeOperations(confirmed);
@@ -209,11 +262,18 @@
         async mergeRemoteOrders(remoteOrders) {
             const pending = await global.AloStorage.getAllOperations();
             const pendingByOrder = new Map();
-            pending.forEach(operation => pendingByOrder.set(String(operation.orderId), operation));
+            const pendingDeletedIds = new Set();
+            pending.forEach(operation => {
+                pendingByOrder.set(String(operation.orderId), operation);
+                if (operation.type === 'delete' || operation.type === 'delete_today' || operation.type === 'delete_all') {
+                    (operation.payload.ids || []).forEach(id => pendingDeletedIds.add(String(id)));
+                }
+            });
             const localById = new Map(this.orders.map(order => [order.id, order]));
             const changes = [];
 
             remoteOrders.forEach(remote => {
+                if (pendingDeletedIds.has(remote.id)) return;
                 const local = localById.get(remote.id);
                 const operation = pendingByOrder.get(remote.id);
                 const merged = operation && local

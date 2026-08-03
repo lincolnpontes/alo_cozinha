@@ -157,7 +157,8 @@
         }
     }
 
-    function manage({ mode, configs, orders, knownIds }) {
+    function manage({ mode, modo, configs, orders, knownIds }) {
+        mode = mode || modo;
         const header = document.getElementById('mainHeader');
         if (!header) return;
         header.classList.remove('alerta-pisca', 'alerta-pisca-buscar');
@@ -178,7 +179,8 @@
         const sound = sounds[key];
         const volume = Math.max(0, Math.min(100, Number(mode === 'panelas' ? configs.volumePanelas || 70 : configs.volumeCozinha || 100))) / 100;
         if (playingKey === key && Math.abs(playingVolume - volume) < 0.01) return;
-        stop();
+        player.pause();
+        stopSynthetic();
         playingKey = key;
         playingVolume = volume;
         if (sound.type === 'audio') {
@@ -198,7 +200,11 @@
     }
 
     function unlock() {
-        audioContext();
+        const ctx = audioContext();
+        if (ctx && ctx.state === 'suspended') ctx.resume().catch(() => {});
+        if (playingKey !== 'sem_som' && player.paused && player.src) {
+            player.play().catch(() => {});
+        }
     }
 
     global.AloAudio = Object.freeze({

@@ -32,7 +32,7 @@ body { font-family: Arial, sans-serif; background-color: #f0f2f5; margin: 0; pad
         .chip.active { border: 2px solid #333; opacity: 0.9; }
 
         .list { padding: 0; margin: 0; list-style: none; padding-bottom: 20px; }
-        .item { display: flex; align-items: center; padding: 12px 15px; border-bottom: 1px solid #eee; cursor: pointer; transition: transform 0.2s; overflow: hidden; }
+        .item { display: flex; align-items: center; padding: 12px 15px; border-bottom: 1px solid #eee; cursor: pointer; transition: transform 0.2s; overflow: hidden; touch-action: pan-y; }
         .item:active { background-color: #e3f2fd; }
         .item-avatar { background-color: transparent; color: #1565C0; width: 40px; height: 40px; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-weight: bold; margin-right: 15px; min-width: 40px; flex-shrink: 0; }
         .item-info { flex: 1; pointer-events: none; }

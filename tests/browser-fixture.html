@@ -1,0 +1,24 @@
+<!doctype html>
+<html lang="pt-BR">
+<head><meta charset="utf-8"><title>Preparando teste</title></head>
+<body>
+<script>
+localStorage.setItem('kds_v1_db', JSON.stringify({
+    produtos: [{ nome: 'Pedido de teste', categoria: 'Teste' }],
+    categorias: [{ nome: 'Teste', cor: '#eeeeee', corTexto: '#000000' }],
+    obsPedidos: [],
+    obsCancelamentos: ['Teste'],
+    configs: {
+        modo: 'cozinha', url: '', senhaModo: '', somCozinha: 'alarme', somPanelas: 'beep',
+        volumeCozinha: '100', volumePanelas: '70', dadosBaixados: true,
+        telaAtiva: 'nao', inatividade: '0', reenvio: 'permitido'
+    }
+}));
+localStorage.setItem('kds_pedidos_local', JSON.stringify([{
+    id: 'pedido_teste_1', produto: 'Pedido de teste', status: 'pendente',
+    timestamp: new Date().toISOString(), finalizadoEm: '', motivo: ''
+}]));
+location.replace('../index.html?fixture=1');
+</script>
+</body>
+</html>
