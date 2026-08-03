@@ -1,15 +1,17 @@
-# Alô Cozinha v1.4.0
+# Alô Cozinha v1.4.1
 
 Aplicativo de pedidos entre áreas de envio e recebimento, com funcionamento local e sincronização por Google Apps Script.
 
-## Novidades da v1.4.0
+## Novidades da v1.4.1
 
-- Ações visíveis na área que recebe pedidos: aceitar, enviar, vir buscar, cancelar e desfazer.
-- Botões responsivos com emoji no celular e emoji + texto em telas maiores.
-- Áreas configuráveis e rota de origem/destino por produto.
+- Ações visíveis com cores claras: aceitar, enviar, vir buscar, cancelar e desfazer.
+- Produtos podem ser solicitados por várias áreas e continuam tendo uma única área de destino.
+- Emoji configurável para cada área e indicação da origem na tela que recebe o pedido.
+- Exclusão individual visível no Histórico de Hoje.
+- Configurações sempre abrem no topo da tela.
+- Categorias mais quadradas e barra de Últimos Pedidos mais compacta.
 - Produtos antigos migrados automaticamente para `Panelas → Cozinha`.
 - Relatório abre com os dados locais e atualiza somente o período escolhido em segundo plano.
-- Apps Script otimizado para consultar o histórico por período e guardar as áreas sem alterar pedidos antigos.
 
 ## Arquivos
 
@@ -26,11 +28,11 @@ Aplicativo de pedidos entre áreas de envio e recebimento, com funcionamento loc
 
 ## Atualização sem perder dados
 
+> A v1.4.1 não altera o Google Apps Script. Quem já implantou o arquivo da v1.4.0 não precisa criar uma nova implantação.
+
 1. Publique os arquivos do aplicativo no mesmo local de antes.
-2. No Apps Script existente, substitua o código pelo conteúdo de `google-apps-script.gs`.
-3. Em `Implantar > Gerenciar implantações`, edite a implantação atual, escolha `Nova versão` e implante. Isso preserva a mesma URL.
-4. Abra o app conectado uma vez em cada aparelho para baixar a atualização. Os pedidos, produtos, categorias e observações existentes são mantidos.
-5. Em um aparelho administrador, use `Gerenciar Áreas`, ajuste as rotas dos novos produtos e salve tudo na nuvem para compartilhar a configuração.
+2. Abra o app conectado uma vez em cada aparelho para baixar a atualização. Os pedidos, produtos, categorias e observações existentes são mantidos.
+3. Em um aparelho administrador, use `Gerenciar Áreas`, ajuste as rotas dos produtos e salve tudo na nuvem para compartilhar a configuração.
 
 ## Como a fila funciona
 

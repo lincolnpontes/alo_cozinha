@@ -185,6 +185,14 @@ async function testNewOrderKeepsAreaRoute() {
     const remote = harness.remoteOrders.get(local.id);
     assert.equal(remote.areaOrigem, 'caixa');
     assert.equal(remote.areaDestino, 'bar');
+
+    const second = await harness.manager.enqueueNewOrder({
+        produto: 'Suco', areaOrigem: 'panelas', areaDestino: 'bar'
+    });
+    assert.notEqual(second.id, local.id);
+    await harness.manager.syncNow(true);
+    assert.equal(harness.remoteOrders.get(second.id).areaOrigem, 'panelas');
+    assert.equal(harness.remoteOrders.get(second.id).areaDestino, 'bar');
 }
 
 function testAudioMode() {
@@ -228,7 +236,7 @@ function testAudioMode() {
     await testDeleteDoesNotReturn();
     await testNewOrderKeepsAreaRoute();
     testAudioMode();
-    console.log('Testes críticos da v1.4.0 passaram.');
+    console.log('Testes críticos da v1.4.1 passaram.');
 })().catch(error => {
     console.error(error);
     process.exitCode = 1;

@@ -10,8 +10,8 @@ body { font-family: Arial, sans-serif; background-color: #f0f2f5; margin: 0; pad
         .splash-titulo { font-size: 32px; font-weight: bold; margin-bottom: 5px; }
         .splash-versao { font-size: 16px; opacity: 0.8; }
 
-        .header { min-height: 48px; padding: 6px 10px; display: flex; justify-content: space-between; align-items: center; color: white; background-color: #1565C0; flex-shrink: 0; z-index: 10; box-sizing: border-box; }
-        .header-select { max-width: calc(100% - 105px); background: transparent; color: white; border: none; font-size: 17px; font-weight: bold; outline: none; -webkit-appearance: none; appearance: none; padding-right: 5px; text-overflow: ellipsis; }
+        .header { min-height: 52px; padding: 6px 10px; display: flex; justify-content: space-between; align-items: center; color: white; background-color: #1565C0; flex-shrink: 0; z-index: 10; box-sizing: border-box; }
+        .header-select { max-width: calc(100% - 105px); background: transparent; color: white; border: none; font-size: 20px; font-weight: bold; outline: none; -webkit-appearance: none; appearance: none; padding-right: 5px; text-overflow: ellipsis; }
         .header-select option { color: black; font-size: 16px; }
 
         .status-conexao { font-size: 12px; display: flex; align-items: center; margin-right: 8px; background: rgba(0,0,0,0.2); padding: 4px 8px; border-radius: 12px; border: 0; color: white; cursor: pointer; min-height: 30px; }
@@ -29,6 +29,7 @@ body { font-family: Arial, sans-serif; background-color: #f0f2f5; margin: 0; pad
         .filters { padding: 10px 15px; display: flex; gap: 10px; overflow-x: auto; white-space: nowrap; border-bottom: 1px solid #eee; background: white; flex-shrink: 0; }
         .chip { background-color: #e0e0e0; color: #333; padding: 8px 16px; border-radius: 20px; cursor: pointer; font-size: 14px; font-weight: bold; border: 2px solid transparent; }
         .chip.active { border: 2px solid #333; opacity: 0.9; }
+        #containerFiltros .chip { border-radius: 6px; }
 
         .list { padding: 0; margin: 0; list-style: none; padding-bottom: 20px; }
         .item { display: flex; align-items: center; padding: 12px 15px; border-bottom: 1px solid #eee; cursor: pointer; transition: transform 0.2s; overflow: hidden; touch-action: pan-y; }
@@ -45,22 +46,30 @@ body { font-family: Arial, sans-serif; background-color: #f0f2f5; margin: 0; pad
         .status-concluido { border-left: 8px solid #9e9e9e; background-color: #fafafa;}
 
         .painel-ultimos { flex: 0 0 35%; height: 35%; max-height: 35%; border-top: 3px solid #ccc; background: #fff; display: flex; flex-direction: column; overflow: hidden; }
-        .painel-titulo { padding: 10px; background: #eee; font-weight: bold; color: #333; border-bottom: 1px solid #ddd; flex-shrink: 0; display: flex; justify-content: space-between; align-items: center; }
+        .painel-titulo { min-height: 32px; padding: 3px 8px; background: #eee; font-weight: bold; color: #333; border-bottom: 1px solid #ddd; flex-shrink: 0; display: flex; justify-content: space-between; align-items: center; box-sizing: border-box; }
+        .painel-titulo button { min-width: 32px; min-height: 28px; padding: 0; }
 
         .swipe-hint { color: #1976D2; font-size: 24px; font-weight: bold; pointer-events: none; }
 
         .pedido-cozinha { align-items: stretch; gap: 10px; padding: 12px; cursor: default; touch-action: pan-y; }
         .pedido-conteudo { min-width: 0; display: flex; align-items: center; flex: 1; }
+        .pedido-meta-acoes { display: flex; align-items: stretch; gap: 8px; flex-shrink: 0; }
+        .pedido-origem { min-width: 48px; min-height: 48px; padding: 4px; border: 1px solid rgba(95, 99, 104, 0.16); border-radius: 6px; background: rgba(255,255,255,0.58); display: flex; align-items: center; justify-content: center; box-sizing: border-box; font-size: 25px; }
         .pedido-acoes { display: flex; align-items: stretch; justify-content: flex-end; gap: 6px; flex-shrink: 0; }
-        .btn-pedido-acao { min-width: 48px; min-height: 48px; padding: 7px 10px; border: 0; border-radius: 6px; color: #fff; cursor: pointer; font-size: 20px; font-weight: bold; display: inline-flex; align-items: center; justify-content: center; gap: 6px; }
+        .btn-pedido-acao { min-width: 48px; min-height: 48px; padding: 7px 10px; border: 1px solid transparent; border-radius: 6px; cursor: pointer; font-size: 20px; font-weight: bold; display: inline-flex; align-items: center; justify-content: center; gap: 6px; backdrop-filter: saturate(120%); }
         .btn-pedido-acao:disabled { opacity: 0.55; cursor: wait; }
-        .acao-aceitar { background: #2e7d32; }
-        .acao-enviar { background: #1565c0; }
-        .acao-buscar { background: #b56a00; }
-        .acao-cancelar { background: #c62828; }
-        .acao-desfazer { background: #5f6368; }
+        .acao-aceitar, .acao-enviar { background: rgba(102, 187, 106, 0.22); border-color: rgba(46, 125, 50, 0.28); color: #1b5e20; }
+        .emoji-enviar { display: inline-block; color: #238636; transform: rotate(90deg); font-family: Arial, sans-serif; font-size: 22px; line-height: 1; }
+        .acao-buscar { background: rgba(186, 104, 200, 0.20); border-color: rgba(123, 31, 162, 0.24); color: #6a1b9a; }
+        .acao-cancelar { background: rgba(239, 83, 80, 0.18); border-color: rgba(198, 40, 40, 0.24); color: #a52121; }
+        .acao-desfazer { background: rgba(95, 99, 104, 0.14); border-color: rgba(95, 99, 104, 0.20); color: #41464b; }
         .acao-label { display: none; font-size: 13px; white-space: nowrap; }
-        .rota-produto { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+        .area-checkbox-grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 8px; }
+        .area-checkbox { min-height: 42px; padding: 8px 10px; border: 1px solid #d7dce1; border-radius: 6px; background: #f7f9fa; display: flex; align-items: center; gap: 8px; font-size: 14px; font-weight: bold; color: #3c4043; box-sizing: border-box; }
+        .area-checkbox input { width: 18px; height: 18px; margin: 0; accent-color: #1976d2; }
+        .emoji-area-opcoes { display: grid; grid-template-columns: repeat(8, 1fr); gap: 5px; margin-top: 7px; }
+        .emoji-area-opcoes button { min-width: 0; min-height: 38px; padding: 3px; border: 1px solid #d7dce1; border-radius: 5px; background: #f7f9fa; font-size: 20px; cursor: pointer; }
+        .btn-excluir-historico { width: 40px; height: 40px; margin-left: 10px; border: 0; border-radius: 5px; background: rgba(239, 83, 80, 0.13); color: #a52121; font-size: 19px; cursor: pointer; flex-shrink: 0; }
         .status-relatorio { min-height: 18px; margin: -5px 0 8px; color: #666; font-size: 12px; text-align: center; }
 
         @media (min-width: 700px) {
@@ -70,9 +79,11 @@ body { font-family: Arial, sans-serif; background-color: #f0f2f5; margin: 0; pad
 
         @media (max-width: 430px) {
             .pedido-cozinha { flex-direction: column; gap: 8px; }
+            .pedido-meta-acoes { width: 100%; }
             .pedido-acoes { width: 100%; }
             .btn-pedido-acao { flex: 1; }
-            .rota-produto { grid-template-columns: 1fr; gap: 0; }
+            .area-checkbox-grid { grid-template-columns: 1fr; }
+            .emoji-area-opcoes { grid-template-columns: repeat(4, 1fr); }
         }
 
         .alerta-pisca { animation: bg-pisca 1s infinite; }
