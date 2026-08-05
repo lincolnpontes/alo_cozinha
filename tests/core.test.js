@@ -474,6 +474,23 @@ function testOldClientPreservesV2TaskCatalog() {
     assert.deepEqual(saved.configsTarefas, originalBank.configsTarefas);
 }
 
+function testPasswordDialogsHaveExplicitConfirmation() {
+    const html = fs.readFileSync(path.join(root, 'index.html'), 'utf8');
+    const app = fs.readFileSync(path.join(root, 'app.js'), 'utf8');
+    [
+        'confirmarSenhaModo()',
+        'confirmarSenhaAdmin()',
+        'confirmarSenhaAvancada()',
+        'confirmarSenhaAcao()'
+    ].forEach(handler => {
+        assert.equal(html.includes('onclick="' + handler + '"'), true, handler + ' precisa de botao visivel');
+        assert.equal(html.includes('event.preventDefault(); ' + handler), true, handler + ' precisa funcionar com Enter');
+        assert.equal(app.includes('function ' + handler), true, handler + ' precisa estar implementada');
+    });
+    assert.equal((html.match(/class="senha-feedback"/g) || []).length, 4);
+    assert.equal(app.includes('Senha incorreta. Tente novamente.'), true);
+}
+
 function testAudioMode() {
     let playCount = 0;
     const classes = new Set();
@@ -584,9 +601,10 @@ async function testCatalogAutoPublish() {
     testAppsScriptAppendsOrderBatchOnce();
     testAppsScriptKeepsActivityIdempotentAndRejectsStaleStatus();
     testOldClientPreservesV2TaskCatalog();
+    testPasswordDialogsHaveExplicitConfirmation();
     testAudioMode();
     await testCatalogAutoPublish();
-    console.log('Testes críticos da v2.0.0 passaram.');
+    console.log('Testes críticos da v2.0.1 passaram.');
 })().catch(error => {
     console.error(error);
     process.exitCode = 1;

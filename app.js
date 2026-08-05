@@ -355,21 +355,40 @@ let db = carregarBanco();
     function iniciarTrocaModo(selectElement) {
         const novoModo = selectElement.value;
         if (db.configs.senhaModo && db.configs.senhaModo.trim() !== "") {
-            modoPendente = novoModo; seletorGlobal = selectElement; document.getElementById('inputSenhaModo').value = ''; document.getElementById('modalSenhaModo').style.display = 'flex'; setTimeout(() => document.getElementById('inputSenhaModo').focus(), 100); selectElement.value = db.configs.areaAtual;
+            modoPendente = novoModo; seletorGlobal = selectElement; document.getElementById('inputSenhaModo').value = ''; limparErroSenha('erroSenhaModo'); document.getElementById('modalSenhaModo').style.display = 'flex'; setTimeout(() => document.getElementById('inputSenhaModo').focus(), 100); selectElement.value = db.configs.areaAtual;
         } else { efetivarTrocaModo(novoModo); }
     }
 
-    function verificarSenhaModo(val) {
-        if ((db.configs.senhaModo && val === db.configs.senhaModo) || (db.configs.senhaMestra && val === db.configs.senhaMestra)) {
-            document.getElementById('inputSenhaModo').blur();
-            document.getElementById('modalSenhaModo').style.display = 'none';
-            seletorGlobal.value = modoPendente;
-            efetivarTrocaModo(modoPendente);
-            document.getElementById('inputSenhaModo').value = '';
+    function limparErroSenha(id) {
+        const feedback = document.getElementById(id);
+        if (feedback) feedback.innerText = '';
+    }
+
+    function senhaIncorreta(inputId, feedbackId) {
+        const input = document.getElementById(inputId);
+        const feedback = document.getElementById(feedbackId);
+        if (feedback) feedback.innerText = 'Senha incorreta. Tente novamente.';
+        if (input) {
+            input.focus();
+            input.select();
         }
     }
 
-    function cancelarTrocaModo() { document.getElementById('modalSenhaModo').style.display = 'none'; seletorGlobal.value = db.configs.areaAtual; modoPendente = null; document.getElementById('inputSenhaModo').value = ''; }
+    function confirmarSenhaModo() {
+        const input = document.getElementById('inputSenhaModo');
+        const valor = input.value;
+        const senhaValida = (db.configs.senhaModo && valor === db.configs.senhaModo)
+            || (db.configs.senhaMestra && valor === db.configs.senhaMestra);
+        if (!senhaValida) return senhaIncorreta('inputSenhaModo', 'erroSenhaModo');
+        input.blur();
+        document.getElementById('modalSenhaModo').style.display = 'none';
+        seletorGlobal.value = modoPendente;
+        efetivarTrocaModo(modoPendente);
+        input.value = '';
+        limparErroSenha('erroSenhaModo');
+    }
+
+    function cancelarTrocaModo() { document.getElementById('modalSenhaModo').style.display = 'none'; seletorGlobal.value = db.configs.areaAtual; modoPendente = null; document.getElementById('inputSenhaModo').value = ''; limparErroSenha('erroSenhaModo'); }
     function efetivarTrocaModo(areaId) {
         const area = db.areas.find(item => item.id === areaId) || getAreaAtual();
         db.configs.areaAtual = area.id;
@@ -1011,6 +1030,7 @@ let db = carregarBanco();
             return;
         }
         document.getElementById('inputSenhaAcao').value = '';
+        limparErroSenha('erroSenhaAcao');
         document.getElementById('modalSenhaAcao').style.display = 'flex';
         setTimeout(() => document.getElementById('inputSenhaAcao').focus(), 100);
     }
@@ -1079,12 +1099,14 @@ let db = carregarBanco();
             return;
         }
         document.getElementById('senhaAdmin').value = '';
+        limparErroSenha('erroSenhaAdmin');
         document.getElementById('modalLoginAdmin').style.display = 'flex';
         setTimeout(()=>document.getElementById('senhaAdmin').focus(), 100);
     }
 
     function abrirConfiguracoesAvancadas() {
         document.getElementById('configSenhaMestra').value = db.configs.senhaMestra || '';
+        document.getElementById('configSenhaFeedback').innerText = '';
         document.getElementById('configUrlApp').value = db.configs.url || '';
         document.getElementById('inputExcluirTudo').value = '';
         abrirModalNoTopo('modalConfigAvancadas');
@@ -1097,6 +1119,7 @@ let db = carregarBanco();
             return;
         }
         document.getElementById('senhaAvancada').value = '';
+        limparErroSenha('erroSenhaAvancada');
         document.getElementById('modalSenhaAvancada').style.display = 'flex';
         setTimeout(() => document.getElementById('senhaAvancada').focus(), 100);
     }
@@ -1421,10 +1444,16 @@ let db = carregarBanco();
 
     function salvarSenhaMestra() {
         const novaSenha = document.getElementById('configSenhaMestra').value.trim();
-        if (novaSenha === (db.configs.senhaMestra || '')) return alert('A senha mestra não foi alterada.');
+        const feedback = document.getElementById('configSenhaFeedback');
+        if (novaSenha === (db.configs.senhaMestra || '')) {
+            feedback.style.color = '#607d8b';
+            feedback.innerText = 'A senha mestra não foi alterada.';
+            return;
+        }
         db.configs.senhaMestra = novaSenha;
         marcarBancoAlterado();
-        alert(novaSenha ? 'Senha mestra salva neste aparelho.' : 'Senha mestra removida. O aplicativo está sem senha de acesso.');
+        feedback.style.color = '#2e7d32';
+        feedback.innerText = novaSenha ? 'Senha mestra salva neste aparelho.' : 'Senha removida. O aplicativo está sem senha.';
     }
 
     function moverItem(tipo, index, direcao) { const lista = tipo === 'produtos' ? db.produtos : (tipo === 'categorias' ? db.categorias : (tipo === 'obsPedidos' ? db.obsPedidos : db.obsCancelamentos)); if(direcao === 'cima' && index > 0) { const temp = lista[index]; lista[index] = lista[index - 1]; lista[index - 1] = temp; } else if (direcao === 'baixo' && index < lista.length - 1) { const temp = lista[index]; lista[index] = lista[index + 1]; lista[index + 1] = temp; } marcarBancoAlterado(); iniciar(); abrirGerenciar(tipo); }
@@ -1549,31 +1578,49 @@ let db = carregarBanco();
     function abrirFormCategoria(idx) { fecharModal('modalListagem'); if(idx >= 0) { const c = db.categorias[idx]; document.getElementById('catIndexOriginal').value = idx; document.getElementById('catNome').value = c.nome; document.getElementById('catCor').value = c.cor; document.getElementById('catCorTexto').value = c.corTexto || '#000000'; } else { document.getElementById('catIndexOriginal').value = '-1'; document.getElementById('catNome').value = ''; document.getElementById('catCor').value = '#1976D2'; document.getElementById('catCorTexto').value = '#ffffff'; } document.getElementById('modalFormCategoria').style.display = 'flex'; }
     function salvarCategoria() { const idx = parseInt(document.getElementById('catIndexOriginal').value); const nome = document.getElementById('catNome').value.trim(); const cor = document.getElementById('catCor').value; const corTexto = document.getElementById('catCorTexto').value; if(!nome) return alert("Preencha o nome!"); if(idx >= 0) { const nomeAntigo = db.categorias[idx].nome; db.categorias[idx] = { nome, cor, corTexto }; db.produtos.forEach(p => { if(p.categoria === nomeAntigo) p.categoria = nome; }); } else { db.categorias.push({ nome, cor, corTexto }); } marcarBancoAlterado(); iniciar(); abrirGerenciar('categorias'); }
 
-    document.getElementById('senhaAdmin').addEventListener('input', function(e) {
-        if(db.configs.senhaMestra && this.value === db.configs.senhaMestra) {
-            this.blur(); document.getElementById('modalLoginAdmin').style.display = 'none';
-            abrirPainelControle();
-            this.value = '';
+    function confirmarSenhaAdmin() {
+        const input = document.getElementById('senhaAdmin');
+        if (!db.configs.senhaMestra || input.value !== db.configs.senhaMestra) {
+            return senhaIncorreta('senhaAdmin', 'erroSenhaAdmin');
         }
-    });
+        input.blur();
+        fecharModal('modalLoginAdmin');
+        input.value = '';
+        limparErroSenha('erroSenhaAdmin');
+        abrirPainelControle();
+    }
 
-    document.getElementById('senhaAvancada').addEventListener('input', function(e) {
-        if(db.configs.senhaMestra && this.value === db.configs.senhaMestra) {
-            this.blur();
-            document.getElementById('modalSenhaAvancada').style.display = 'none';
-            abrirConfiguracoesAvancadas();
-            this.value = '';
+    function confirmarSenhaAvancada() {
+        const input = document.getElementById('senhaAvancada');
+        if (!db.configs.senhaMestra || input.value !== db.configs.senhaMestra) {
+            return senhaIncorreta('senhaAvancada', 'erroSenhaAvancada');
         }
-    });
+        input.blur();
+        fecharModal('modalSenhaAvancada');
+        input.value = '';
+        limparErroSenha('erroSenhaAvancada');
+        abrirConfiguracoesAvancadas();
+    }
 
-    document.getElementById('inputSenhaAcao').addEventListener('input', async function(e) {
-        if(db.configs.senhaMestra && this.value === db.configs.senhaMestra) {
-            this.blur();
-            fecharModal('modalSenhaAcao');
-            this.value = '';
-            await executarAcaoPendenteAutorizada();
+    async function confirmarSenhaAcao() {
+        const input = document.getElementById('inputSenhaAcao');
+        if (!db.configs.senhaMestra || input.value !== db.configs.senhaMestra) {
+            return senhaIncorreta('inputSenhaAcao', 'erroSenhaAcao');
         }
-    });
+        input.blur();
+        fecharModal('modalSenhaAcao');
+        input.value = '';
+        limparErroSenha('erroSenhaAcao');
+        await executarAcaoPendenteAutorizada();
+    }
+
+    function cancelarAutorizacaoAcao() {
+        fecharModal('modalSenhaAcao');
+        document.getElementById('inputSenhaAcao').value = '';
+        limparErroSenha('erroSenhaAcao');
+        acaoPendente = null;
+        parametroAcao = null;
+    }
 
     let syncConfiavel = null;
     let bancoSyncTimer = null;
@@ -1959,7 +2006,7 @@ let db = carregarBanco();
     };
 
     if ('serviceWorker' in navigator) {
-        window.addEventListener('load', () => navigator.serviceWorker.register('./service-worker.js?v=2.0.0').catch(() => {}));
+        window.addEventListener('load', () => navigator.serviceWorker.register('./service-worker.js?v=2.0.1').catch(() => {}));
     }
 
     iniciarComSyncConfiavel();

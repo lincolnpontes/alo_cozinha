@@ -1,9 +1,11 @@
-# Alô Cozinha v2.0.0
+# Alô Cozinha v2.0.1
 
 Aplicativo para operação de restaurante com dois módulos: pedidos entre áreas (KDS) e lista de atividades por setor.
 
 ## Novidades da v2
 
+- A v2.0.1 adiciona confirmação explícita e suporte à tecla Enter em todos os acessos por senha.
+- Senhas incorretas mostram uma mensagem no próprio modal, e salvar a senha mestra não abre mais um alerta bloqueante.
 - Nova tela inicial para escolher entre `Pedidos por Área` e `Lista de Atividades`.
 - O KDS anterior foi preservado dentro do módulo de pedidos.
 - Atividades diárias, semanais ou únicas, com horário, prioridade, setor, responsável, instrução curta e alarme opcional.

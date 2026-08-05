@@ -8,10 +8,10 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
     <meta name="mobile-web-app-capable" content="yes">
     <meta name="theme-color" content="#1565C0" id="metaThemeColor">
-    <title>Alô Cozinha v2.0.0</title>
+    <title>Alô Cozinha v2.0.1</title>
 
-    <link rel="stylesheet" href="styles.css?v=2.0.0">
-    <link rel="stylesheet" href="tasks.css?v=2.0.0">
+    <link rel="stylesheet" href="styles.css?v=2.0.1">
+    <link rel="stylesheet" href="tasks.css?v=2.0.1">
 </head>
 <body class="theme-panelas" oncontextmenu="return false;">
 
@@ -20,7 +20,7 @@
 <div id="splashScreen">
     <img src="icon.png" alt="Logo" class="splash-icone" onerror="this.src='data:image/svg+xml;utf8,<svg xmlns=\'http://www.w3.org/2000/svg\' viewBox=\'0 0 100 100\'><text y=\'50\' font-size=\'40\'>🍲</text></svg>'">
     <div class="splash-titulo">Alô Cozinha</div>
-    <div class="splash-versao">v2.0.0</div>
+    <div class="splash-versao">v2.0.1</div>
 </div>
 
 <main id="moduleHome" class="module-home" aria-label="Escolher módulo">
@@ -98,11 +98,13 @@
     <div class="modal">
         <div class="modal-title">Senha Necessária</div>
         <div class="form-group">
-            <label>Digite a senha de acesso:</label>
-            <input type="password" id="inputSenhaModo" placeholder="Senha" inputmode="numeric" pattern="[0-9]*" oninput="this.value = this.value.replace(/[^0-9]/g, ''); verificarSenhaModo(this.value);">
+            <label for="inputSenhaModo">Digite a senha de acesso:</label>
+            <input type="password" id="inputSenhaModo" placeholder="Senha" inputmode="numeric" pattern="[0-9]*" enterkeyhint="done" autocomplete="current-password" oninput="this.value = this.value.replace(/[^0-9]/g, ''); limparErroSenha('erroSenhaModo')" onkeydown="if(event.key === 'Enter'){ event.preventDefault(); confirmarSenhaModo(); }">
+            <div id="erroSenhaModo" class="senha-feedback" role="alert"></div>
         </div>
         <div class="modal-actions">
             <button class="btn-cancel" onclick="cancelarTrocaModo()">Cancelar</button>
+            <button class="btn-action" onclick="confirmarSenhaModo()">Confirmar</button>
         </div>
     </div>
 </div>
@@ -165,11 +167,13 @@
     <div class="modal">
         <div class="modal-title">Painel de Controle</div>
         <div class="form-group">
-            <label>Digite a senha de acesso:</label>
-            <input type="password" id="senhaAdmin" placeholder="Senha" inputmode="numeric" pattern="[0-9]*" oninput="this.value = this.value.replace(/[^0-9]/g, '')">
+            <label for="senhaAdmin">Digite a senha de acesso:</label>
+            <input type="password" id="senhaAdmin" placeholder="Senha" inputmode="numeric" pattern="[0-9]*" enterkeyhint="done" autocomplete="current-password" oninput="this.value = this.value.replace(/[^0-9]/g, ''); limparErroSenha('erroSenhaAdmin')" onkeydown="if(event.key === 'Enter'){ event.preventDefault(); confirmarSenhaAdmin(); }">
+            <div id="erroSenhaAdmin" class="senha-feedback" role="alert"></div>
         </div>
         <div class="modal-actions">
             <button class="btn-cancel" onclick="fecharModal('modalLoginAdmin')">Cancelar</button>
+            <button class="btn-action" onclick="confirmarSenhaAdmin()">Entrar</button>
         </div>
     </div>
 </div>
@@ -178,11 +182,13 @@
     <div class="modal">
         <div class="modal-title" style="color:#d32f2f;">Acesso Restrito</div>
         <div class="form-group">
-            <label>Senha do Administrador:</label>
-            <input type="password" id="senhaAvancada" placeholder="digite a senha mestra" inputmode="numeric" pattern="[0-9]*" oninput="this.value = this.value.replace(/[^0-9]/g, '')">
+            <label for="senhaAvancada">Senha do Administrador:</label>
+            <input type="password" id="senhaAvancada" placeholder="digite a senha mestra" inputmode="numeric" pattern="[0-9]*" enterkeyhint="done" autocomplete="current-password" oninput="this.value = this.value.replace(/[^0-9]/g, ''); limparErroSenha('erroSenhaAvancada')" onkeydown="if(event.key === 'Enter'){ event.preventDefault(); confirmarSenhaAvancada(); }">
+            <div id="erroSenhaAvancada" class="senha-feedback" role="alert"></div>
         </div>
         <div class="modal-actions">
             <button class="btn-cancel" onclick="fecharModal('modalSenhaAvancada')">Cancelar</button>
+            <button class="btn-action" onclick="confirmarSenhaAvancada()">Continuar</button>
         </div>
     </div>
 </div>
@@ -192,18 +198,20 @@
         <div class="modal-title" style="color:#d32f2f;" id="tituloModalAcao">Confirmação</div>
         <p id="descModalAcao" style="font-size: 13px; color: #555; margin-top: 0;"></p>
         <div class="form-group">
-            <label>Senha do Administrador:</label>
-            <input type="password" id="inputSenhaAcao" placeholder="digite a senha mestra" inputmode="numeric" pattern="[0-9]*" oninput="this.value = this.value.replace(/[^0-9]/g, '')">
+            <label for="inputSenhaAcao">Senha do Administrador:</label>
+            <input type="password" id="inputSenhaAcao" placeholder="digite a senha mestra" inputmode="numeric" pattern="[0-9]*" enterkeyhint="done" autocomplete="current-password" oninput="this.value = this.value.replace(/[^0-9]/g, ''); limparErroSenha('erroSenhaAcao')" onkeydown="if(event.key === 'Enter'){ event.preventDefault(); confirmarSenhaAcao(); }">
+            <div id="erroSenhaAcao" class="senha-feedback" role="alert"></div>
         </div>
         <div class="modal-actions">
-            <button class="btn-cancel" onclick="fecharModal('modalSenhaAcao')">Cancelar</button>
+            <button class="btn-cancel" onclick="cancelarAutorizacaoAcao()">Cancelar</button>
+            <button class="btn-action" style="background:#d32f2f;" onclick="confirmarSenhaAcao()">Confirmar</button>
         </div>
     </div>
 </div>
 
 <div class="modal-overlay" id="modalPainelUnificado">
     <div class="modal">
-        <div style="text-align: center; color: #666; font-size: 13px; font-weight: bold; margin-bottom: 20px;">Alô Cozinha - v2.0.0</div>
+        <div style="text-align: center; color: #666; font-size: 13px; font-weight: bold; margin-bottom: 20px;">Alô Cozinha - v2.0.1</div>
 
         <button class="btn-outline" onclick="abrirGerenciar('areas')">🗺️ Gerenciar Áreas</button>
         <button class="btn-outline" onclick="abrirConfiguracoesKds()">🍽️ Configurações KDS</button>
@@ -413,6 +421,7 @@
             <label>Senha Mestra:</label>
             <input type="password" id="configSenhaMestra" placeholder="Deixe em branco para não usar senha" inputmode="numeric" pattern="[0-9]*" oninput="this.value = this.value.replace(/[^0-9]/g, '')">
             <button class="btn-action" style="width: 100%; margin-top: 10px;" onclick="salvarSenhaMestra()">💾 Salvar Senha Mestra</button>
+            <div id="configSenhaFeedback" class="salvar-feedback" role="status"></div>
         </div>
 
         <h3 style="font-size: 15px; color: #333; margin-top: 20px; margin-bottom: 10px;">Sincronização e Nuvem</h3>
@@ -497,13 +506,13 @@
 <div class="modal-overlay" id="modalFormCategoria"><div class="modal"><div class="modal-title">Categoria</div><input type="hidden" id="catIndexOriginal"><div class="form-group"><label>Nome da Categoria:</label><input type="text" id="catNome"></div><div style="display: flex; gap: 10px;"><div class="form-group" style="flex: 1;"><label>Cor do Fundo:</label><input type="color" id="catCor" value="#1976D2"></div><div class="form-group" style="flex: 1;"><label>Cor do Texto:</label><input type="color" id="catCorTexto" value="#ffffff"></div></div><div class="modal-actions"><button class="btn-cancel" onclick="fecharModal('modalFormCategoria'); abrirGerenciar('categorias')">Cancelar</button><button class="btn-action" onclick="salvarCategoria()">Salvar</button></div></div></div>
 <div class="modal-overlay" id="modalFormArea"><div class="modal"><div class="modal-title">Área</div><input type="hidden" id="areaIndexOriginal"><div class="form-group"><label>Nome da Área:</label><input type="text" id="areaNome" placeholder="Ex: Bar"></div><div class="form-group"><label>Emoji:</label><input type="text" id="areaEmoji" maxlength="12" inputmode="text" placeholder="Ex: 🍹"><div class="emoji-area-opcoes"><button type="button" onclick="selecionarEmojiArea('🥘')">🥘</button><button type="button" onclick="selecionarEmojiArea('🧑‍🍳')">🧑‍🍳</button><button type="button" onclick="selecionarEmojiArea('🍹')">🍹</button><button type="button" onclick="selecionarEmojiArea('🍽️')">🍽️</button><button type="button" onclick="selecionarEmojiArea('📦')">📦</button><button type="button" onclick="selecionarEmojiArea('🛵')">🛵</button><button type="button" onclick="selecionarEmojiArea('☕')">☕</button><button type="button" onclick="selecionarEmojiArea('🥣')" aria-label="Panela de barro"><span class="emoji-panela-barro">🥣</span></button></div></div><div class="form-group"><label>Função:</label><select id="areaTipo"><option value="envio">Envia pedidos</option><option value="recebimento">Recebe pedidos</option></select></div><div class="modal-actions"><button class="btn-cancel" onclick="fecharModal('modalFormArea'); abrirGerenciar('areas')">Cancelar</button><button class="btn-action" onclick="salvarArea()">Salvar</button></div></div></div>
 
-<script defer src="logic.js?v=2.0.0"></script>
-<script defer src="storage.js?v=2.0.0"></script>
-<script defer src="api.js?v=2.0.0"></script>
-<script defer src="audio.js?v=2.0.0"></script>
-<script defer src="sync.js?v=2.0.0"></script>
-<script defer src="catalog-sync.js?v=2.0.0"></script>
-<script defer src="tasks.js?v=2.0.0"></script>
-<script defer src="app.js?v=2.0.0"></script>
+<script defer src="logic.js?v=2.0.1"></script>
+<script defer src="storage.js?v=2.0.1"></script>
+<script defer src="api.js?v=2.0.1"></script>
+<script defer src="audio.js?v=2.0.1"></script>
+<script defer src="sync.js?v=2.0.1"></script>
+<script defer src="catalog-sync.js?v=2.0.1"></script>
+<script defer src="tasks.js?v=2.0.1"></script>
+<script defer src="app.js?v=2.0.1"></script>
 </body>
 </html>

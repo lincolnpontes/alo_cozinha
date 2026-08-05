@@ -126,6 +126,8 @@ body { font-family: Arial, sans-serif; background-color: #f0f2f5; margin: 0; pad
         .modal-title { font-size: 20px; font-weight: bold; margin-bottom: 20px; color: #333; border-bottom: 2px solid #1976D2; padding-bottom: 10px; display: flex; justify-content: space-between; align-items: center; }
         .form-group { margin-bottom: 15px; }
         .form-group label { display: block; margin-bottom: 5px; color: #555; font-weight: bold; font-size: 14px; }
+        .senha-feedback { min-height: 18px; margin-top: 6px; color: #c62828; font-size: 13px; font-weight: 700; }
+        .salvar-feedback { min-height: 18px; margin-top: 7px; color: #2e7d32; font-size: 13px; font-weight: 700; text-align: center; }
         .form-group input, .form-group select { width: 100%; padding: 10px; border: 1px solid #ccc; border-radius: 5px; box-sizing: border-box; font-size: 16px; }
         .form-group input[type="color"] { height: 45px; padding: 0; cursor: pointer; }
         .form-group input[type="color"]::-webkit-color-swatch-wrapper { padding: 0; }
