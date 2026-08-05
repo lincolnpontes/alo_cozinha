@@ -191,17 +191,25 @@ function salvarBanco_(dados, expectedRevision) {
   if (expectedRevision !== undefined && expectedRevision !== null && Number(expectedRevision) !== currentRevision) {
     return { status: 'conflict', revision: currentRevision };
   }
+  let bancoAtual = {};
+  try {
+    bancoAtual = JSON.parse(properties.getProperty(PROP_BANCO) || '{}');
+  } catch (error) {}
+  const valorEnviadoOuAtual = (campo, padrao) => {
+    if (Object.prototype.hasOwnProperty.call(dados, campo)) return dados[campo];
+    return Object.prototype.hasOwnProperty.call(bancoAtual, campo) ? bancoAtual[campo] : padrao;
+  };
   const bancoLimpo = {
-    produtos: dados.produtos || [],
-    categorias: dados.categorias || [],
-    obsPedidos: dados.obsPedidos || [],
-    obsCancelamentos: dados.obsCancelamentos || [],
-    areas: dados.areas || [],
-    setoresTarefas: dados.setoresTarefas || [],
-    funcionarios: dados.funcionarios || [],
-    tarefas: dados.tarefas || [],
-    configsTarefas: dados.configsTarefas || {},
-    configs: dados.configs || {}
+    produtos: valorEnviadoOuAtual('produtos', []),
+    categorias: valorEnviadoOuAtual('categorias', []),
+    obsPedidos: valorEnviadoOuAtual('obsPedidos', []),
+    obsCancelamentos: valorEnviadoOuAtual('obsCancelamentos', []),
+    areas: valorEnviadoOuAtual('areas', []),
+    setoresTarefas: valorEnviadoOuAtual('setoresTarefas', []),
+    funcionarios: valorEnviadoOuAtual('funcionarios', []),
+    tarefas: valorEnviadoOuAtual('tarefas', []),
+    configsTarefas: valorEnviadoOuAtual('configsTarefas', {}),
+    configs: valorEnviadoOuAtual('configs', {})
   };
   const revision = currentRevision + 1;
   properties.setProperty(PROP_BANCO, JSON.stringify(bancoLimpo));

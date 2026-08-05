@@ -433,6 +433,47 @@ function testAppsScriptKeepsActivityIdempotentAndRejectsStaleStatus() {
     assert.equal(rows[0][5], 'em_execucao');
 }
 
+function testOldClientPreservesV2TaskCatalog() {
+    const originalBank = {
+        produtos: [{ nome: 'Feijao' }], categorias: [], obsPedidos: [], obsCancelamentos: [], areas: [],
+        setoresTarefas: [{ id: 'cozinha', nome: 'Cozinha' }],
+        funcionarios: [{ id: 'ana', nome: 'Ana', cargo: 'Auxiliar' }],
+        tarefas: [{ id: 'limpar', nome: 'Limpar chapa' }],
+        configsTarefas: { som: 'beep', volume: '80' }, configs: {}
+    };
+    const properties = new Map([
+        ['kds_banco_revision', '9'],
+        ['kds_banco', JSON.stringify(originalBank)]
+    ]);
+    const context = vm.createContext({
+        console,
+        Date,
+        Set,
+        PropertiesService: {
+            getDocumentProperties() {
+                return {
+                    getProperty(key) { return properties.get(key) || null; },
+                    setProperty(key, value) { properties.set(key, String(value)); }
+                };
+            }
+        }
+    });
+    loadScript(context, 'google-apps-script.gs');
+    context.oldClientBank = {
+        produtos: [{ nome: 'Arroz' }], categorias: [], obsPedidos: [], obsCancelamentos: [], areas: [], configs: {}
+    };
+
+    const result = vm.runInContext('salvarBanco_(oldClientBank, 9)', context);
+    const saved = JSON.parse(properties.get('kds_banco'));
+    assert.equal(result.status, 'ok');
+    assert.equal(result.revision, 10);
+    assert.equal(saved.produtos[0].nome, 'Arroz');
+    assert.deepEqual(saved.setoresTarefas, originalBank.setoresTarefas);
+    assert.deepEqual(saved.funcionarios, originalBank.funcionarios);
+    assert.deepEqual(saved.tarefas, originalBank.tarefas);
+    assert.deepEqual(saved.configsTarefas, originalBank.configsTarefas);
+}
+
 function testAudioMode() {
     let playCount = 0;
     const classes = new Set();
@@ -542,6 +583,7 @@ async function testCatalogAutoPublish() {
     testAppsScriptRejectsStaleStatus();
     testAppsScriptAppendsOrderBatchOnce();
     testAppsScriptKeepsActivityIdempotentAndRejectsStaleStatus();
+    testOldClientPreservesV2TaskCatalog();
     testAudioMode();
     await testCatalogAutoPublish();
     console.log('Testes críticos da v2.0.0 passaram.');
