@@ -8,9 +8,10 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
     <meta name="mobile-web-app-capable" content="yes">
     <meta name="theme-color" content="#1565C0" id="metaThemeColor">
-    <title>Alô Cozinha v1.4.8</title>
+    <title>Alô Cozinha v2.0.0</title>
 
-    <link rel="stylesheet" href="styles.css?v=1.4.8">
+    <link rel="stylesheet" href="styles.css?v=2.0.0">
+    <link rel="stylesheet" href="tasks.css?v=2.0.0">
 </head>
 <body class="theme-panelas" oncontextmenu="return false;">
 
@@ -19,11 +20,41 @@
 <div id="splashScreen">
     <img src="icon.png" alt="Logo" class="splash-icone" onerror="this.src='data:image/svg+xml;utf8,<svg xmlns=\'http://www.w3.org/2000/svg\' viewBox=\'0 0 100 100\'><text y=\'50\' font-size=\'40\'>🍲</text></svg>'">
     <div class="splash-titulo">Alô Cozinha</div>
-    <div class="splash-versao">v1.4.8</div>
+    <div class="splash-versao">v2.0.0</div>
 </div>
 
-<div class="app-container">
+<main id="moduleHome" class="module-home" aria-label="Escolher módulo">
+    <div class="module-home-inner">
+        <img src="icon.png" alt="Alô Cozinha" class="module-home-logo">
+        <h1>Alô Cozinha</h1>
+        <div class="module-choice-grid">
+            <button class="module-choice module-choice-kds" onclick="AloTasks.openModule('kds')">
+                <span class="module-choice-icon">🍽️</span>
+                <span><strong>Pedidos por Área</strong><small>KDS atual</small></span>
+            </button>
+            <button class="module-choice module-choice-tasks" onclick="AloTasks.openModule('tasks')">
+                <span class="module-choice-icon">📋</span>
+                <span><strong>Lista de Atividades</strong><small>Rotinas e tarefas</small></span>
+            </button>
+        </div>
+    </div>
+</main>
+
+<aside id="globalTaskAlarm" class="task-alarm-banner" aria-live="assertive" style="display:none;">
+    <button class="task-alarm-main" onclick="AloTasks.openAlarmTask()">
+        <span class="task-alarm-icon">⏰</span>
+        <span><strong id="globalTaskAlarmName">Atividade pendente</strong><small id="globalTaskAlarmMeta"></small></span>
+    </button>
+    <div class="task-alarm-actions">
+        <button onclick="AloTasks.startAlarmTask()">▶️ Iniciar</button>
+        <button onclick="AloTasks.completeAlarmTask()">✅ OK</button>
+        <button onclick="AloTasks.dismissAlarm()" aria-label="Silenciar alarme" title="Silenciar">🔕</button>
+    </div>
+</aside>
+
+<div class="app-container" id="kdsModule" style="display:none;">
     <div class="header" id="mainHeader">
+        <button class="module-home-button" onclick="AloTasks.showHome()" aria-label="Voltar aos módulos" title="Módulos">⌂</button>
         <div class="header-area-picker">
             <span id="emojiAreaAtual" class="header-area-emoji" aria-hidden="true">🥘</span>
             <select class="header-select" id="seletorModo" aria-label="Área atual" onchange="iniciarTrocaModo(this)">
@@ -172,13 +203,11 @@
 
 <div class="modal-overlay" id="modalPainelUnificado">
     <div class="modal">
-        <div style="text-align: center; color: #666; font-size: 13px; font-weight: bold; margin-bottom: 20px;">Alô Cozinha - v1.4.8</div>
+        <div style="text-align: center; color: #666; font-size: 13px; font-weight: bold; margin-bottom: 20px;">Alô Cozinha - v2.0.0</div>
 
         <button class="btn-outline" onclick="abrirGerenciar('areas')">🗺️ Gerenciar Áreas</button>
-        <button class="btn-outline" onclick="abrirMenuProdutos()">🍔 Gerenciar Produtos</button>
-
-        <button class="btn-outline" onclick="abrirModalMetricas()" style="border-color:#2e7d32; color:#2e7d32; margin-top: 15px;">📊 Relatórios por Item</button>
-        <button class="btn-outline" onclick="abrirConfiguracoesBasicas()" style="margin-top: 15px;">⚙️ Configurações Básicas</button>
+        <button class="btn-outline" onclick="abrirConfiguracoesKds()">🍽️ Configurações KDS</button>
+        <button class="btn-outline" onclick="AloTasks.openSettingsMenu()" style="border-color:#00695c; color:#00695c;">📋 Configurações Tarefas</button>
         <button class="btn-danger" onclick="solicitarAcessoAvancado()">⚠️ Configurações Avançadas</button>
 
         <div class="modal-actions">
@@ -186,6 +215,104 @@
         </div>
     </div>
 </div>
+
+<div class="modal-overlay" id="modalConfigKds">
+    <div class="modal">
+        <div class="modal-title">Configurações KDS</div>
+        <button class="btn-outline" onclick="abrirMenuProdutos()">🍔 Gerenciar Produtos</button>
+        <button class="btn-outline" onclick="abrirModalMetricas()" style="border-color:#2e7d32; color:#2e7d32;">📊 Relatórios por Item</button>
+        <button class="btn-outline" onclick="abrirConfiguracoesBasicas()">⚙️ Configurações Básicas</button>
+        <div class="modal-actions"><button class="btn-cancel" onclick="voltarConfiguracoesKds()">Voltar</button></div>
+    </div>
+</div>
+
+<div class="modal-overlay" id="modalConfigTasksMenu">
+    <div class="modal">
+        <div class="modal-title">Configurações Tarefas</div>
+        <button class="btn-outline" onclick="AloTasks.manageTaskAreas()">🗺️ Setores das Tarefas</button>
+        <button class="btn-outline" onclick="AloTasks.manageEmployees()">👤 Funcionários</button>
+        <button class="btn-outline" onclick="AloTasks.manageTemplates()">📋 Gerenciar Tarefas</button>
+        <button class="btn-outline" onclick="AloTasks.openReports()" style="border-color:#00695c; color:#00695c;">📊 Relatórios por Tarefas</button>
+        <button class="btn-outline" onclick="AloTasks.openBasicSettings()">⚙️ Configurações Básicas</button>
+        <div class="modal-actions"><button class="btn-cancel" onclick="AloTasks.backToControlPanel()">Voltar</button></div>
+    </div>
+</div>
+
+<div class="modal-overlay" id="modalTasksManager">
+    <div class="modal task-manager-modal">
+        <div class="modal-title" id="tasksManagerTitle">Gerenciar</div>
+        <button id="tasksManagerNew" class="btn-action" style="width:100%; margin-bottom:12px;">+ Novo</button>
+        <div id="tasksManagerList" class="task-manager-list"></div>
+        <div class="modal-actions"><button class="btn-cancel" onclick="AloTasks.backToSettingsMenu()">Voltar</button></div>
+    </div>
+</div>
+
+<div class="modal-overlay" id="modalTaskForm">
+    <div class="modal task-form-modal">
+        <div class="modal-title" id="taskFormTitle">Tarefa</div>
+        <div id="taskFormBody"></div>
+        <div class="modal-actions">
+            <button class="btn-cancel" onclick="AloTasks.cancelForm()">Cancelar</button>
+            <button class="btn-action" onclick="AloTasks.saveCurrentForm()">Salvar</button>
+        </div>
+    </div>
+</div>
+
+<div class="modal-overlay" id="modalTaskEmployee">
+    <div class="modal">
+        <div class="modal-title">Quem vai fazer?</div>
+        <div class="form-group"><label>Funcionário:</label><select id="taskExecutionEmployee"></select></div>
+        <div class="modal-actions">
+            <button class="btn-cancel" onclick="fecharModal('modalTaskEmployee')">Cancelar</button>
+            <button class="btn-action" onclick="AloTasks.confirmEmployeeSelection()">Continuar</button>
+        </div>
+    </div>
+</div>
+
+<div class="modal-overlay" id="modalTaskReports">
+    <div class="modal task-reports-modal">
+        <div class="modal-title">Relatórios por Tarefas</div>
+        <div class="task-report-tabs">
+            <button class="active" onclick="AloTasks.renderReports(7, this)">7 dias</button>
+            <button onclick="AloTasks.renderReports(30, this)">30 dias</button>
+        </div>
+        <div id="taskReportsContent"></div>
+        <div class="modal-actions"><button class="btn-cancel" onclick="AloTasks.closeReports()">Voltar</button></div>
+    </div>
+</div>
+
+<div class="modal-overlay" id="modalTaskBasicSettings">
+    <div class="modal">
+        <div class="modal-title">Configurações Básicas</div>
+        <div class="form-group"><label>Som dos alarmes:</label><select id="taskConfigSound"><option value="beep">Beep Clássico</option><option value="alarme">Alarme Curto</option><option value="sino_forte">Sino Forte</option><option value="sem_som">Sem som</option></select></div>
+        <div class="form-group"><label>Volume: <span id="taskVolumeLabel">80%</span></label><input id="taskConfigVolume" type="range" min="0" max="100" step="5" oninput="document.getElementById('taskVolumeLabel').innerText=this.value+'%'"></div>
+        <div class="form-group"><label>Repetir alarme após:</label><select id="taskConfigRepeat"><option value="5">5 minutos</option><option value="10">10 minutos</option><option value="15">15 minutos</option></select></div>
+        <div class="modal-actions"><button class="btn-cancel" onclick="AloTasks.backToSettingsMenu('modalTaskBasicSettings')">Cancelar</button><button class="btn-action" onclick="AloTasks.saveBasicSettings()">Salvar</button></div>
+    </div>
+</div>
+
+<section id="tasksModule" class="tasks-module" style="display:none;" aria-label="Lista de atividades">
+    <header class="tasks-header">
+        <button class="module-home-button" onclick="AloTasks.showHome()" aria-label="Voltar aos módulos" title="Módulos">⌂</button>
+        <div class="tasks-header-title"><span>📋</span><strong>Atividades</strong></div>
+        <div class="tasks-header-actions">
+            <button id="tasksSyncIndicator" class="tasks-sync-indicator" onclick="AloTasks.syncNow()" aria-label="Sincronizar tarefas" title="Sincronizar">↻</button>
+            <button class="tasks-settings-button" onclick="abrirLoginAdmin()" aria-label="Configurações" title="Configurações">⚙️</button>
+        </div>
+    </header>
+    <div class="tasks-toolbar">
+        <select id="tasksAreaFilter" class="tasks-area-filter" aria-label="Filtrar por setor" onchange="AloTasks.setArea(this.value)"></select>
+        <div class="tasks-tabs" role="tablist">
+            <button class="active" data-task-tab="agora" onclick="AloTasks.setTab('agora')">Agora</button>
+            <button data-task-tab="proximas" onclick="AloTasks.setTab('proximas')">Próximas</button>
+            <button data-task-tab="concluidas" onclick="AloTasks.setTab('concluidas')">Concluídas</button>
+        </div>
+    </div>
+    <div class="tasks-scroll">
+        <div id="tasksSummary" class="tasks-summary"></div>
+        <ul id="tasksList" class="tasks-list"></ul>
+    </div>
+</section>
 
 <div class="modal-overlay" id="modalMenuProdutos">
     <div class="modal">
@@ -360,7 +487,7 @@
         </div>
 
         <div class="modal-actions">
-            <button class="btn-cancel" onclick="fecharModal('modalMetricas')">Fechar</button>
+            <button class="btn-cancel" onclick="fecharModal('modalMetricas'); abrirConfiguracoesKds()">Voltar</button>
         </div>
     </div>
 </div>
@@ -370,12 +497,13 @@
 <div class="modal-overlay" id="modalFormCategoria"><div class="modal"><div class="modal-title">Categoria</div><input type="hidden" id="catIndexOriginal"><div class="form-group"><label>Nome da Categoria:</label><input type="text" id="catNome"></div><div style="display: flex; gap: 10px;"><div class="form-group" style="flex: 1;"><label>Cor do Fundo:</label><input type="color" id="catCor" value="#1976D2"></div><div class="form-group" style="flex: 1;"><label>Cor do Texto:</label><input type="color" id="catCorTexto" value="#ffffff"></div></div><div class="modal-actions"><button class="btn-cancel" onclick="fecharModal('modalFormCategoria'); abrirGerenciar('categorias')">Cancelar</button><button class="btn-action" onclick="salvarCategoria()">Salvar</button></div></div></div>
 <div class="modal-overlay" id="modalFormArea"><div class="modal"><div class="modal-title">Área</div><input type="hidden" id="areaIndexOriginal"><div class="form-group"><label>Nome da Área:</label><input type="text" id="areaNome" placeholder="Ex: Bar"></div><div class="form-group"><label>Emoji:</label><input type="text" id="areaEmoji" maxlength="12" inputmode="text" placeholder="Ex: 🍹"><div class="emoji-area-opcoes"><button type="button" onclick="selecionarEmojiArea('🥘')">🥘</button><button type="button" onclick="selecionarEmojiArea('🧑‍🍳')">🧑‍🍳</button><button type="button" onclick="selecionarEmojiArea('🍹')">🍹</button><button type="button" onclick="selecionarEmojiArea('🍽️')">🍽️</button><button type="button" onclick="selecionarEmojiArea('📦')">📦</button><button type="button" onclick="selecionarEmojiArea('🛵')">🛵</button><button type="button" onclick="selecionarEmojiArea('☕')">☕</button><button type="button" onclick="selecionarEmojiArea('🥣')" aria-label="Panela de barro"><span class="emoji-panela-barro">🥣</span></button></div></div><div class="form-group"><label>Função:</label><select id="areaTipo"><option value="envio">Envia pedidos</option><option value="recebimento">Recebe pedidos</option></select></div><div class="modal-actions"><button class="btn-cancel" onclick="fecharModal('modalFormArea'); abrirGerenciar('areas')">Cancelar</button><button class="btn-action" onclick="salvarArea()">Salvar</button></div></div></div>
 
-<script defer src="logic.js?v=1.4.8"></script>
-<script defer src="storage.js?v=1.4.8"></script>
-<script defer src="api.js?v=1.4.8"></script>
-<script defer src="audio.js?v=1.4.8"></script>
-<script defer src="sync.js?v=1.4.8"></script>
-<script defer src="catalog-sync.js?v=1.4.8"></script>
-<script defer src="app.js?v=1.4.8"></script>
+<script defer src="logic.js?v=2.0.0"></script>
+<script defer src="storage.js?v=2.0.0"></script>
+<script defer src="api.js?v=2.0.0"></script>
+<script defer src="audio.js?v=2.0.0"></script>
+<script defer src="sync.js?v=2.0.0"></script>
+<script defer src="catalog-sync.js?v=2.0.0"></script>
+<script defer src="tasks.js?v=2.0.0"></script>
+<script defer src="app.js?v=2.0.0"></script>
 </body>
 </html>

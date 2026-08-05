@@ -374,6 +374,65 @@ function testAppsScriptAppendsOrderBatchOnce() {
     assert.equal(writes[0].values.length, 2);
 }
 
+function testAppsScriptKeepsActivityIdempotentAndRejectsStaleStatus() {
+    const properties = new Map([['kds_atividades_revision', '0']]);
+    const rows = [];
+    const context = vm.createContext({
+        console,
+        Date,
+        Set,
+        PropertiesService: {
+            getDocumentProperties() {
+                return {
+                    getProperty(key) { return properties.get(key) || null; },
+                    setProperty(key, value) { properties.set(key, String(value)); }
+                };
+            }
+        }
+    });
+    loadScript(context, 'google-apps-script.gs');
+    context.testSheet = {
+        getLastRow() { return rows.length + 1; },
+        getRange(row, column, rowCount) {
+            return {
+                getValues() { return rows.slice(row - 2, row - 2 + rowCount).map(values => values.slice()); },
+                setValues(values) {
+                    values.forEach((item, index) => { rows[row - 2 + index] = item.slice(); });
+                }
+            };
+        }
+    };
+    context.activityPending = {
+        id: 'atividade-1', tarefaId: 'tarefa-1', nome: 'Limpar chapa', setorId: 'cozinha',
+        status: 'pendente', data: '2026-08-04', horario: '18:00', operacaoId: 'op-1',
+        atualizadoEm: '2026-08-04T18:00:00.000Z'
+    };
+    context.activityStarted = {
+        ...context.activityPending, status: 'em_execucao', expectedStatus: 'pendente',
+        operacaoId: 'op-2', iniciadoEm: '2026-08-04T18:01:00.000Z',
+        atualizadoEm: '2026-08-04T18:01:00.000Z'
+    };
+    context.activityStale = {
+        ...context.activityPending, status: 'concluida', expectedStatus: 'pendente',
+        operacaoId: 'op-3', atualizadoEm: '2026-08-04T18:02:00.000Z'
+    };
+
+    const inserted = vm.runInContext('saveActivities_(testSheet, [activityPending])', context);
+    assert.equal(inserted.count, 1);
+    assert.equal(rows[0][5], 'pendente');
+
+    const duplicate = vm.runInContext('saveActivities_(testSheet, [activityPending])', context);
+    assert.equal(duplicate.count, 0, 'a mesma operacao nao pode duplicar a atividade');
+
+    const started = vm.runInContext('saveActivities_(testSheet, [activityStarted])', context);
+    assert.equal(started.count, 1);
+    assert.equal(rows[0][5], 'em_execucao');
+
+    const stale = vm.runInContext('saveActivities_(testSheet, [activityStale])', context);
+    assert.equal(stale.count, 0, 'status antigo de outro aparelho nao deve sobrescrever o atual');
+    assert.equal(rows[0][5], 'em_execucao');
+}
+
 function testAudioMode() {
     let playCount = 0;
     const classes = new Set();
@@ -430,7 +489,7 @@ function testAudioMode() {
 async function testCatalogAutoPublish() {
     let revision = 4;
     let postCount = 0;
-    let remote = { _revision: revision, produtos: [], categorias: [], obsPedidos: [], obsCancelamentos: [], areas: [], configs: {} };
+    let remote = { _revision: revision, produtos: [], categorias: [], obsPedidos: [], obsCancelamentos: [], areas: [], setoresTarefas: [], funcionarios: [], tarefas: [], configsTarefas: {}, configs: {} };
     let conflict = false;
     const context = vm.createContext({ console, setTimeout, clearTimeout });
     context.window = context;
@@ -450,7 +509,8 @@ async function testCatalogAutoPublish() {
         }
     };
     const data = {
-        produtos: [{ nome: 'Feijão' }], categorias: [], obsPedidos: [], obsCancelamentos: [], areas: [], configs: { volumeCozinha: '100' }
+        produtos: [{ nome: 'Feijão' }], categorias: [], obsPedidos: [], obsCancelamentos: [], areas: [],
+        setoresTarefas: [], funcionarios: [], tarefas: [], configsTarefas: {}, configs: { volumeCozinha: '100' }
     };
 
     const published = await context.AloCatalogSync.publish({ api, url: 'https://server.test', data, wait: async () => {} });
@@ -481,9 +541,10 @@ async function testCatalogAutoPublish() {
     await testOldOrphanQueueIsCleaned();
     testAppsScriptRejectsStaleStatus();
     testAppsScriptAppendsOrderBatchOnce();
+    testAppsScriptKeepsActivityIdempotentAndRejectsStaleStatus();
     testAudioMode();
     await testCatalogAutoPublish();
-    console.log('Testes críticos da v1.4.8 passaram.');
+    console.log('Testes críticos da v2.0.0 passaram.');
 })().catch(error => {
     console.error(error);
     process.exitCode = 1;

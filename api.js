@@ -36,5 +36,17 @@
         return response.json();
     }
 
-    global.AloApi = Object.freeze({ buildUrl, post, sync, getBank, getHistory });
+    async function syncActivities(baseUrl, revision) {
+        const response = await fetch(buildUrl(baseUrl, { action: 'sincronizar_atividades', revision }), { cache: 'no-store' });
+        if (!response.ok) throw new Error('Não foi possível sincronizar as tarefas.');
+        return response.json();
+    }
+
+    async function getActivityHistory(baseUrl, start, end) {
+        const response = await fetch(buildUrl(baseUrl, { action: 'historico_atividades', start, end }), { cache: 'no-store' });
+        if (!response.ok) throw new Error('Não foi possível carregar o histórico de tarefas.');
+        return response.json();
+    }
+
+    global.AloApi = Object.freeze({ buildUrl, post, sync, getBank, getHistory, syncActivities, getActivityHistory });
 })(window);

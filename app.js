@@ -300,7 +300,14 @@ let db = carregarBanco();
     }
 
     function carregarBanco() {
-        let defaultDB = { produtos: [], categorias: [], obsPedidos: ["Sem sal", "Pouco óleo"], obsCancelamentos: ["Falta de insumo", "Queimou"], configs: { modo: "panelas", url: "", senhaMestra: "", senhaModo: "", somCozinha: "sem_som", somPanelas: "sem_som", volumeCozinha: "100", volumePanelas: "70", dadosBaixados: false, bancoPendente: false, revisaoBanco: 0, telaAtiva: "sim", inatividade: "0", reenvio: "permitido" } };
+        let defaultDB = {
+            produtos: [], categorias: [], obsPedidos: ["Sem sal", "Pouco óleo"],
+            obsCancelamentos: ["Falta de insumo", "Queimou"],
+            setoresTarefas: [{ id: 'setor_cozinha', nome: 'Cozinha', emoji: '🧑‍🍳', ativo: true }],
+            funcionarios: [], tarefas: [],
+            configsTarefas: { som: 'beep', volume: '80', repeticaoMinutos: '5' },
+            configs: { modo: "panelas", url: "", senhaMestra: "", senhaModo: "", somCozinha: "sem_som", somPanelas: "sem_som", volumeCozinha: "100", volumePanelas: "70", dadosBaixados: false, bancoPendente: false, revisaoBanco: 0, telaAtiva: "sim", inatividade: "0", reenvio: "permitido" }
+        };
         let local = JSON.parse(localStorage.getItem('kds_v1_db'));
         if(local) {
             if(!local.configs) local.configs = defaultDB.configs;
@@ -313,6 +320,10 @@ let db = carregarBanco();
             if(!local.configs.reenvio) local.configs.reenvio = "permitido";
             if(!local.configs.volumeCozinha) local.configs.volumeCozinha = "100";
             if(!local.configs.volumePanelas) local.configs.volumePanelas = "70";
+            if(!Array.isArray(local.setoresTarefas) || !local.setoresTarefas.length) local.setoresTarefas = defaultDB.setoresTarefas;
+            if(!Array.isArray(local.funcionarios)) local.funcionarios = [];
+            if(!Array.isArray(local.tarefas)) local.tarefas = [];
+            local.configsTarefas = { ...defaultDB.configsTarefas, ...(local.configsTarefas || {}) };
             return local;
         }
         return defaultDB;
@@ -1052,6 +1063,16 @@ let db = carregarBanco();
         abrirModalNoTopo('modalPainelUnificado');
     }
 
+    function abrirConfiguracoesKds() {
+        fecharModal('modalPainelUnificado');
+        abrirModalNoTopo('modalConfigKds');
+    }
+
+    function voltarConfiguracoesKds() {
+        fecharModal('modalConfigKds');
+        abrirModalNoTopo('modalPainelUnificado');
+    }
+
     function abrirLoginAdmin() {
         if (!db.configs.senhaMestra) {
             abrirPainelControle();
@@ -1111,6 +1132,7 @@ let db = carregarBanco();
 
     function abrirModalMetricas() {
         fecharModal('modalPainelUnificado');
+        fecharModal('modalConfigKds');
         document.getElementById('boxFiltroCustom').style.display = 'none';
         renderizarMetricasDetalhes('hoje');
         document.getElementById('modalMetricas').style.display = 'flex';
@@ -1342,6 +1364,7 @@ let db = carregarBanco();
     function abrirConfiguracoesBasicas() {
         preencherConfiguracoesBasicas();
         fecharModal('modalPainelUnificado');
+        fecharModal('modalConfigKds');
         abrirModalNoTopo('modalConfigBasicas');
     }
 
@@ -1364,13 +1387,13 @@ let db = carregarBanco();
         gerenciarAlarme();
         if(previewAudio) { previewAudio.pause(); }
         fecharModal('modalConfigBasicas');
-        abrirModalNoTopo('modalPainelUnificado');
+        abrirModalNoTopo('modalConfigKds');
     }
 
     function cancelarConfiguracoesBasicas() {
         if(previewAudio) previewAudio.pause();
         fecharModal('modalConfigBasicas');
-        abrirModalNoTopo('modalPainelUnificado');
+        abrirModalNoTopo('modalConfigKds');
     }
 
     function fecharPainelUnificado() {
@@ -1380,12 +1403,13 @@ let db = carregarBanco();
 
     function abrirMenuProdutos() {
         fecharModal('modalPainelUnificado');
+        fecharModal('modalConfigKds');
         abrirModalNoTopo('modalMenuProdutos');
     }
 
     function voltarDoMenuProdutos() {
         fecharModal('modalMenuProdutos');
-        abrirModalNoTopo('modalPainelUnificado');
+        abrirModalNoTopo('modalConfigKds');
     }
 
     let tipoGerenciamentoAtual = '';
@@ -1708,6 +1732,14 @@ let db = carregarBanco();
         document.addEventListener('touchstart', () => AloAudio.unlock(), { once: true });
         document.addEventListener('click', () => AloAudio.unlock(), { once: true });
         iniciar();
+        if (window.AloTasks) {
+            AloTasks.init({
+                getDatabase: () => db,
+                getUrl: () => db.configs.url,
+                markDatabaseChanged: marcarBancoAlterado,
+                openModalTop: abrirModalNoTopo
+            });
+        }
         syncConfiavel = new AloSync({
             getUrl: () => db.configs.url,
             onOrders: aplicarPedidosSincronizados,
@@ -1788,6 +1820,14 @@ let db = carregarBanco();
             obsPedidos: db.obsPedidos,
             obsCancelamentos: db.obsCancelamentos,
             areas: db.areas,
+            setoresTarefas: db.setoresTarefas,
+            funcionarios: db.funcionarios,
+            tarefas: db.tarefas,
+            configsTarefas: {
+                som: db.configsTarefas.som,
+                volume: db.configsTarefas.volume,
+                repeticaoMinutos: db.configsTarefas.repeticaoMinutos
+            },
             configs: {
                 senhaMestra: db.configs.senhaMestra || '',
                 senhaModo: db.configs.senhaModo || '',
@@ -1831,6 +1871,10 @@ let db = carregarBanco();
         db.obsPedidos = Array.isArray(nuvemDB.obsPedidos) ? nuvemDB.obsPedidos : db.obsPedidos;
         db.obsCancelamentos = Array.isArray(nuvemDB.obsCancelamentos) ? nuvemDB.obsCancelamentos : db.obsCancelamentos;
         db.areas = Array.isArray(nuvemDB.areas) && nuvemDB.areas.length ? nuvemDB.areas : db.areas;
+        db.setoresTarefas = Array.isArray(nuvemDB.setoresTarefas) && nuvemDB.setoresTarefas.length ? nuvemDB.setoresTarefas : db.setoresTarefas;
+        db.funcionarios = Array.isArray(nuvemDB.funcionarios) ? nuvemDB.funcionarios : db.funcionarios;
+        db.tarefas = Array.isArray(nuvemDB.tarefas) ? nuvemDB.tarefas : db.tarefas;
+        db.configsTarefas = { ...db.configsTarefas, ...(nuvemDB.configsTarefas || {}) };
         db.configs = {
             ...db.configs,
             ...(nuvemDB.configs || {}),
@@ -1842,6 +1886,7 @@ let db = carregarBanco();
         normalizarAreasERotas();
         normalizarSonsConfigurados();
         salvarBancoLocal();
+        if (window.AloTasks) AloTasks.refreshDefinitions();
     }
 
     function agendarSincronizacaoBanco(atraso = 450) {
@@ -1914,7 +1959,7 @@ let db = carregarBanco();
     };
 
     if ('serviceWorker' in navigator) {
-        window.addEventListener('load', () => navigator.serviceWorker.register('./service-worker.js?v=1.4.8').catch(() => {}));
+        window.addEventListener('load', () => navigator.serviceWorker.register('./service-worker.js?v=2.0.0').catch(() => {}));
     }
 
     iniciarComSyncConfiavel();

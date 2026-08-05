@@ -1,13 +1,21 @@
 const SHEET_PEDIDOS = 'Pedidos';
+const SHEET_ATIVIDADES = 'Atividades';
 const PROP_BANCO = 'kds_banco';
 const PROP_BANCO_REVISION = 'kds_banco_revision';
 const PROP_PEDIDOS_REVISION = 'kds_pedidos_revision';
+const PROP_ATIVIDADES_REVISION = 'kds_atividades_revision';
 const CACHE_PEDIDOS_PREFIX = 'kds_pedidos_visiveis_';
 const BASE_HEADERS = ['ID', 'Produto', 'Status', 'Timestamp', 'FinalizadoEm', 'Motivo'];
 const EXTRA_HEADERS = ['AtualizadoEm', 'Revisao', 'OperacaoId', 'AreaOrigem', 'AreaDestino'];
 const HEADERS_PEDIDOS = BASE_HEADERS.concat(EXTRA_HEADERS);
 const FINAL_STATUSES = new Set(['enviado', 'buscar', 'cancelado', 'concluido']);
 const VALID_STATUSES = new Set(['pendente', 'fazendo', 'enviado', 'buscar', 'cancelado', 'concluido']);
+const HEADERS_ATIVIDADES = [
+  'ID', 'TarefaId', 'Nome', 'SetorId', 'FuncionarioId', 'Status', 'Data', 'Horario',
+  'IniciadoEm', 'FinalizadoEm', 'DuracaoSegundos', 'AlarmeStatus', 'AtualizadoEm',
+  'Revisao', 'OperacaoId', 'Prioridade', 'TempoEsperadoMin', 'Observacao'
+];
+const VALID_ACTIVITY_STATUSES = new Set(['pendente', 'em_execucao', 'concluida', 'nao_realizada', 'cancelada']);
 
 function json_(obj) {
   return ContentService
@@ -189,6 +197,10 @@ function salvarBanco_(dados, expectedRevision) {
     obsPedidos: dados.obsPedidos || [],
     obsCancelamentos: dados.obsCancelamentos || [],
     areas: dados.areas || [],
+    setoresTarefas: dados.setoresTarefas || [],
+    funcionarios: dados.funcionarios || [],
+    tarefas: dados.tarefas || [],
+    configsTarefas: dados.configsTarefas || {},
     configs: dados.configs || {}
   };
   const revision = currentRevision + 1;
@@ -220,6 +232,131 @@ function pedidosVisiveisCached_(sheet, revision) {
   const pedidos = pedidosVisiveis_(sheet);
   try { cache.put(key, JSON.stringify(pedidos), 300); } catch (error) {}
   return pedidos;
+}
+
+function getAtividadesSheet_() {
+  const ss = SpreadsheetApp.getActiveSpreadsheet();
+  let sheet = ss.getSheetByName(SHEET_ATIVIDADES);
+  if (!sheet) sheet = ss.insertSheet(SHEET_ATIVIDADES);
+  if (sheet.getLastRow() === 0) {
+    sheet.getRange(1, 1, 1, HEADERS_ATIVIDADES.length).setValues([HEADERS_ATIVIDADES]);
+  } else if (sheet.getLastColumn() < HEADERS_ATIVIDADES.length) {
+    sheet.getRange(1, 1, 1, HEADERS_ATIVIDADES.length).setValues([HEADERS_ATIVIDADES]);
+  }
+  return sheet;
+}
+
+function getAtividadesData_(sheet) {
+  const lastRow = sheet.getLastRow();
+  if (lastRow < 2) return [];
+  return sheet.getRange(2, 1, lastRow - 1, HEADERS_ATIVIDADES.length).getValues();
+}
+
+function activityFromRow_(row) {
+  return {
+    id: String(row[0] || ''),
+    tarefaId: String(row[1] || ''),
+    nome: row[2] || '',
+    setorId: String(row[3] || ''),
+    funcionarioId: String(row[4] || ''),
+    status: row[5] || 'pendente',
+    data: row[6] || '',
+    horario: row[7] || '',
+    iniciadoEm: asIso_(row[8]),
+    finalizadoEm: asIso_(row[9]),
+    duracaoSegundos: Number(row[10] || 0),
+    alarmeStatus: row[11] || 'aguardando',
+    atualizadoEm: asIso_(row[12]),
+    revisao: Number(row[13] || 0),
+    operacaoId: row[14] || '',
+    prioridade: row[15] || 'normal',
+    tempoEsperadoMin: Number(row[16] || 0),
+    observacao: row[17] || ''
+  };
+}
+
+function activityToRow_(activity, revision) {
+  return [
+    String(activity.id || ''), String(activity.tarefaId || ''), activity.nome || '',
+    String(activity.setorId || ''), String(activity.funcionarioId || ''), activity.status || 'pendente',
+    activity.data || '', activity.horario || '', activity.iniciadoEm || '', activity.finalizadoEm || '',
+    Number(activity.duracaoSegundos || 0), activity.alarmeStatus || 'aguardando',
+    activity.atualizadoEm || new Date().toISOString(), revision, activity.operacaoId || '',
+    activity.prioridade || 'normal', Number(activity.tempoEsperadoMin || 0), activity.observacao || ''
+  ];
+}
+
+function getAtividadesRevision_() {
+  return Number(PropertiesService.getDocumentProperties().getProperty(PROP_ATIVIDADES_REVISION) || '0');
+}
+
+function saveActivities_(sheet, activities) {
+  if (!activities || !activities.length) return { count: 0, revision: getAtividadesRevision_() };
+  const rows = getAtividadesData_(sheet);
+  const records = {};
+  rows.forEach((values, index) => { records[String(values[0])] = { row: index + 2, values: values }; });
+  let revision = getAtividadesRevision_();
+  const changed = [];
+  const appended = [];
+
+  activities.forEach(activity => {
+    if (!activity || !activity.id || !activity.nome || !VALID_ACTIVITY_STATUSES.has(activity.status || 'pendente')) return;
+    const id = String(activity.id);
+    const record = records[id];
+    if (record) {
+      const current = activityFromRow_(record.values);
+      if (activity.operacaoId && current.operacaoId === activity.operacaoId) return;
+      if (activity.expectedStatus && current.status !== activity.expectedStatus) return;
+      const incomingTime = new Date(activity.atualizadoEm || 0).getTime();
+      const currentTime = new Date(current.atualizadoEm || 0).getTime();
+      if (incomingTime && currentTime && incomingTime < currentTime) return;
+      revision += 1;
+      record.values = activityToRow_(activity, revision);
+      changed.push(record);
+      return;
+    }
+    revision += 1;
+    const values = activityToRow_(activity, revision);
+    records[id] = { row: sheet.getLastRow() + appended.length + 1, values: values };
+    appended.push(values);
+  });
+
+  changed.sort((a, b) => a.row - b.row);
+  let group = [];
+  const writeGroup = () => {
+    if (!group.length) return;
+    sheet.getRange(group[0].row, 1, group.length, HEADERS_ATIVIDADES.length).setValues(group.map(record => record.values));
+    group = [];
+  };
+  changed.forEach(record => {
+    if (group.length && record.row !== group[group.length - 1].row + 1) writeGroup();
+    group.push(record);
+  });
+  writeGroup();
+  if (appended.length) {
+    sheet.getRange(sheet.getLastRow() + 1, 1, appended.length, HEADERS_ATIVIDADES.length).setValues(appended);
+  }
+  if (changed.length || appended.length) {
+    PropertiesService.getDocumentProperties().setProperty(PROP_ATIVIDADES_REVISION, String(revision));
+  }
+  return { count: changed.length + appended.length, revision: revision };
+}
+
+function atividadesVisiveis_(sheet) {
+  const limit = new Date();
+  limit.setDate(limit.getDate() - 45);
+  const limitKey = Utilities.formatDate(limit, Session.getScriptTimeZone(), 'yyyy-MM-dd');
+  return getAtividadesData_(sheet).map(activityFromRow_).filter(activity => {
+    return activity.status === 'pendente' || activity.status === 'em_execucao' || activity.data >= limitKey;
+  });
+}
+
+function filtrarHistoricoAtividades_(sheet, start, end) {
+  const startKey = start ? String(start).slice(0, 10) : '';
+  const endKey = end ? String(end).slice(0, 10) : '9999-12-31';
+  return getAtividadesData_(sheet).map(activityFromRow_).filter(activity => {
+    return activity.data >= startKey && activity.data <= endKey;
+  });
 }
 
 function filtrarHistorico_(sheet, start, end) {
@@ -331,6 +468,13 @@ function doPost(e) {
       return json_({ status: 'ok', revision: getPedidosRevision_() });
     }
 
+    if (action === 'salvar_atividade' || action === 'salvar_atividades_lote') {
+      const sheetAtividades = getAtividadesSheet_();
+      const activities = action === 'salvar_atividade' ? [params.atividade || {}] : (params.atividades || []);
+      const result = saveActivities_(sheetAtividades, activities);
+      return json_({ status: 'ok', count: result.count, revision: result.revision });
+    }
+
     if (action === 'salvar_banco') {
       return json_(salvarBanco_(params.dados || {}, params.expectedRevision));
     }
@@ -346,6 +490,24 @@ function doPost(e) {
 function doGet(e) {
   const action = e && e.parameter ? e.parameter.action : '';
   if (action === 'carregar_banco') return json_(bancosComRevisao_());
+
+  if (action === 'sincronizar_atividades') {
+    const revision = getAtividadesRevision_();
+    if (String(e.parameter.revision || '') === String(revision)) {
+      return json_({ status: 'ok', changed: false, revision: revision, serverTime: new Date().toISOString() });
+    }
+    return json_({
+      status: 'ok', changed: true, revision: revision, serverTime: new Date().toISOString(),
+      atividades: atividadesVisiveis_(getAtividadesSheet_())
+    });
+  }
+
+  if (action === 'historico_atividades') {
+    return json_({
+      status: 'ok',
+      atividades: filtrarHistoricoAtividades_(getAtividadesSheet_(), e.parameter.start, e.parameter.end)
+    });
+  }
 
   const sheetPedidos = getPedidosSheet_();
   if (action === 'sincronizar') {

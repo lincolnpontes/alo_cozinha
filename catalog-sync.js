@@ -6,6 +6,10 @@
             obsPedidos: bank.obsPedidos || [],
             obsCancelamentos: bank.obsCancelamentos || [],
             areas: bank.areas || [],
+            setoresTarefas: bank.setoresTarefas || [],
+            funcionarios: bank.funcionarios || [],
+            tarefas: bank.tarefas || [],
+            configsTarefas: bank.configsTarefas || {},
             configs: bank.configs || {}
         };
     }
