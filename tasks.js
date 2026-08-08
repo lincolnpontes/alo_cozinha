@@ -22,9 +22,14 @@
     let alarmAudio = null;
     let currentAlarmId = '';
     let lastAlarmSoundAt = 0;
+    let alarmBannerTimer = null;
+    let hiddenAlarmId = '';
     let managerType = '';
     let formState = { type: '', index: -1 };
     let pendingEmployeeAction = null;
+    let pendingPopCompletion = null;
+    let finishedActivityId = '';
+    let rescheduleActivityId = '';
     let initialized = false;
 
     function db() { return deps.getDatabase(); }
@@ -68,6 +73,12 @@
             prioridade: activity.prioridade || 'normal',
             tempoEsperadoMin: Number(activity.tempoEsperadoMin || 0),
             observacao: activity.observacao || '',
+            funcionarioNome: activity.funcionarioNome || '',
+            permiteRemarcacao: Boolean(activity.permiteRemarcacao),
+            registroPop: Boolean(activity.registroPop),
+            procedimento: activity.procedimento || '',
+            remarcadoDe: activity.remarcadoDe || '',
+            remarcadoEm: activity.remarcadoEm || '',
             syncState: activity.syncState || 'confirmed'
         };
     }
@@ -77,6 +88,12 @@
             data.setoresTarefas = [{ id: 'setor_cozinha', nome: 'Cozinha', emoji: '🧑‍🍳', ativo: true }];
         }
         if (!Array.isArray(data.funcionarios)) data.funcionarios = [];
+        data.funcionarios = data.funcionarios.map(employee => ({
+            id: employee.id,
+            nome: employee.nome || '',
+            setorId: employee.setorId || '',
+            ativo: employee.ativo !== false
+        }));
         if (!Array.isArray(data.tarefas)) data.tarefas = [];
         data.configsTarefas = {
             som: 'beep', volume: '80', repeticaoMinutos: '5',
@@ -119,6 +136,9 @@
                 horario: task.horario,
                 prioridade: task.prioridade,
                 tempoEsperadoMin: task.tempoEsperadoMin,
+                permiteRemarcacao: Boolean(task.permiteRemarcacao),
+                registroPop: Boolean(task.registroPop),
+                procedimento: task.instrucoes || '',
                 alarmeStatus: task.alarme ? 'aguardando' : 'desativado',
                 status: 'pendente',
                 atualizadoEm: nowIso(),
@@ -260,7 +280,6 @@
     }
     function activityGroups() {
         const now = new Date();
-        const inOneHour = new Date(now.getTime() + 60 * 60 * 1000);
         const filtered = activities.filter(activity => selectedArea === 'todos' || activity.setorId === selectedArea);
 
         if (selectedTab === 'hoje') {
@@ -268,7 +287,7 @@
             return [
                 {
                     title: 'Pendentes',
-                    items: today.filter(activity => activity.status === 'pendente' && scheduledDate(activity) <= inOneHour).sort(sortBySchedule)
+                    items: today.filter(activity => activity.status === 'pendente').sort(sortBySchedule)
                 },
                 {
                     title: 'Em execução',
@@ -300,7 +319,7 @@
 
         return [{
             title: 'Concluídas',
-            items: filtered.filter(activity => isFinalStatus(activity.status)).sort(sortByFinished)
+            items: filtered.filter(activity => activity.data === todayKey() && isFinalStatus(activity.status)).sort(sortByFinished)
         }].filter(group => group.items.length);
     }
     function formatTime(value) { return value || '--:--'; }
@@ -328,7 +347,7 @@
         const runningCount = allToday.filter(item => item.status === 'em_execucao').length;
         summary.innerHTML = `<span>${allToday.length} hoje</span><span>${runningCount} em execução</span>${overdueCount ? `<span class="task-summary-late">${overdueCount} atrasada(s)</span>` : ''}`;
         if (!groups.length) {
-            const text = selectedTab === 'hoje' ? 'Nenhuma atividade prevista para a próxima hora.' : (selectedTab === 'pendentes' ? 'Nenhuma atividade pendente.' : 'Nenhuma atividade concluída.');
+            const text = selectedTab === 'hoje' ? 'Nenhuma atividade programada para hoje.' : (selectedTab === 'pendentes' ? 'Nenhuma atividade pendente.' : 'Nenhuma atividade concluída hoje.');
             list.innerHTML = `<li class="tasks-empty">${text}</li>`;
             return;
         }
@@ -337,24 +356,24 @@
             const employee = getEmployee(activity.funcionarioId);
             const timing = taskTiming(activity);
             const template = db().tarefas.find(item => item.id === activity.tarefaId) || {};
+            const canReschedule = activity.permiteRemarcacao || template.permiteRemarcacao;
             const stateClass = activity.status === 'em_execucao' ? 'running' : (timing.overdue ? 'late' : activity.status);
             const statusText = activity.status === 'em_execucao' ? 'Em execução' : (timing.overdue ? 'Atrasada' : activity.status === 'concluida' ? 'Concluída' : activity.status === 'nao_realizada' ? 'Não realizada' : activity.status === 'cancelada' ? 'Cancelada' : 'Pendente');
             let actions = '';
             if (activity.status === 'pendente') {
-                actions = `<button class="task-primary-action" onclick="AloTasks.startTask('${activity.id}')">▶ Iniciar</button><button class="task-complete-action" onclick="AloTasks.completeTask('${activity.id}', true)">✓ Concluir</button><button class="task-skip-action" onclick="AloTasks.markTaskNotDone('${activity.id}')" aria-label="Marcar como não realizada" title="Não foi feita">⚠</button>`;
+                actions = `<button class="task-primary-action" onclick="AloTasks.startTask('${activity.id}')">▶ Iniciar</button><button class="task-complete-action" onclick="AloTasks.completeTask('${activity.id}', true)">✓ Concluir</button>${canReschedule ? `<button class="task-reschedule-action" onclick="AloTasks.openReschedule('${activity.id}')" aria-label="Remarcar atividade" title="Remarcar">📅</button>` : ''}<button class="task-skip-action" onclick="AloTasks.markTaskNotDone('${activity.id}')" aria-label="Marcar como não realizada" title="Não foi feita">⚠</button>`;
             } else if (activity.status === 'em_execucao') {
-                actions = `<button class="task-complete-action" onclick="AloTasks.completeTask('${activity.id}', false)">✓ Concluir</button>`;
-            } else if (isFinalStatus(activity.status)) {
-                actions = `<button class="task-undo-action" onclick="AloTasks.undoTask('${activity.id}')">↩ Desfazer</button>`;
+                actions = `<button class="task-complete-action" onclick="AloTasks.completeTask('${activity.id}', false)">✓ Concluir</button>${canReschedule ? `<button class="task-reschedule-action" onclick="AloTasks.openReschedule('${activity.id}')" aria-label="Remarcar atividade" title="Remarcar">📅</button>` : ''}`;
             }
             const syncText = activity.syncState === 'offline' ? 'Salvo neste aparelho' : (activity.syncState === 'queued' ? 'Aguardando confirmação' : '');
-            return `<article class="task-card ${stateClass}" id="task-${escapeHtml(activity.id)}">
+            const finishedAction = isFinalStatus(activity.status) ? ` onclick="AloTasks.openFinishedTask('${activity.id}')" onkeydown="if(event.key==='Enter'||event.key===' '){event.preventDefault();AloTasks.openFinishedTask('${activity.id}')}" role="button" tabindex="0" aria-label="Abrir registro de ${escapeHtml(activity.nome)}"` : '';
+            return `<article class="task-card ${stateClass}${isFinalStatus(activity.status) ? ' finished-clickable' : ''}" id="task-${escapeHtml(activity.id)}"${finishedAction}>
                 <div class="task-card-main">
                     <div class="task-time">${formatTime(activity.horario)}</div>
                     <div class="task-card-copy"><strong>${escapeHtml(activity.nome)}</strong><span>${escapeHtml(area.emoji)} ${escapeHtml(area.nome)}${employee ? ` · ${escapeHtml(employee.nome)}` : ''}</span>${template.instrucoes ? `<small>${escapeHtml(template.instrucoes)}</small>` : ''}</div>
                     <div class="task-card-side"><div class="task-status">${activity.prioridade === 'urgente' ? '<b>URGENTE</b>' : ''}<span>${statusText}</span></div>${actions ? `<div class="task-card-actions">${actions}</div>` : ''}</div>
                 </div>
-                ${activity.status === 'concluida' ? `<div class="task-completed-meta">${activity.iniciadoEm ? `Tempo: ${formatDuration(activity.duracaoSegundos)}` : 'Concluída sem iniciar'}</div>` : ''}
+                ${activity.status === 'concluida' ? `<div class="task-completed-meta">${activity.registroPop ? 'POP registrado · ' : ''}${activity.iniciadoEm ? `Tempo: ${formatDuration(activity.duracaoSegundos)}` : 'Concluída sem iniciar'}</div>` : ''}
                 ${syncText ? `<div class="task-sync-text">${syncText}</div>` : ''}
             </article>`;
         };
@@ -379,9 +398,11 @@
         const activity = activities.find(item => item.id === id);
         if (!activity || activity.status !== 'pendente') return;
         if (employeeId === undefined && requestEmployee(activity, 'start', false)) return;
+        const executorId = employeeId !== undefined ? employeeId : activity.funcionarioId;
         queueActivity({
             ...activity,
-            funcionarioId: employeeId !== undefined ? employeeId : activity.funcionarioId,
+            funcionarioId: executorId,
+            funcionarioNome: getEmployee(executorId)?.nome || activity.funcionarioNome || '',
             status: 'em_execucao',
             iniciadoEm: nowIso(),
             finalizadoEm: '',
@@ -389,20 +410,62 @@
             alarmeStatus: 'reconhecido'
         }, activity.status);
     }
-    function completeTask(id, direct, employeeId) {
+    function completeTask(id, direct, employeeId, popRecord) {
         const activity = activities.find(item => item.id === id);
         if (!activity || !['pendente', 'em_execucao'].includes(activity.status)) return;
-        if (employeeId === undefined && requestEmployee(activity, 'complete', Boolean(direct))) return;
+        const template = db().tarefas.find(item => item.id === activity.tarefaId) || {};
+        const requiresPop = activity.registroPop || template.registroPop;
+        if (requiresPop && !popRecord) {
+            openPopCompletion(activity, direct, employeeId);
+            return;
+        }
+        if (!requiresPop && employeeId === undefined && requestEmployee(activity, 'complete', Boolean(direct))) return;
+        const executorId = popRecord?.employeeId || (employeeId !== undefined ? employeeId : activity.funcionarioId);
         const finishedAt = new Date();
         const duration = activity.iniciadoEm ? Math.max(0, Math.round((finishedAt.getTime() - new Date(activity.iniciadoEm).getTime()) / 1000)) : 0;
         queueActivity({
             ...activity,
-            funcionarioId: employeeId !== undefined ? employeeId : activity.funcionarioId,
+            funcionarioId: executorId,
+            funcionarioNome: getEmployee(executorId)?.nome || activity.funcionarioNome || '',
             status: 'concluida',
             finalizadoEm: finishedAt.toISOString(),
             duracaoSegundos: duration,
+            registroPop: requiresPop,
+            procedimento: activity.procedimento || template.instrucoes || '',
+            observacao: popRecord?.observacao || activity.observacao || '',
             alarmeStatus: 'reconhecido'
         }, activity.status);
+    }
+    function openPopCompletion(activity, direct, employeeId) {
+        const employees = employeesForActivity(activity);
+        if (!employees.length) {
+            alert('Cadastre um funcionário deste setor para concluir uma atividade com registro POP.');
+            return;
+        }
+        const template = db().tarefas.find(item => item.id === activity.tarefaId) || {};
+        const selected = employeeId || activity.funcionarioId || employees[0].id;
+        pendingPopCompletion = { activityId: activity.id, direct: Boolean(direct) };
+        document.getElementById('taskPopName').innerText = activity.nome;
+        document.getElementById('taskPopProcedure').innerHTML = `<strong>Procedimento</strong><span>${escapeHtml(activity.procedimento || template.instrucoes || 'Sem procedimento informado.')}</span>`;
+        document.getElementById('taskPopEmployee').innerHTML = employees.map(employee => `<option value="${escapeHtml(employee.id)}" ${employee.id === selected ? 'selected' : ''}>${escapeHtml(employee.nome)}</option>`).join('');
+        document.getElementById('taskPopObservation').value = '';
+        deps.openModalTop('modalTaskPop');
+    }
+    function cancelPopCompletion() {
+        pendingPopCompletion = null;
+        document.getElementById('modalTaskPop').style.display = 'none';
+    }
+    function confirmPopCompletion() {
+        if (!pendingPopCompletion) return;
+        const employeeId = document.getElementById('taskPopEmployee').value;
+        if (!employeeId) return alert('Escolha quem realizou a atividade.');
+        const pending = pendingPopCompletion;
+        pendingPopCompletion = null;
+        document.getElementById('modalTaskPop').style.display = 'none';
+        completeTask(pending.activityId, pending.direct, employeeId, {
+            employeeId,
+            observacao: document.getElementById('taskPopObservation').value.trim()
+        });
     }
     function markTaskNotDone(id) {
         const activity = activities.find(item => item.id === id);
@@ -416,18 +479,97 @@
             alarmeStatus: 'reconhecido'
         }, activity.status);
     }
-    function undoTask(id) {
+    function formatDateTime(value) {
+        if (!value) return 'Não informado';
+        const date = new Date(value);
+        return isNaN(date.getTime()) ? 'Não informado' : date.toLocaleString('pt-BR', { dateStyle: 'short', timeStyle: 'short' });
+    }
+    function formatDateKey(value) {
+        const parts = String(value || '').split('-');
+        return parts.length === 3 ? `${parts[2]}/${parts[1]}/${parts[0]}` : String(value || 'Não informado');
+    }
+    function openFinishedTask(id) {
         const activity = activities.find(item => item.id === id);
         if (!activity || !isFinalStatus(activity.status)) return;
-        const returnToRunning = Boolean(activity.iniciadoEm);
         const template = db().tarefas.find(item => item.id === activity.tarefaId) || {};
+        const employee = getEmployee(activity.funcionarioId);
+        const procedure = activity.procedimento || template.instrucoes || '';
+        finishedActivityId = id;
+        document.getElementById('taskFinishedContent').innerHTML = `
+            <div class="task-finished-summary"><strong>${escapeHtml(activity.nome)}</strong><span>${activity.status === 'concluida' ? 'Concluída' : activity.status === 'nao_realizada' ? 'Não realizada' : 'Cancelada'}</span></div>
+            <div class="task-detail-grid">
+                <div><small>Realizada por</small><strong>${escapeHtml(activity.funcionarioNome || employee?.nome || 'Não informado')}</strong></div>
+                <div><small>Data e horário</small><strong>${escapeHtml(formatDateTime(activity.finalizadoEm))}</strong></div>
+                <div><small>Tempo registrado</small><strong>${activity.iniciadoEm ? escapeHtml(formatDuration(activity.duracaoSegundos)) : 'Sem medição'}</strong></div>
+                <div><small>Data programada</small><strong>${escapeHtml(formatDateKey(activity.data))}</strong></div>
+                ${activity.remarcadoDe ? `<div><small>Remarcada da data</small><strong>${escapeHtml(formatDateKey(activity.remarcadoDe))}</strong></div>` : ''}
+            </div>
+            ${activity.registroPop ? '<div class="task-pop-badge">POP registrado</div>' : ''}
+            ${procedure ? `<div class="task-procedure-box"><strong>Procedimento</strong><span>${escapeHtml(procedure)}</span></div>` : ''}
+            ${activity.observacao ? `<div class="task-procedure-box"><strong>Observação</strong><span>${escapeHtml(activity.observacao)}</span></div>` : ''}`;
+        deps.openModalTop('modalTaskFinished');
+    }
+    function closeFinishedTask() {
+        finishedActivityId = '';
+        document.getElementById('modalTaskFinished').style.display = 'none';
+    }
+    function undoFinishedTask(targetStatus) {
+        const activity = activities.find(item => item.id === finishedActivityId);
+        if (!activity || !isFinalStatus(activity.status) || !['pendente', 'em_execucao'].includes(targetStatus)) return;
+        const template = db().tarefas.find(item => item.id === activity.tarefaId) || {};
+        const previousStatus = activity.status;
+        const previousDuration = Math.max(0, Number(activity.duracaoSegundos || 0));
+        const resumeStartedAt = new Date(Date.now() - previousDuration * 1000).toISOString();
+        closeFinishedTask();
         queueActivity({
             ...activity,
-            status: returnToRunning ? 'em_execucao' : 'pendente',
+            status: targetStatus,
+            iniciadoEm: targetStatus === 'em_execucao' ? resumeStartedAt : '',
             finalizadoEm: '',
             duracaoSegundos: 0,
-            alarmeStatus: returnToRunning ? 'reconhecido' : (template.alarme === false ? 'desativado' : 'aguardando')
-        }, activity.status);
+            funcionarioId: targetStatus === 'em_execucao' ? activity.funcionarioId : (template.funcionarioId || ''),
+            funcionarioNome: targetStatus === 'em_execucao' ? activity.funcionarioNome : '',
+            alarmeStatus: targetStatus === 'em_execucao' ? 'reconhecido' : (template.alarme === false ? 'desativado' : 'aguardando')
+        }, previousStatus);
+    }
+    function openReschedule(id) {
+        const activity = activities.find(item => item.id === id);
+        if (!activity || !['pendente', 'em_execucao'].includes(activity.status)) return;
+        const template = db().tarefas.find(item => item.id === activity.tarefaId) || {};
+        if (!activity.permiteRemarcacao && !template.permiteRemarcacao) return;
+        const tomorrow = new Date();
+        tomorrow.setDate(tomorrow.getDate() + 1);
+        rescheduleActivityId = id;
+        document.getElementById('taskRescheduleName').innerText = activity.nome;
+        const dateInput = document.getElementById('taskRescheduleDate');
+        dateInput.min = todayKey();
+        dateInput.value = todayKey(tomorrow);
+        deps.openModalTop('modalTaskReschedule');
+    }
+    function cancelReschedule() {
+        rescheduleActivityId = '';
+        document.getElementById('modalTaskReschedule').style.display = 'none';
+    }
+    function confirmReschedule() {
+        const activity = activities.find(item => item.id === rescheduleActivityId);
+        const newDate = document.getElementById('taskRescheduleDate').value;
+        if (!activity || !newDate) return;
+        if (newDate < todayKey()) return alert('Escolha hoje ou uma data futura.');
+        const template = db().tarefas.find(item => item.id === activity.tarefaId) || {};
+        const previousStatus = activity.status;
+        cancelReschedule();
+        queueActivity({
+            ...activity,
+            data: newDate,
+            status: 'pendente',
+            iniciadoEm: '',
+            finalizadoEm: '',
+            duracaoSegundos: 0,
+            funcionarioNome: '',
+            remarcadoDe: activity.remarcadoDe || activity.data,
+            remarcadoEm: nowIso(),
+            alarmeStatus: template.alarme === false ? 'desativado' : 'aguardando'
+        }, previousStatus);
     }
     function confirmEmployeeSelection() {
         if (!pendingEmployeeAction) return;
@@ -464,16 +606,38 @@
         if (!banner) return;
         if (!due.length) {
             currentAlarmId = '';
+            hiddenAlarmId = '';
+            if (alarmBannerTimer) clearTimeout(alarmBannerTimer);
+            alarmBannerTimer = null;
             banner.style.display = 'none';
             if (alarmAudio) alarmAudio.pause();
             return;
         }
         const activity = due[0];
         const area = getArea(activity.setorId);
+        if (currentAlarmId !== activity.id) {
+            hiddenAlarmId = '';
+            if (alarmBannerTimer) clearTimeout(alarmBannerTimer);
+            alarmBannerTimer = null;
+        }
         currentAlarmId = activity.id;
         document.getElementById('globalTaskAlarmName').innerText = activity.nome;
         document.getElementById('globalTaskAlarmMeta').innerText = `${area.emoji} ${area.nome} · ${activity.horario}${due.length > 1 ? ` · +${due.length - 1}` : ''}`;
-        banner.style.display = 'flex';
+        if (activeModule === 'tasks') {
+            banner.style.display = hiddenAlarmId === activity.id ? 'none' : 'flex';
+            if (!hiddenAlarmId && !alarmBannerTimer) {
+                alarmBannerTimer = setTimeout(() => {
+                    banner.style.display = 'none';
+                    hiddenAlarmId = activity.id;
+                    alarmBannerTimer = null;
+                }, 3500);
+            }
+        } else {
+            if (alarmBannerTimer) clearTimeout(alarmBannerTimer);
+            alarmBannerTimer = null;
+            hiddenAlarmId = '';
+            banner.style.display = 'flex';
+        }
         const repeatMs = Number(db().configsTarefas.repeticaoMinutos || 5) * 60000;
         if (Date.now() - lastAlarmSoundAt >= repeatMs) {
             lastAlarmSoundAt = Date.now();
@@ -511,6 +675,7 @@
             generateToday();
             render();
             syncNow(true);
+            checkAlarms();
         }
     }
     function setTab(tab) { selectedTab = tab; render(); }
@@ -552,7 +717,7 @@
             list.innerHTML = db().setoresTarefas.map((area, index) => managerItem(`${area.emoji} ${area.nome}`, area.ativo === false ? 'Inativo' : 'Ativo', index, area.ativo)).join('');
         } else if (type === 'employees') {
             title.innerText = 'Funcionários';
-            list.innerHTML = db().funcionarios.map((employee, index) => managerItem(employee.nome, `${employee.cargo}${employee.setorId ? ` · ${getArea(employee.setorId).nome}` : ''}`, index, employee.ativo)).join('');
+            list.innerHTML = db().funcionarios.map((employee, index) => managerItem(employee.nome, employee.setorId ? getArea(employee.setorId).nome : 'Todos os setores', index, employee.ativo)).join('');
         } else {
             title.innerText = 'Tarefas Cadastradas';
             list.innerHTML = db().tarefas.map((task, index) => managerItem(task.nome, `${getArea(task.setorId).nome} · ${task.horario} · ${task.recorrencia === 'unica' ? task.dataUnica : task.recorrencia}`, index, task.ativo)).join('');
@@ -584,14 +749,14 @@
             title.innerText = index >= 0 ? 'Editar Setor' : 'Novo Setor';
             body.innerHTML = `<div class="form-group"><label>Nome do setor:</label><input id="taskAreaName" value="${escapeHtml(area.nome)}" placeholder="Ex: Salão"></div><div class="form-group"><label>Emoji:</label><input id="taskAreaEmoji" value="${escapeHtml(area.emoji)}" maxlength="12"></div><label class="task-simple-switch"><input id="taskAreaActive" type="checkbox" ${area.ativo !== false ? 'checked' : ''}><span>Setor ativo</span></label>`;
         } else if (type === 'employees') {
-            const employee = index >= 0 ? db().funcionarios[index] : { nome: '', cargo: '', setorId: '', ativo: true };
+            const employee = index >= 0 ? db().funcionarios[index] : { nome: '', setorId: '', ativo: true };
             title.innerText = index >= 0 ? 'Editar Funcionário' : 'Novo Funcionário';
-            body.innerHTML = `<div class="form-group"><label>Nome:</label><input id="taskEmployeeName" value="${escapeHtml(employee.nome)}" placeholder="Nome do funcionário"></div><div class="form-group"><label>Cargo:</label><input id="taskEmployeeRole" value="${escapeHtml(employee.cargo)}" placeholder="Ex: Auxiliar de cozinha"></div><div class="form-group"><label>Setor principal:</label><select id="taskEmployeeArea"><option value="">Trabalha em vários setores</option>${areaOptions(employee.setorId)}</select></div><label class="task-simple-switch"><input id="taskEmployeeActive" type="checkbox" ${employee.ativo !== false ? 'checked' : ''}><span>Funcionário ativo</span></label>`;
+            body.innerHTML = `<div class="form-group"><label>Nome:</label><input id="taskEmployeeName" value="${escapeHtml(employee.nome)}" placeholder="Nome do funcionário"></div><div class="form-group"><label>Setor principal:</label><select id="taskEmployeeArea"><option value="">Trabalha em vários setores</option>${areaOptions(employee.setorId)}</select></div><label class="task-simple-switch"><input id="taskEmployeeActive" type="checkbox" ${employee.ativo !== false ? 'checked' : ''}><span>Funcionário ativo</span></label>`;
         } else {
-            const task = index >= 0 ? db().tarefas[index] : { nome: '', setorId: db().setoresTarefas[0]?.id || '', funcionarioId: '', horario: '09:00', recorrencia: 'diaria', dias: [1,2,3,4,5,6,0], dataUnica: todayKey(), prioridade: 'normal', alarme: true, tempoEsperadoMin: 0, instrucoes: '', ativo: true };
+            const task = index >= 0 ? db().tarefas[index] : { nome: '', setorId: db().setoresTarefas[0]?.id || '', funcionarioId: '', horario: '09:00', recorrencia: 'diaria', dias: [1,2,3,4,5,6,0], dataUnica: todayKey(), prioridade: 'normal', alarme: true, tempoEsperadoMin: 0, instrucoes: '', permiteRemarcacao: false, registroPop: false, ativo: true };
             title.innerText = index >= 0 ? 'Editar Tarefa' : 'Nova Tarefa';
             const dayNames = ['Dom','Seg','Ter','Qua','Qui','Sex','Sáb'];
-            body.innerHTML = `<div class="form-group"><label>Nome curto:</label><input id="taskName" value="${escapeHtml(task.nome)}" placeholder="Ex: Limpar a chapa"></div><div class="task-form-grid"><div class="form-group"><label>Setor:</label><select id="taskArea" onchange="AloTasks.refreshTaskEmployeeOptions()">${areaOptions(task.setorId)}</select></div><div class="form-group"><label>Horário:</label><input id="taskTime" type="time" value="${escapeHtml(task.horario)}"></div></div><div class="form-group"><label>Responsável:</label><select id="taskEmployee">${employeeOptions(task.funcionarioId, task.setorId)}</select></div><div class="task-form-grid"><div class="form-group"><label>Frequência:</label><select id="taskRecurrence" onchange="AloTasks.toggleRecurrenceFields()"><option value="diaria" ${task.recorrencia === 'diaria' ? 'selected' : ''}>Todos os dias</option><option value="semanal" ${task.recorrencia === 'semanal' ? 'selected' : ''}>Dias específicos</option><option value="unica" ${task.recorrencia === 'unica' ? 'selected' : ''}>Uma única vez</option></select></div><div class="form-group"><label>Prioridade:</label><select id="taskPriority"><option value="normal" ${task.prioridade !== 'urgente' ? 'selected' : ''}>Normal</option><option value="urgente" ${task.prioridade === 'urgente' ? 'selected' : ''}>Urgente</option></select></div></div><div id="taskWeekDays" class="task-weekdays">${dayNames.map((name, day) => `<label><input type="checkbox" value="${day}" ${(task.dias || []).map(Number).includes(day) ? 'checked' : ''}><span>${name}</span></label>`).join('')}</div><div id="taskOneDate" class="form-group"><label>Data:</label><input id="taskDate" type="date" value="${escapeHtml(task.dataUnica)}"></div><div class="task-form-grid"><div class="form-group"><label>Tempo esperado (min.):</label><input id="taskExpected" type="number" min="0" value="${Number(task.tempoEsperadoMin || 0)}"></div><label class="task-simple-switch task-alarm-switch"><input id="taskAlarmEnabled" type="checkbox" ${task.alarme !== false ? 'checked' : ''}><span>⏰ Alarme</span></label></div><div class="form-group"><label>Instrução curta:</label><textarea id="taskInstructions" rows="3" maxlength="240" placeholder="Até 3 passos simples">${escapeHtml(task.instrucoes)}</textarea></div><label class="task-simple-switch"><input id="taskActive" type="checkbox" ${task.ativo !== false ? 'checked' : ''}><span>Tarefa ativa</span></label>`;
+            body.innerHTML = `<div class="form-group"><label>Nome curto:</label><input id="taskName" value="${escapeHtml(task.nome)}" placeholder="Ex: Limpar a chapa"></div><div class="task-form-grid"><div class="form-group"><label>Setor:</label><select id="taskArea" onchange="AloTasks.refreshTaskEmployeeOptions()">${areaOptions(task.setorId)}</select></div><div class="form-group"><label>Horário:</label><input id="taskTime" type="time" value="${escapeHtml(task.horario)}"></div></div><div class="form-group"><label>Responsável:</label><select id="taskEmployee">${employeeOptions(task.funcionarioId, task.setorId)}</select></div><div class="task-form-grid"><div class="form-group"><label>Frequência:</label><select id="taskRecurrence" onchange="AloTasks.toggleRecurrenceFields()"><option value="diaria" ${task.recorrencia === 'diaria' ? 'selected' : ''}>Todos os dias</option><option value="semanal" ${task.recorrencia === 'semanal' ? 'selected' : ''}>Dias específicos</option><option value="unica" ${task.recorrencia === 'unica' ? 'selected' : ''}>Uma única vez</option></select></div><div class="form-group"><label>Prioridade:</label><select id="taskPriority"><option value="normal" ${task.prioridade !== 'urgente' ? 'selected' : ''}>Normal</option><option value="urgente" ${task.prioridade === 'urgente' ? 'selected' : ''}>Urgente</option></select></div></div><div id="taskWeekDays" class="task-weekdays">${dayNames.map((name, day) => `<label><input type="checkbox" value="${day}" ${(task.dias || []).map(Number).includes(day) ? 'checked' : ''}><span>${name}</span></label>`).join('')}</div><div id="taskOneDate" class="form-group"><label>Data:</label><input id="taskDate" type="date" value="${escapeHtml(task.dataUnica)}"></div><div class="task-form-grid"><div class="form-group"><label>Tempo esperado (min.):</label><input id="taskExpected" type="number" min="0" value="${Number(task.tempoEsperadoMin || 0)}"></div><label class="task-simple-switch task-alarm-switch"><input id="taskAlarmEnabled" type="checkbox" ${task.alarme !== false ? 'checked' : ''}><span>⏰ Alarme</span></label></div><div class="form-group"><label>Procedimento:</label><textarea id="taskInstructions" rows="4" maxlength="500" placeholder="Passo a passo simples para executar corretamente">${escapeHtml(task.instrucoes)}</textarea></div><label class="task-simple-switch"><input id="taskAllowReschedule" type="checkbox" ${task.permiteRemarcacao ? 'checked' : ''}><span>📅 Permitir remarcar para outro dia</span></label><label class="task-simple-switch"><input id="taskPopRequired" type="checkbox" ${task.registroPop ? 'checked' : ''}><span>📋 Exigir registro POP ao concluir</span></label><label class="task-simple-switch"><input id="taskActive" type="checkbox" ${task.ativo !== false ? 'checked' : ''}><span>Tarefa ativa</span></label>`;
             toggleRecurrenceFields();
         }
         deps.openModalTop('modalTaskForm');
@@ -618,10 +783,9 @@
             if (index >= 0) db().setoresTarefas[index] = value; else db().setoresTarefas.push(value);
         } else if (type === 'employees') {
             const nome = document.getElementById('taskEmployeeName').value.trim();
-            const cargo = document.getElementById('taskEmployeeRole').value.trim();
-            if (!nome || !cargo) return alert('Informe o nome e o cargo.');
+            if (!nome) return alert('Informe o nome do funcionário.');
             const current = index >= 0 ? db().funcionarios[index] : null;
-            const value = { id: current?.id || createId('func'), nome, cargo, setorId: document.getElementById('taskEmployeeArea').value, ativo: document.getElementById('taskEmployeeActive').checked };
+            const value = { id: current?.id || createId('func'), nome, setorId: document.getElementById('taskEmployeeArea').value, ativo: document.getElementById('taskEmployeeActive').checked };
             if (index >= 0) db().funcionarios[index] = value; else db().funcionarios.push(value);
         } else {
             const nome = document.getElementById('taskName').value.trim();
@@ -642,6 +806,8 @@
                 alarme: document.getElementById('taskAlarmEnabled').checked,
                 tempoEsperadoMin: Number(document.getElementById('taskExpected').value || 0),
                 instrucoes: document.getElementById('taskInstructions').value.trim(),
+                permiteRemarcacao: document.getElementById('taskAllowReschedule').checked,
+                registroPop: document.getElementById('taskPopRequired').checked,
                 ativo: document.getElementById('taskActive').checked
             };
             if (index >= 0) db().tarefas[index] = value; else db().tarefas.push(value);
@@ -710,7 +876,8 @@
             if (item.duracaoSegundos) { current.seconds += item.duracaoSegundos; current.measured += 1; }
             byTask.set(item.tarefaId, current);
         });
-        content.innerHTML = `<div class="task-report-summary"><div><strong>${completed.length}</strong><span>Concluídas</span></div><div><strong>${formatDuration(avg)}</strong><span>Tempo médio</span></div><div><strong>${late}</strong><span>Atrasadas</span></div><div><strong>${direct}</strong><span>Sem início</span></div></div><div class="task-report-list">${Array.from(byTask.values()).sort((a,b) => b.count-a.count).map(item => `<div><span><strong>${escapeHtml(item.nome)}</strong><small>${item.count} conclusão(ões)</small></span><b>${item.measured ? formatDuration(Math.round(item.seconds / item.measured)) : 'sem medição'}</b></div>`).join('') || '<div class="tasks-empty">Nenhuma tarefa concluída no período.</div>'}</div>`;
+        const popRecords = completed.filter(item => item.registroPop).sort(sortByFinished);
+        content.innerHTML = `<div class="task-report-summary"><div><strong>${completed.length}</strong><span>Concluídas</span></div><div><strong>${formatDuration(avg)}</strong><span>Tempo médio</span></div><div><strong>${late}</strong><span>Atrasadas</span></div><div><strong>${direct}</strong><span>Sem início</span></div></div><div class="task-report-list">${Array.from(byTask.values()).sort((a,b) => b.count-a.count).map(item => `<div><span><strong>${escapeHtml(item.nome)}</strong><small>${item.count} conclusão(ões)</small></span><b>${item.measured ? formatDuration(Math.round(item.seconds / item.measured)) : 'sem medição'}</b></div>`).join('') || '<div class="tasks-empty">Nenhuma tarefa concluída no período.</div>'}</div>${popRecords.length ? `<div class="task-report-section-title">Registros POP</div><div class="task-pop-records">${popRecords.map(item => `<div><strong>${escapeHtml(item.nome)}</strong><span>${escapeHtml(item.funcionarioNome || getEmployee(item.funcionarioId)?.nome || 'Não informado')} · ${escapeHtml(formatDateTime(item.finalizadoEm))}</span>${item.observacao ? `<small>${escapeHtml(item.observacao)}</small>` : ''}</div>`).join('')}</div>` : ''}`;
     }
     function closeReports() {
         document.getElementById('modalTaskReports').style.display = 'none';
@@ -755,7 +922,10 @@
 
     global.AloTasks = Object.freeze({
         init, refreshDefinitions, showHome, openModule, setTab, setArea, syncNow,
-        startTask, completeTask, undoTask, markTaskNotDone, confirmEmployeeSelection,
+        startTask, completeTask, markTaskNotDone, confirmEmployeeSelection,
+        openFinishedTask, closeFinishedTask, undoFinishedTask,
+        openReschedule, cancelReschedule, confirmReschedule,
+        cancelPopCompletion, confirmPopCompletion,
         openAlarmTask, startAlarmTask, completeAlarmTask, dismissAlarm,
         openSettingsMenu, backToControlPanel, backToSettingsMenu,
         manageTaskAreas, manageEmployees, manageTemplates, editManagedItem,

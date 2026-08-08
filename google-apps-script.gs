@@ -13,7 +13,8 @@ const VALID_STATUSES = new Set(['pendente', 'fazendo', 'enviado', 'buscar', 'can
 const HEADERS_ATIVIDADES = [
   'ID', 'TarefaId', 'Nome', 'SetorId', 'FuncionarioId', 'Status', 'Data', 'Horario',
   'IniciadoEm', 'FinalizadoEm', 'DuracaoSegundos', 'AlarmeStatus', 'AtualizadoEm',
-  'Revisao', 'OperacaoId', 'Prioridade', 'TempoEsperadoMin', 'Observacao'
+  'Revisao', 'OperacaoId', 'Prioridade', 'TempoEsperadoMin', 'Observacao',
+  'PermiteRemarcacao', 'RegistroPop', 'Procedimento', 'FuncionarioNome', 'RemarcadoDe', 'RemarcadoEm'
 ];
 const VALID_ACTIVITY_STATUSES = new Set(['pendente', 'em_execucao', 'concluida', 'nao_realizada', 'cancelada']);
 
@@ -90,6 +91,10 @@ function findRecordsById_(sheet) {
     records[values[0].toString()] = { row: index + 2, values: values };
   });
   return records;
+}
+
+function asBoolean_(value) {
+  return value === true || String(value).toLowerCase() === 'true';
 }
 
 function appendNewOrders_(sheet, orders) {
@@ -279,7 +284,13 @@ function activityFromRow_(row) {
     operacaoId: row[14] || '',
     prioridade: row[15] || 'normal',
     tempoEsperadoMin: Number(row[16] || 0),
-    observacao: row[17] || ''
+    observacao: row[17] || '',
+    permiteRemarcacao: asBoolean_(row[18]),
+    registroPop: asBoolean_(row[19]),
+    procedimento: row[20] || '',
+    funcionarioNome: row[21] || '',
+    remarcadoDe: row[22] || '',
+    remarcadoEm: asIso_(row[23])
   };
 }
 
@@ -290,7 +301,9 @@ function activityToRow_(activity, revision) {
     activity.data || '', activity.horario || '', activity.iniciadoEm || '', activity.finalizadoEm || '',
     Number(activity.duracaoSegundos || 0), activity.alarmeStatus || 'aguardando',
     activity.atualizadoEm || new Date().toISOString(), revision, activity.operacaoId || '',
-    activity.prioridade || 'normal', Number(activity.tempoEsperadoMin || 0), activity.observacao || ''
+    activity.prioridade || 'normal', Number(activity.tempoEsperadoMin || 0), activity.observacao || '',
+    Boolean(activity.permiteRemarcacao), Boolean(activity.registroPop), activity.procedimento || '',
+    activity.funcionarioNome || '', activity.remarcadoDe || '', activity.remarcadoEm || ''
   ];
 }
 

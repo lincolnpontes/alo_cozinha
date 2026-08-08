@@ -405,7 +405,9 @@ function testAppsScriptKeepsActivityIdempotentAndRejectsStaleStatus() {
     context.activityPending = {
         id: 'atividade-1', tarefaId: 'tarefa-1', nome: 'Limpar chapa', setorId: 'cozinha',
         status: 'pendente', data: '2026-08-04', horario: '18:00', operacaoId: 'op-1',
-        atualizadoEm: '2026-08-04T18:00:00.000Z'
+        atualizadoEm: '2026-08-04T18:00:00.000Z', permiteRemarcacao: true,
+        registroPop: true, procedimento: 'Lavar, aplicar produto e registrar.',
+        funcionarioNome: 'Ana', remarcadoDe: '2026-08-03', remarcadoEm: '2026-08-03T12:00:00.000Z'
     };
     context.activityStarted = {
         ...context.activityPending, status: 'em_execucao', expectedStatus: 'pendente',
@@ -420,6 +422,11 @@ function testAppsScriptKeepsActivityIdempotentAndRejectsStaleStatus() {
     const inserted = vm.runInContext('saveActivities_(testSheet, [activityPending])', context);
     assert.equal(inserted.count, 1);
     assert.equal(rows[0][5], 'pendente');
+    assert.equal(rows[0][18], true);
+    assert.equal(rows[0][19], true);
+    assert.equal(rows[0][20], 'Lavar, aplicar produto e registrar.');
+    assert.equal(rows[0][21], 'Ana');
+    assert.equal(rows[0][22], '2026-08-03');
 
     const duplicate = vm.runInContext('saveActivities_(testSheet, [activityPending])', context);
     assert.equal(duplicate.count, 0, 'a mesma operacao nao pode duplicar a atividade');
@@ -491,7 +498,7 @@ function testPasswordDialogsHaveExplicitConfirmation() {
     assert.equal(app.includes('Senha incorreta. Tente novamente.'), true);
 }
 
-function testV202TaskExperience() {
+function testV203TaskExperience() {
     const html = fs.readFileSync(path.join(root, 'index.html'), 'utf8');
     const tasks = fs.readFileSync(path.join(root, 'tasks.js'), 'utf8');
     const css = fs.readFileSync(path.join(root, 'tasks.css'), 'utf8');
@@ -506,10 +513,20 @@ function testV202TaskExperience() {
     assert.equal(kdsSettings.includes("abrirGerenciar('areas')"), true);
     assert.equal(html.includes('data-task-tab="hoje"'), true);
     assert.equal(html.includes('data-task-tab="pendentes"'), true);
-    assert.equal(tasks.includes('function undoTask(id)'), true);
-    assert.equal(tasks.includes('startTask, completeTask, undoTask'), true);
+    assert.equal(html.includes('id="modalTaskFinished"'), true);
+    assert.equal(html.includes('id="modalTaskPop"'), true);
+    assert.equal(html.includes('id="modalTaskReschedule"'), true);
+    assert.equal((html.match(/class="module-wordmark-arrow" aria-hidden="true">☰/g) || []).length, 2);
+    assert.equal(tasks.includes('function undoFinishedTask(targetStatus)'), true);
+    assert.equal(tasks.includes('function openReschedule(id)'), true);
+    assert.equal(tasks.includes('function confirmPopCompletion()'), true);
     assert.equal(tasks.includes('onclick="AloTasks.openTask'), false, 'o corpo do cartao nao pode alterar o status');
-    assert.equal(tasks.includes('${escapeHtml(employee.nome)} · ${escapeHtml(employee.cargo)}</option>'), false, 'o cargo nao deve aparecer nas opcoes de funcionario');
+    assert.equal(tasks.includes('taskEmployeeRole'), false, 'o cadastro nao pode pedir cargo');
+    assert.equal(tasks.includes('employee.cargo'), false, 'o cargo nao pode aparecer no modulo de tarefas');
+    assert.equal(tasks.includes("activity.data === todayKey() && isFinalStatus(activity.status)"), true, 'concluidas deve usar o mesmo dia da aba Hoje');
+    assert.equal(tasks.includes('inOneHour'), false, 'Hoje deve mostrar todas as atividades do dia');
+    assert.equal(tasks.includes('}, 3500);'), true, 'o lembrete deve desaparecer rapidamente dentro do modulo');
+    assert.equal(tasks.includes('remarcadoDe: activity.remarcadoDe || activity.data'), true, 'remarcacoes sucessivas devem preservar a data original');
     assert.equal(tasks.includes("selectedTab = 'hoje'"), true, 'o lembrete deve abrir a aba Hoje');
     assert.equal(css.includes('background: #fde8e8'), true);
     assert.equal(css.includes('background: #eee5f6'), true);
@@ -627,10 +644,10 @@ async function testCatalogAutoPublish() {
     testAppsScriptKeepsActivityIdempotentAndRejectsStaleStatus();
     testOldClientPreservesV2TaskCatalog();
     testPasswordDialogsHaveExplicitConfirmation();
-    testV202TaskExperience();
+    testV203TaskExperience();
     testAudioMode();
     await testCatalogAutoPublish();
-    console.log('Testes críticos da v2.0.2 passaram.');
+    console.log('Testes críticos da v2.0.3 passaram.');
 })().catch(error => {
     console.error(error);
     process.exitCode = 1;

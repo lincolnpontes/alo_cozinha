@@ -8,10 +8,10 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
     <meta name="mobile-web-app-capable" content="yes">
     <meta name="theme-color" content="#1565C0" id="metaThemeColor">
-    <title>Alô Cozinha v2.0.2</title>
+    <title>Alô Cozinha v2.0.3</title>
 
-    <link rel="stylesheet" href="styles.css?v=2.0.2">
-    <link rel="stylesheet" href="tasks.css?v=2.0.2">
+    <link rel="stylesheet" href="styles.css?v=2.0.3">
+    <link rel="stylesheet" href="tasks.css?v=2.0.3">
 </head>
 <body class="theme-panelas" oncontextmenu="return false;">
 
@@ -20,7 +20,7 @@
 <div id="splashScreen">
     <img src="icon.png" alt="Logo" class="splash-icone" onerror="this.src='data:image/svg+xml;utf8,<svg xmlns=\'http://www.w3.org/2000/svg\' viewBox=\'0 0 100 100\'><text y=\'50\' font-size=\'40\'>🍲</text></svg>'">
     <div class="splash-titulo">Alô Cozinha</div>
-    <div class="splash-versao">v2.0.2</div>
+    <div class="splash-versao">v2.0.3</div>
 </div>
 
 <main id="moduleHome" class="module-home" aria-label="Escolher módulo">
@@ -57,7 +57,7 @@
         <button class="module-wordmark-button" onclick="AloTasks.showHome()" aria-label="Alô Cozinha, voltar aos módulos" title="Voltar aos módulos">
             <img src="icon.png" class="module-wordmark-icon" alt="">
             <span class="module-wordmark-copy"><strong>Alô</strong><small>COZINHA</small></span>
-            <span class="module-wordmark-arrow" aria-hidden="true">➜</span>
+            <span class="module-wordmark-arrow" aria-hidden="true">☰</span>
         </button>
         <div class="header-area-picker">
             <span id="emojiAreaAtual" class="header-area-emoji" aria-hidden="true">🥘</span>
@@ -215,7 +215,7 @@
 
 <div class="modal-overlay" id="modalPainelUnificado">
     <div class="modal">
-        <div style="text-align: center; color: #666; font-size: 13px; font-weight: bold; margin-bottom: 20px;">Alô Cozinha - v2.0.2</div>
+        <div style="text-align: center; color: #666; font-size: 13px; font-weight: bold; margin-bottom: 20px;">Alô Cozinha - v2.0.3</div>
 
         <button class="btn-outline" onclick="abrirConfiguracoesKds()">🍽️ Configurações KDS</button>
         <button class="btn-outline" onclick="AloTasks.openSettingsMenu()" style="border-color:#00695c; color:#00695c;">📋 Configurações Tarefas</button>
@@ -281,6 +281,44 @@
     </div>
 </div>
 
+<div class="modal-overlay" id="modalTaskPop">
+    <div class="modal task-pop-modal">
+        <div class="modal-title">Registro POP</div>
+        <strong id="taskPopName" class="task-pop-name"></strong>
+        <div id="taskPopProcedure" class="task-procedure-box"></div>
+        <div class="form-group"><label>Quem realizou:</label><select id="taskPopEmployee"></select></div>
+        <div class="form-group"><label>Observação do registro (opcional):</label><textarea id="taskPopObservation" rows="3" maxlength="300" placeholder="Ex: produto reposto, ponto que precisa de atenção"></textarea></div>
+        <div class="modal-actions">
+            <button class="btn-cancel" onclick="AloTasks.cancelPopCompletion()">Cancelar</button>
+            <button class="btn-action task-pop-confirm" onclick="AloTasks.confirmPopCompletion()">✓ Concluir e registrar</button>
+        </div>
+    </div>
+</div>
+
+<div class="modal-overlay" id="modalTaskFinished">
+    <div class="modal task-finished-modal">
+        <div class="modal-title">Registro da Atividade</div>
+        <div id="taskFinishedContent"></div>
+        <div class="task-finished-choices">
+            <button class="btn-outline task-resume-button" onclick="AloTasks.undoFinishedTask('em_execucao')">▶ Voltar para execução</button>
+            <button class="btn-outline task-pending-button" onclick="AloTasks.undoFinishedTask('pendente')">↩ Voltar para pendente</button>
+        </div>
+        <div class="modal-actions"><button class="btn-cancel" onclick="AloTasks.closeFinishedTask()">Fechar</button></div>
+    </div>
+</div>
+
+<div class="modal-overlay" id="modalTaskReschedule">
+    <div class="modal">
+        <div class="modal-title">Remarcar Atividade</div>
+        <strong id="taskRescheduleName" class="task-pop-name"></strong>
+        <div class="form-group"><label>Nova data:</label><input id="taskRescheduleDate" type="date"></div>
+        <div class="modal-actions">
+            <button class="btn-cancel" onclick="AloTasks.cancelReschedule()">Cancelar</button>
+            <button class="btn-action" onclick="AloTasks.confirmReschedule()">Remarcar</button>
+        </div>
+    </div>
+</div>
+
 <div class="modal-overlay" id="modalTaskReports">
     <div class="modal task-reports-modal">
         <div class="modal-title">Relatórios por Tarefas</div>
@@ -308,7 +346,7 @@
         <button class="module-wordmark-button" onclick="AloTasks.showHome()" aria-label="Alô Cozinha, voltar aos módulos" title="Voltar aos módulos">
             <img src="icon.png" class="module-wordmark-icon" alt="">
             <span class="module-wordmark-copy"><strong>Alô</strong><small>COZINHA</small></span>
-            <span class="module-wordmark-arrow" aria-hidden="true">➜</span>
+            <span class="module-wordmark-arrow" aria-hidden="true">☰</span>
         </button>
         <div class="tasks-header-title"><span>📋</span><strong>Atividades</strong></div>
         <div class="tasks-header-actions">
@@ -514,13 +552,13 @@
 <div class="modal-overlay" id="modalFormCategoria"><div class="modal"><div class="modal-title">Categoria</div><input type="hidden" id="catIndexOriginal"><div class="form-group"><label>Nome da Categoria:</label><input type="text" id="catNome"></div><div style="display: flex; gap: 10px;"><div class="form-group" style="flex: 1;"><label>Cor do Fundo:</label><input type="color" id="catCor" value="#1976D2"></div><div class="form-group" style="flex: 1;"><label>Cor do Texto:</label><input type="color" id="catCorTexto" value="#ffffff"></div></div><div class="modal-actions"><button class="btn-cancel" onclick="fecharModal('modalFormCategoria'); abrirGerenciar('categorias')">Cancelar</button><button class="btn-action" onclick="salvarCategoria()">Salvar</button></div></div></div>
 <div class="modal-overlay" id="modalFormArea"><div class="modal"><div class="modal-title">Área</div><input type="hidden" id="areaIndexOriginal"><div class="form-group"><label>Nome da Área:</label><input type="text" id="areaNome" placeholder="Ex: Bar"></div><div class="form-group"><label>Emoji:</label><input type="text" id="areaEmoji" maxlength="12" inputmode="text" placeholder="Ex: 🍹"><div class="emoji-area-opcoes"><button type="button" onclick="selecionarEmojiArea('🥘')">🥘</button><button type="button" onclick="selecionarEmojiArea('🧑‍🍳')">🧑‍🍳</button><button type="button" onclick="selecionarEmojiArea('🍹')">🍹</button><button type="button" onclick="selecionarEmojiArea('🍽️')">🍽️</button><button type="button" onclick="selecionarEmojiArea('📦')">📦</button><button type="button" onclick="selecionarEmojiArea('🛵')">🛵</button><button type="button" onclick="selecionarEmojiArea('☕')">☕</button><button type="button" onclick="selecionarEmojiArea('🥣')" aria-label="Panela de barro"><span class="emoji-panela-barro">🥣</span></button></div></div><div class="form-group"><label>Função:</label><select id="areaTipo"><option value="envio">Envia pedidos</option><option value="recebimento">Recebe pedidos</option></select></div><div class="modal-actions"><button class="btn-cancel" onclick="fecharModal('modalFormArea'); abrirGerenciar('areas')">Cancelar</button><button class="btn-action" onclick="salvarArea()">Salvar</button></div></div></div>
 
-<script defer src="logic.js?v=2.0.2"></script>
-<script defer src="storage.js?v=2.0.2"></script>
-<script defer src="api.js?v=2.0.2"></script>
-<script defer src="audio.js?v=2.0.2"></script>
-<script defer src="sync.js?v=2.0.2"></script>
-<script defer src="catalog-sync.js?v=2.0.2"></script>
-<script defer src="tasks.js?v=2.0.2"></script>
-<script defer src="app.js?v=2.0.2"></script>
+<script defer src="logic.js?v=2.0.3"></script>
+<script defer src="storage.js?v=2.0.3"></script>
+<script defer src="api.js?v=2.0.3"></script>
+<script defer src="audio.js?v=2.0.3"></script>
+<script defer src="sync.js?v=2.0.3"></script>
+<script defer src="catalog-sync.js?v=2.0.3"></script>
+<script defer src="tasks.js?v=2.0.3"></script>
+<script defer src="app.js?v=2.0.3"></script>
 </body>
 </html>

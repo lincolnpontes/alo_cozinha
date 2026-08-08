@@ -1,9 +1,14 @@
-# Alô Cozinha v2.0.2
+# Alô Cozinha v2.0.3
 
 Aplicativo para operação de restaurante com dois módulos: pedidos entre áreas (KDS) e lista de atividades por setor.
 
 ## Novidades da v2
 
+- A v2.0.3 remove o cargo do cadastro de funcionários e deixa somente nome, setor e estado ativo.
+- `Hoje` mostra todas as atividades do dia; `Concluídas` mostra somente as concluídas do mesmo dia.
+- Tocar numa atividade concluída abre seu registro e permite voltar para execução, continuando o tempo anterior, ou voltar para pendente.
+- Tarefas configuradas como remarcáveis podem ser levadas para outra data sem perder o registro da data original.
+- Tarefas com registro POP exigem o funcionário ao concluir e guardam procedimento, observação, data, hora e duração.
 - A v2.0.2 reorganiza a Lista de Atividades em Hoje, Pendentes e Concluídas, com cores por estado e conclusão apenas por botão.
 - Atividades concluídas podem ser desfeitas; lembretes abrem diretamente a atividade sem navegar quando a ação é feita no próprio aviso.
 - A navegação dos módulos ganhou a assinatura Alô Cozinha e Gerenciar Áreas passou para Configurações KDS.
@@ -12,7 +17,7 @@ Aplicativo para operação de restaurante com dois módulos: pedidos entre área
 - Nova tela inicial para escolher entre `KDS - Sistema de Pedidos` e `Lista de Atividades`.
 - O KDS anterior foi preservado dentro do módulo de pedidos.
 - Atividades diárias, semanais ou únicas, com horário, prioridade, setor, responsável, instrução curta e alarme opcional.
-- Funcionários cadastrados somente com nome, cargo, setor e estado ativo.
+- Funcionários cadastrados somente com nome, setor e estado ativo.
 - A atividade pode ser iniciada, concluída ou marcada como não realizada.
 - O tempo é medido somente quando a atividade foi iniciada antes da conclusão.
 - Alarmes aparecem sobre qualquer módulo e permitem abrir a tarefa, iniciar, marcar como feita ou silenciar.
@@ -39,7 +44,7 @@ Aplicativo para operação de restaurante com dois módulos: pedidos entre área
 
 ## Atualizar sem perder dados
 
-A v2 preserva pedidos, produtos, categorias, observações, áreas, configurações e histórico já existentes. O Google Apps Script cria uma aba `Atividades` separada para o novo módulo.
+A v2 preserva pedidos, produtos, categorias, observações, áreas, configurações e histórico já existentes. O Google Apps Script cria a aba `Atividades` quando necessário e acrescenta as novas colunas de POP e remarcação ao fim da aba existente.
 
 1. Substitua o conteúdo do projeto no Google Apps Script pelo arquivo `google-apps-script.gs` desta branch.
 2. Em `Implantar > Gerenciar implantações`, edite a implantação atual e selecione `Nova versão`.
@@ -55,6 +60,8 @@ A v2 preserva pedidos, produtos, categorias, observações, áreas, configuraç�
 4. Feche e reabra o app ainda offline; a conclusão deve continuar salva.
 5. Ligue o Wi-Fi e confira em outro aparelho que a atividade chega concluída apenas uma vez.
 6. Com dois aparelhos, tente agir sobre a mesma tarefa e confirme que o status mais novo prevalece.
+7. Marque uma tarefa como remarcável, leve-a para amanhã e confirme que ela sai de `Hoje`, mas continua em `Pendentes`.
+8. Marque uma tarefa como POP, conclua com um funcionário e confira o registro em `Relatórios por Tarefas`.
 
 ## Branch de teste
 
