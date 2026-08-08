@@ -1439,6 +1439,7 @@ let db = carregarBanco();
     function voltarDaListagem() {
         fecharModal('modalListagem');
         if(['categorias', 'produtos', 'obsPedidos', 'obsCancelamentos'].includes(tipoGerenciamentoAtual)) abrirModalNoTopo('modalMenuProdutos');
+        else if(tipoGerenciamentoAtual === 'areas') abrirModalNoTopo('modalConfigKds');
         else abrirModalNoTopo('modalPainelUnificado');
     }
 
@@ -1460,7 +1461,7 @@ let db = carregarBanco();
 
     function abrirGerenciar(tipo) {
         tipoGerenciamentoAtual = tipo;
-        fecharModal('modalPainelUnificado'); fecharModal('modalMenuProdutos'); fecharModal('modalFormProduto'); fecharModal('modalFormCategoria'); fecharModal('modalFormArea');
+        fecharModal('modalPainelUnificado'); fecharModal('modalConfigKds'); fecharModal('modalMenuProdutos'); fecharModal('modalFormProduto'); fecharModal('modalFormCategoria'); fecharModal('modalFormArea');
         const lista = document.getElementById('conteudoListagem'); const btnNovo = document.getElementById('btnNovoListagem'); const titulo = document.getElementById('tituloListagem'); lista.innerHTML = '';
         if(tipo === 'areas') { titulo.innerText = "Gerenciar Áreas"; btnNovo.onclick = () => abrirFormArea(-1); db.areas.forEach((area, idx) => { const funcao = area.tipo === 'envio' ? 'Envia pedidos' : 'Recebe pedidos'; lista.innerHTML += `<div class="gerenciar-item"><div class="gerenciar-info"><strong>${getEmojiAreaHtml(area.emoji)} ${area.nome}</strong><br><span style="color:#666">${funcao}</span></div><div class="gerenciar-actions"><button onclick="abrirFormArea(${idx})" title="Editar">✏️</button><button onclick="excluirArea(${idx})" title="Excluir">🗑️</button></div></div>`; }); } else if(tipo === 'produtos') { titulo.innerText = "Gerenciar Produtos"; btnNovo.onclick = () => abrirFormProduto(-1); db.produtos.forEach((p, idx) => { const origens = getAreasOrigemProduto(p).map(getAreaNome).join(', '); lista.innerHTML += `<div class="gerenciar-item"><div class="gerenciar-info"><strong>${p.nome}</strong><br><span style="color:#666">${p.categoria} · ${origens} → ${getAreaNome(p.areaDestino || 'cozinha')}</span></div><div class="gerenciar-actions"><button onclick="moverItem('produtos', ${idx}, 'cima')">🔼</button><button onclick="moverItem('produtos', ${idx}, 'baixo')">🔽</button><button onclick="abrirFormProduto(${idx})">✏️</button><button onclick="excluirItem('produtos', ${idx})">🗑️</button></div></div>`; }); } else if (tipo === 'categorias') { titulo.innerText = "Gerenciar Categorias"; btnNovo.onclick = () => abrirFormCategoria(-1); db.categorias.forEach((c, idx) => { lista.innerHTML += `<div class="gerenciar-item"><div class="gerenciar-info"><span class="color-preview" style="background:${c.cor}; color:${c.corTexto}">${c.nome}</span></div><div class="gerenciar-actions"><button onclick="moverItem('categorias', ${idx}, 'cima')">🔼</button><button onclick="moverItem('categorias', ${idx}, 'baixo')">🔽</button><button onclick="abrirFormCategoria(${idx})">✏️</button><button onclick="excluirItem('categorias', '${c.nome}')">🗑️</button></div></div>`; }); } else if (tipo === 'obsPedidos') { titulo.innerText = "Observação dos Produtos"; btnNovo.onclick = () => novaObservacao('obsPedidos'); db.obsPedidos.forEach((obs, idx) => { lista.innerHTML += `<div class="gerenciar-item"><div class="gerenciar-info"><strong>${obs}</strong></div><div class="gerenciar-actions"><button onclick="moverItem('obsPedidos', ${idx}, 'cima')">🔼</button><button onclick="moverItem('obsPedidos', ${idx}, 'baixo')">🔽</button><button onclick="excluirItem('obsPedidos', '${obs}')">🗑️</button></div></div>`; }); } else if (tipo === 'obsCancelamentos') { titulo.innerText = "Motivos Cancelamento"; btnNovo.onclick = () => novaObservacao('obsCancelamentos'); db.obsCancelamentos.forEach((obs, idx) => { lista.innerHTML += `<div class="gerenciar-item"><div class="gerenciar-info"><strong>${obs}</strong></div><div class="gerenciar-actions"><button onclick="moverItem('obsCancelamentos', ${idx}, 'cima')">🔼</button><button onclick="moverItem('obsCancelamentos', ${idx}, 'baixo')">🔽</button><button onclick="excluirItem('obsCancelamentos', '${obs}')">🗑️</button></div></div>`; }); }
         document.getElementById('modalListagem').style.display = 'flex';
@@ -2006,7 +2007,7 @@ let db = carregarBanco();
     };
 
     if ('serviceWorker' in navigator) {
-        window.addEventListener('load', () => navigator.serviceWorker.register('./service-worker.js?v=2.0.1').catch(() => {}));
+        window.addEventListener('load', () => navigator.serviceWorker.register('./service-worker.js?v=2.0.2').catch(() => {}));
     }
 
     iniciarComSyncConfiavel();

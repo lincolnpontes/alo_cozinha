@@ -491,6 +491,31 @@ function testPasswordDialogsHaveExplicitConfirmation() {
     assert.equal(app.includes('Senha incorreta. Tente novamente.'), true);
 }
 
+function testV202TaskExperience() {
+    const html = fs.readFileSync(path.join(root, 'index.html'), 'utf8');
+    const tasks = fs.readFileSync(path.join(root, 'tasks.js'), 'utf8');
+    const css = fs.readFileSync(path.join(root, 'tasks.css'), 'utf8');
+    const panel = html.slice(html.indexOf('id="modalPainelUnificado"'), html.indexOf('id="modalConfigKds"'));
+    const kdsSettings = html.slice(html.indexOf('id="modalConfigKds"'), html.indexOf('id="modalConfigTasksMenu"'));
+
+    assert.equal(html.includes('KDS - Sistema de Pedidos'), true);
+    assert.equal(html.includes('Pedidos por Área'), false);
+    assert.equal(html.includes('Rotinas e tarefas'), false);
+    assert.equal((html.match(/class="module-wordmark-button"/g) || []).length, 2);
+    assert.equal(panel.includes("abrirGerenciar('areas')"), false);
+    assert.equal(kdsSettings.includes("abrirGerenciar('areas')"), true);
+    assert.equal(html.includes('data-task-tab="hoje"'), true);
+    assert.equal(html.includes('data-task-tab="pendentes"'), true);
+    assert.equal(tasks.includes('function undoTask(id)'), true);
+    assert.equal(tasks.includes('startTask, completeTask, undoTask'), true);
+    assert.equal(tasks.includes('onclick="AloTasks.openTask'), false, 'o corpo do cartao nao pode alterar o status');
+    assert.equal(tasks.includes('${escapeHtml(employee.nome)} · ${escapeHtml(employee.cargo)}</option>'), false, 'o cargo nao deve aparecer nas opcoes de funcionario');
+    assert.equal(tasks.includes("selectedTab = 'hoje'"), true, 'o lembrete deve abrir a aba Hoje');
+    assert.equal(css.includes('background: #fde8e8'), true);
+    assert.equal(css.includes('background: #eee5f6'), true);
+    assert.equal(css.includes('background: #e4f3e7'), true);
+}
+
 function testAudioMode() {
     let playCount = 0;
     const classes = new Set();
@@ -602,9 +627,10 @@ async function testCatalogAutoPublish() {
     testAppsScriptKeepsActivityIdempotentAndRejectsStaleStatus();
     testOldClientPreservesV2TaskCatalog();
     testPasswordDialogsHaveExplicitConfirmation();
+    testV202TaskExperience();
     testAudioMode();
     await testCatalogAutoPublish();
-    console.log('Testes críticos da v2.0.1 passaram.');
+    console.log('Testes críticos da v2.0.2 passaram.');
 })().catch(error => {
     console.error(error);
     process.exitCode = 1;

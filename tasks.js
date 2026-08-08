@@ -13,7 +13,7 @@
     let activities = [];
     let outbox = [];
     let revision = localStorage.getItem(STORAGE_REVISION) || '';
-    let selectedTab = 'agora';
+    let selectedTab = 'hoje';
     let selectedArea = localStorage.getItem(STORAGE_SELECTED_AREA) || 'todos';
     let activeModule = 'home';
     let syncRunning = false;
@@ -246,16 +246,62 @@
         const future = activity.status === 'pendente' && scheduled > now;
         return { scheduled, overdue, future };
     }
-    function visibleActivities() {
-        const today = todayKey();
-        return activities.filter(activity => activity.data === today)
-            .filter(activity => selectedArea === 'todos' || activity.setorId === selectedArea)
-            .filter(activity => {
-                const timing = taskTiming(activity);
-                if (selectedTab === 'agora') return activity.status === 'em_execucao' || (activity.status === 'pendente' && !timing.future);
-                if (selectedTab === 'proximas') return activity.status === 'pendente' && timing.future;
-                return ['concluida', 'nao_realizada', 'cancelada'].includes(activity.status);
-            });
+    function isFinalStatus(status) {
+        return ['concluida', 'nao_realizada', 'cancelada'].includes(status);
+    }
+    function sortBySchedule(left, right) {
+        return scheduledDate(left) - scheduledDate(right);
+    }
+    function sortByStarted(left, right) {
+        return new Date(left.iniciadoEm || left.atualizadoEm) - new Date(right.iniciadoEm || right.atualizadoEm);
+    }
+    function sortByFinished(left, right) {
+        return new Date(right.finalizadoEm || right.atualizadoEm) - new Date(left.finalizadoEm || left.atualizadoEm);
+    }
+    function activityGroups() {
+        const now = new Date();
+        const inOneHour = new Date(now.getTime() + 60 * 60 * 1000);
+        const filtered = activities.filter(activity => selectedArea === 'todos' || activity.setorId === selectedArea);
+
+        if (selectedTab === 'hoje') {
+            const today = filtered.filter(activity => activity.data === todayKey());
+            return [
+                {
+                    title: 'Pendentes',
+                    items: today.filter(activity => activity.status === 'pendente' && scheduledDate(activity) <= inOneHour).sort(sortBySchedule)
+                },
+                {
+                    title: 'Em execução',
+                    items: today.filter(activity => activity.status === 'em_execucao').sort(sortByStarted)
+                },
+                {
+                    title: 'Concluídas',
+                    items: today.filter(activity => isFinalStatus(activity.status)).sort(sortByFinished)
+                }
+            ].filter(group => group.items.length);
+        }
+
+        if (selectedTab === 'pendentes') {
+            return [
+                {
+                    title: 'Atrasadas',
+                    items: filtered.filter(activity => activity.status === 'pendente' && scheduledDate(activity) < now).sort(sortBySchedule)
+                },
+                {
+                    title: 'Em execução',
+                    items: filtered.filter(activity => activity.status === 'em_execucao').sort(sortByStarted)
+                },
+                {
+                    title: 'Mais tarde',
+                    items: filtered.filter(activity => activity.status === 'pendente' && scheduledDate(activity) >= now).sort(sortBySchedule)
+                }
+            ].filter(group => group.items.length);
+        }
+
+        return [{
+            title: 'Concluídas',
+            items: filtered.filter(activity => isFinalStatus(activity.status)).sort(sortByFinished)
+        }].filter(group => group.items.length);
     }
     function formatTime(value) { return value || '--:--'; }
     function formatDuration(seconds) {
@@ -276,41 +322,43 @@
         const list = document.getElementById('tasksList');
         const summary = document.getElementById('tasksSummary');
         if (!list || !summary) return;
-        const items = visibleActivities();
+        const groups = activityGroups();
         const allToday = activities.filter(item => item.data === todayKey() && (selectedArea === 'todos' || item.setorId === selectedArea));
         const overdueCount = allToday.filter(item => taskTiming(item).overdue).length;
         const runningCount = allToday.filter(item => item.status === 'em_execucao').length;
         summary.innerHTML = `<span>${allToday.length} hoje</span><span>${runningCount} em execução</span>${overdueCount ? `<span class="task-summary-late">${overdueCount} atrasada(s)</span>` : ''}`;
-        if (!items.length) {
-            const text = selectedTab === 'agora' ? 'Nenhuma atividade para fazer agora.' : (selectedTab === 'proximas' ? 'Nenhuma atividade programada para depois.' : 'Nenhuma atividade concluída hoje.');
+        if (!groups.length) {
+            const text = selectedTab === 'hoje' ? 'Nenhuma atividade prevista para a próxima hora.' : (selectedTab === 'pendentes' ? 'Nenhuma atividade pendente.' : 'Nenhuma atividade concluída.');
             list.innerHTML = `<li class="tasks-empty">${text}</li>`;
             return;
         }
-        list.innerHTML = items.map(activity => {
+        const renderCard = activity => {
             const area = getArea(activity.setorId);
             const employee = getEmployee(activity.funcionarioId);
             const timing = taskTiming(activity);
             const template = db().tarefas.find(item => item.id === activity.tarefaId) || {};
             const stateClass = activity.status === 'em_execucao' ? 'running' : (timing.overdue ? 'late' : activity.status);
-            const statusText = activity.status === 'em_execucao' ? 'Em execução' : (timing.overdue ? 'Atrasada' : activity.status === 'concluida' ? 'Concluída' : activity.status === 'nao_realizada' ? 'Não realizada' : 'Pendente');
+            const statusText = activity.status === 'em_execucao' ? 'Em execução' : (timing.overdue ? 'Atrasada' : activity.status === 'concluida' ? 'Concluída' : activity.status === 'nao_realizada' ? 'Não realizada' : activity.status === 'cancelada' ? 'Cancelada' : 'Pendente');
             let actions = '';
             if (activity.status === 'pendente') {
-                actions = `<button class="task-primary-action" onclick="AloTasks.startTask('${activity.id}')">▶️ Iniciar</button><button class="task-secondary-action" onclick="AloTasks.completeTask('${activity.id}', true)">✅ Já fiz</button><button class="task-skip-action" onclick="AloTasks.markTaskNotDone('${activity.id}')">⚠️ Não foi feita</button>`;
+                actions = `<button class="task-primary-action" onclick="AloTasks.startTask('${activity.id}')">▶ Iniciar</button><button class="task-complete-action" onclick="AloTasks.completeTask('${activity.id}', true)">✓ Concluir</button><button class="task-skip-action" onclick="AloTasks.markTaskNotDone('${activity.id}')" aria-label="Marcar como não realizada" title="Não foi feita">⚠</button>`;
             } else if (activity.status === 'em_execucao') {
-                actions = `<button class="task-primary-action complete" onclick="AloTasks.completeTask('${activity.id}', false)">✅ Concluir</button>`;
+                actions = `<button class="task-complete-action" onclick="AloTasks.completeTask('${activity.id}', false)">✓ Concluir</button>`;
+            } else if (isFinalStatus(activity.status)) {
+                actions = `<button class="task-undo-action" onclick="AloTasks.undoTask('${activity.id}')">↩ Desfazer</button>`;
             }
             const syncText = activity.syncState === 'offline' ? 'Salvo neste aparelho' : (activity.syncState === 'queued' ? 'Aguardando confirmação' : '');
-            return `<li class="task-card ${stateClass}" id="task-${escapeHtml(activity.id)}">
-                <div class="task-card-main" onclick="AloTasks.openTask('${activity.id}')">
+            return `<article class="task-card ${stateClass}" id="task-${escapeHtml(activity.id)}">
+                <div class="task-card-main">
                     <div class="task-time">${formatTime(activity.horario)}</div>
                     <div class="task-card-copy"><strong>${escapeHtml(activity.nome)}</strong><span>${escapeHtml(area.emoji)} ${escapeHtml(area.nome)}${employee ? ` · ${escapeHtml(employee.nome)}` : ''}</span>${template.instrucoes ? `<small>${escapeHtml(template.instrucoes)}</small>` : ''}</div>
-                    <div class="task-status">${activity.prioridade === 'urgente' ? '<b>URGENTE</b>' : ''}<span>${statusText}</span></div>
+                    <div class="task-card-side"><div class="task-status">${activity.prioridade === 'urgente' ? '<b>URGENTE</b>' : ''}<span>${statusText}</span></div>${actions ? `<div class="task-card-actions">${actions}</div>` : ''}</div>
                 </div>
                 ${activity.status === 'concluida' ? `<div class="task-completed-meta">${activity.iniciadoEm ? `Tempo: ${formatDuration(activity.duracaoSegundos)}` : 'Concluída sem iniciar'}</div>` : ''}
                 ${syncText ? `<div class="task-sync-text">${syncText}</div>` : ''}
-                ${actions ? `<div class="task-card-actions">${actions}</div>` : ''}
-            </li>`;
-        }).join('');
+            </article>`;
+        };
+        list.innerHTML = groups.map(group => `<li class="task-section"><div class="task-section-title">${group.title}<span>${group.items.length}</span></div><div class="task-section-grid">${group.items.map(renderCard).join('')}</div></li>`).join('');
     }
 
     function employeesForActivity(activity) {
@@ -322,7 +370,7 @@
         pendingEmployeeAction = { activityId: activity.id, action, direct };
         const select = document.getElementById('taskExecutionEmployee');
         select.innerHTML = '<option value="">Qualquer pessoa da área</option>' + employees.map(employee =>
-            `<option value="${escapeHtml(employee.id)}">${escapeHtml(employee.nome)} · ${escapeHtml(employee.cargo)}</option>`
+            `<option value="${escapeHtml(employee.id)}">${escapeHtml(employee.nome)}</option>`
         ).join('');
         document.getElementById('modalTaskEmployee').style.display = 'flex';
         return true;
@@ -368,6 +416,19 @@
             alarmeStatus: 'reconhecido'
         }, activity.status);
     }
+    function undoTask(id) {
+        const activity = activities.find(item => item.id === id);
+        if (!activity || !isFinalStatus(activity.status)) return;
+        const returnToRunning = Boolean(activity.iniciadoEm);
+        const template = db().tarefas.find(item => item.id === activity.tarefaId) || {};
+        queueActivity({
+            ...activity,
+            status: returnToRunning ? 'em_execucao' : 'pendente',
+            finalizadoEm: '',
+            duracaoSegundos: 0,
+            alarmeStatus: returnToRunning ? 'reconhecido' : (template.alarme === false ? 'desativado' : 'aguardando')
+        }, activity.status);
+    }
     function confirmEmployeeSelection() {
         if (!pendingEmployeeAction) return;
         const action = pendingEmployeeAction;
@@ -377,13 +438,6 @@
         if (action.action === 'start') startTask(action.activityId, employeeId);
         else completeTask(action.activityId, action.direct, employeeId);
     }
-    function openTask(id) {
-        const activity = activities.find(item => item.id === id);
-        if (!activity) return;
-        if (activity.status === 'pendente') startTask(id);
-        else if (activity.status === 'em_execucao') completeTask(id, false);
-    }
-
     function dueAlarmActivities() {
         const now = new Date();
         return activities.filter(activity => activity.data === todayKey() && activity.status === 'pendente'
@@ -430,7 +484,7 @@
         if (!currentAlarmId) return;
         const activity = activities.find(item => item.id === currentAlarmId);
         if (activity) selectedArea = activity.setorId;
-        selectedTab = 'agora';
+        selectedTab = 'hoje';
         openModule('tasks');
         requestAnimationFrame(() => document.getElementById(`task-${currentAlarmId}`)?.scrollIntoView({ block: 'center' }));
     }
@@ -517,7 +571,7 @@
     }
     function employeeOptions(selected, areaId) {
         return '<option value="">Qualquer pessoa da área</option>' + db().funcionarios.filter(employee => employee.ativo !== false && (!areaId || !employee.setorId || employee.setorId === areaId)).map(employee =>
-            `<option value="${escapeHtml(employee.id)}" ${employee.id === selected ? 'selected' : ''}>${escapeHtml(employee.nome)} · ${escapeHtml(employee.cargo)}</option>`
+            `<option value="${escapeHtml(employee.id)}" ${employee.id === selected ? 'selected' : ''}>${escapeHtml(employee.nome)}</option>`
         ).join('');
     }
     function openForm(type, index) {
@@ -701,7 +755,7 @@
 
     global.AloTasks = Object.freeze({
         init, refreshDefinitions, showHome, openModule, setTab, setArea, syncNow,
-        startTask, completeTask, markTaskNotDone, openTask, confirmEmployeeSelection,
+        startTask, completeTask, undoTask, markTaskNotDone, confirmEmployeeSelection,
         openAlarmTask, startAlarmTask, completeAlarmTask, dismissAlarm,
         openSettingsMenu, backToControlPanel, backToSettingsMenu,
         manageTaskAreas, manageEmployees, manageTemplates, editManagedItem,

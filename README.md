@@ -1,12 +1,15 @@
-# Alô Cozinha v2.0.1
+# Alô Cozinha v2.0.2
 
 Aplicativo para operação de restaurante com dois módulos: pedidos entre áreas (KDS) e lista de atividades por setor.
 
 ## Novidades da v2
 
-- A v2.0.1 adiciona confirmação explícita e suporte à tecla Enter em todos os acessos por senha.
+- A v2.0.2 reorganiza a Lista de Atividades em Hoje, Pendentes e Concluídas, com cores por estado e conclusão apenas por botão.
+- Atividades concluídas podem ser desfeitas; lembretes abrem diretamente a atividade sem navegar quando a ação é feita no próprio aviso.
+- A navegação dos módulos ganhou a assinatura Alô Cozinha e Gerenciar Áreas passou para Configurações KDS.
+- A v2.0.1 adicionou confirmação explícita e suporte à tecla Enter em todos os acessos por senha.
 - Senhas incorretas mostram uma mensagem no próprio modal, e salvar a senha mestra não abre mais um alerta bloqueante.
-- Nova tela inicial para escolher entre `Pedidos por Área` e `Lista de Atividades`.
+- Nova tela inicial para escolher entre `KDS - Sistema de Pedidos` e `Lista de Atividades`.
 - O KDS anterior foi preservado dentro do módulo de pedidos.
 - Atividades diárias, semanais ou únicas, com horário, prioridade, setor, responsável, instrução curta e alarme opcional.
 - Funcionários cadastrados somente com nome, cargo, setor e estado ativo.
@@ -16,7 +19,7 @@ Aplicativo para operação de restaurante com dois módulos: pedidos entre área
 - Fila local persistente para atividades: ações sem internet são guardadas e reenviadas até a confirmação.
 - Sincronização entre aparelhos com revisão, operação idempotente e proteção contra status atrasado.
 - Relatórios de 7 ou 30 dias com total concluído, tempo médio, atrasos e conclusões sem medição.
-- Painel reorganizado em `Gerenciar Áreas`, `Configurações KDS`, `Configurações Tarefas` e `Configurações Avançadas`.
+- Painel reorganizado em `Configurações KDS`, `Configurações Tarefas` e `Configurações Avançadas`; áreas ficam dentro do KDS.
 
 ## Arquivos
 
