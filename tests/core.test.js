@@ -498,9 +498,10 @@ function testPasswordDialogsHaveExplicitConfirmation() {
     assert.equal(app.includes('Senha incorreta. Tente novamente.'), true);
 }
 
-function testV205TaskExperience() {
+function testV206TaskExperience() {
     const html = fs.readFileSync(path.join(root, 'index.html'), 'utf8');
     const tasks = fs.readFileSync(path.join(root, 'tasks.js'), 'utf8');
+    const app = fs.readFileSync(path.join(root, 'app.js'), 'utf8');
     const css = fs.readFileSync(path.join(root, 'tasks.css'), 'utf8');
     const gas = fs.readFileSync(path.join(root, 'google-apps-script.gs'), 'utf8');
     const panel = html.slice(html.indexOf('id="modalPainelUnificado"'), html.indexOf('id="modalConfigKds"'));
@@ -546,6 +547,26 @@ function testV205TaskExperience() {
     assert.equal(css.includes('#modalTaskHistory { z-index: 1300; }'), true, 'historico precisa de camada superior');
     assert.equal(gas.includes("'ProcedimentoFormato'"), true, 'o formato do procedimento precisa sincronizar entre aparelhos');
     assert.equal(html.includes('class="kds-header-title"'), true, 'o cabecalho deve identificar o KDS');
+    assert.equal(html.includes('id="tasksSummary"'), false, 'a faixa redundante de resumo deve ser removida');
+    assert.equal(html.includes('id="taskTabTodayCount"'), true, 'Hoje deve mostrar sua contagem na aba');
+    assert.equal(html.includes('id="taskTabPendingCount"'), true, 'Pendentes deve mostrar sua contagem na aba');
+    assert.equal(html.includes('id="taskTabCompletedCount"'), true, 'Concluidas deve mostrar sua contagem na aba');
+    assert.equal(html.includes("abrirLoginAdmin('kds')"), true, 'o KDS deve abrir somente suas configuracoes');
+    assert.equal(html.includes("abrirLoginAdmin('tasks')"), true, 'Atividades deve abrir somente suas configuracoes');
+    assert.equal(html.includes('module-choice-settings'), true, 'a tela inicial deve oferecer o painel completo');
+    assert.equal(tasks.includes('function formatRichEditor(editorId, command)'), true, 'o procedimento deve usar editor formatado');
+    assert.equal(tasks.includes('function normalizeRichEditorLists(editor)'), true, 'trocar marcadores nao pode criar itens vazios');
+    assert.equal(tasks.includes("procedimentoFormato: 'rico'"), true, 'o formato rico deve ser salvo');
+    assert.equal(html.includes('id="taskPopObservation" class="task-rich-editor" contenteditable="true"'), true, 'a observacao POP deve usar o editor fixo');
+    assert.equal(html.includes('<textarea id="taskPopObservation"'), false, 'a observacao nao deve ser redimensionavel');
+    assert.equal(tasks.includes("title=\"Não foi feita\">❌"), true, 'nao realizada deve usar o X vermelho');
+    assert.equal(tasks.includes('function toggleTaskStatusEditMenu()'), true, 'o lapis deve abrir as correcoes de estado');
+    assert.equal(tasks.includes("runTaskDetailAction('start')"), true, 'detalhes pendentes devem permitir iniciar');
+    assert.equal(tasks.includes("runTaskDetailAction('complete')"), true, 'detalhes devem permitir concluir');
+    assert.equal(tasks.includes('const procedure = item.procedimento'), false, 'o historico nao deve repetir o procedimento');
+    assert.equal(css.includes('.task-detail-status.running { color: #733fa0; }'), true, 'Em execucao deve aparecer em roxo');
+    assert.equal(app.includes("let destinoConfiguracoes = 'painel'"), true, 'o painel deve lembrar de onde as configuracoes foram abertas');
+    assert.equal(app.includes("destinoConfiguracoes === 'tasks'"), true, 'as configuracoes de atividades devem voltar ao modulo');
     assert.equal(css.includes('background: #fde8e8'), true);
     assert.equal(css.includes('background: #eee5f6'), true);
     assert.equal(css.includes('background: #e4f3e7'), true);
@@ -662,10 +683,10 @@ async function testCatalogAutoPublish() {
     testAppsScriptKeepsActivityIdempotentAndRejectsStaleStatus();
     testOldClientPreservesV2TaskCatalog();
     testPasswordDialogsHaveExplicitConfirmation();
-    testV205TaskExperience();
+    testV206TaskExperience();
     testAudioMode();
     await testCatalogAutoPublish();
-    console.log('Testes críticos da v2.0.5 passaram.');
+    console.log('Testes críticos da v2.0.6 passaram.');
 })().catch(error => {
     console.error(error);
     process.exitCode = 1;

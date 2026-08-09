@@ -342,7 +342,7 @@
         return `${hours}h ${minutes % 60}min`;
     }
     function normalizeProcedureFormat(value) {
-        return ['texto', 'bolinhas', 'numeros', 'tracos'].includes(value) ? value : 'texto';
+        return ['texto', 'bolinhas', 'numeros', 'tracos', 'rico'].includes(value) ? value : 'texto';
     }
     function cleanProcedureLine(value) {
         return String(value || '').trim().replace(/^([-*•–—]|\d+[.)])\s+/, '');
@@ -350,6 +350,7 @@
     function procedureHtml(value, requestedFormat = 'texto') {
         const lines = String(value || '').replace(/\r/g, '').split('\n');
         const format = normalizeProcedureFormat(requestedFormat);
+        if (format === 'rico') return sanitizeRichHtml(value);
         const blocks = [];
         let listType = '';
         let listClass = '';
@@ -388,14 +389,114 @@
         while (blocks[blocks.length - 1]?.includes('task-procedure-spacer')) blocks.pop();
         return blocks.join('');
     }
-    function updateProcedurePreview() {
-        const input = document.getElementById('taskInstructions');
-        const format = document.getElementById('taskProcedureFormat');
-        const preview = document.getElementById('taskProcedurePreview');
-        if (!input || !format || !preview) return;
-        const value = input.value.trim();
-        preview.style.display = value ? 'block' : 'none';
-        preview.innerHTML = value ? `<strong>Prévia</strong><div class="task-procedure-content">${procedureHtml(value, format.value)}</div>` : '';
+    function sanitizeRichHtml(value) {
+        const source = String(value || '').trim();
+        if (!source) return '';
+        if (!/<[a-z][\s\S]*>/i.test(source)) return procedureHtml(source, 'texto');
+        const documentValue = new DOMParser().parseFromString(`<div>${source}</div>`, 'text/html');
+        const root = documentValue.body.firstElementChild;
+        const allowedTags = new Set(['P', 'DIV', 'BR', 'STRONG', 'B', 'U', 'UL', 'OL', 'LI']);
+        Array.from(root.querySelectorAll('*')).forEach(node => {
+            if (!allowedTags.has(node.tagName)) {
+                if (['SCRIPT', 'STYLE', 'IFRAME', 'OBJECT'].includes(node.tagName)) node.remove();
+                else node.replaceWith(...Array.from(node.childNodes));
+                return;
+            }
+            const alignment = ['left', 'center', 'right', 'justify'].includes(node.style?.textAlign) ? node.style.textAlign : '';
+            const dashList = node.tagName === 'UL' && node.classList.contains('procedure-dashes');
+            Array.from(node.attributes).forEach(attribute => node.removeAttribute(attribute.name));
+            if (alignment) node.style.textAlign = alignment;
+            if (dashList) node.classList.add('procedure-dashes');
+        });
+        return root.innerHTML;
+    }
+    function richEditorInitialHtml(value, format) {
+        const html = normalizeProcedureFormat(format) === 'rico' ? sanitizeRichHtml(value) : procedureHtml(value, format);
+        return html.replaceAll('<div class="task-procedure-spacer"></div>', '<p><br></p>');
+    }
+    function richEditorToolbar(editorId, label) {
+        const commandButton = (command, title, content) => `<button type="button" onmousedown="event.preventDefault()" onclick="AloTasks.formatRichEditor('${editorId}','${command}')" aria-label="${title}" title="${title}">${content}</button>`;
+        return `<div class="task-rich-toolbar" role="toolbar" aria-label="${label}">
+            ${commandButton('bold', 'Negrito', '<b>B</b>')}
+            ${commandButton('underline', 'Sublinhar', '<u>S</u>')}
+            ${commandButton('insertUnorderedList', 'Lista com bolinhas', '•')}
+            ${commandButton('insertOrderedList', 'Lista numerada', '1.')}
+            ${commandButton('dashList', 'Lista com traços', '–')}
+            ${commandButton('justifyLeft', 'Alinhar à esquerda', '☰')}
+            ${commandButton('justifyCenter', 'Centralizar', '≡')}
+            ${commandButton('justifyRight', 'Alinhar à direita', '☷')}
+        </div>`;
+    }
+    function richEditorMarkup(editorId, value, format, placeholder, maxLength) {
+        return `<div class="task-rich-shell">${richEditorToolbar(editorId, 'Formatação do procedimento')}<div id="${editorId}" class="task-rich-editor" contenteditable="true" role="textbox" aria-multiline="true" data-placeholder="${escapeHtml(placeholder)}" oninput="AloTasks.limitRichEditor(this, ${maxLength})">${richEditorInitialHtml(value, format)}</div></div>`;
+    }
+    function formatRichEditor(editorId, command) {
+        const editor = document.getElementById(editorId);
+        if (!editor) return;
+        editor.focus();
+        const selection = global.getSelection();
+        const origin = selection?.anchorNode?.nodeType === Node.TEXT_NODE ? selection.anchorNode.parentElement : selection?.anchorNode;
+        let currentList = origin?.closest?.('ul, ol');
+        if (!currentList && editor.querySelectorAll('ul, ol').length === 1) currentList = editor.querySelector('ul, ol');
+        if (command === 'dashList') {
+            if (currentList?.tagName === 'UL' && editor.contains(currentList)) {
+                currentList.classList.add('procedure-dashes');
+                return;
+            }
+            document.execCommand('insertUnorderedList', false, null);
+            const changedSelection = global.getSelection();
+            const changedOrigin = changedSelection?.anchorNode?.nodeType === Node.TEXT_NODE ? changedSelection.anchorNode.parentElement : changedSelection?.anchorNode;
+            const list = changedOrigin?.closest?.('ul');
+            if (list && editor.contains(list)) list.classList.add('procedure-dashes');
+        } else {
+            if (command === 'insertUnorderedList' && currentList?.tagName === 'UL' && currentList.classList.contains('procedure-dashes')) {
+                currentList.classList.remove('procedure-dashes');
+                return;
+            }
+            document.execCommand(command, false, null);
+            if (['insertUnorderedList', 'insertOrderedList'].includes(command)) {
+                const changedSelection = global.getSelection();
+                const changedOrigin = changedSelection?.anchorNode?.nodeType === Node.TEXT_NODE ? changedSelection.anchorNode.parentElement : changedSelection?.anchorNode;
+                changedOrigin?.closest?.('ul')?.classList.remove('procedure-dashes');
+            }
+        }
+        normalizeRichEditorLists(editor);
+    }
+    function normalizeRichEditorLists(editor) {
+        Array.from(editor.querySelectorAll('ul, ol')).forEach(list => {
+            const emptyItem = Array.from(list.children).find(item => item.tagName === 'LI' && !item.textContent.trim());
+            if (!emptyItem) return;
+            const trailingItems = [];
+            let next = emptyItem.nextElementSibling;
+            while (next) {
+                const current = next;
+                next = next.nextElementSibling;
+                trailingItems.push(current);
+            }
+            const spacer = document.createElement('p');
+            spacer.innerHTML = '<br>';
+            const trailingList = trailingItems.length ? list.cloneNode(false) : null;
+            trailingItems.forEach(item => trailingList.appendChild(item));
+            emptyItem.remove();
+            list.after(spacer);
+            if (trailingList) spacer.after(trailingList);
+            if (!list.children.length) list.remove();
+        });
+    }
+    function limitRichEditor(editor, maxLength) {
+        const text = editor?.innerText || '';
+        if (text.length <= maxLength) return;
+        editor.innerText = text.slice(0, maxLength);
+        const range = document.createRange();
+        range.selectNodeContents(editor);
+        range.collapse(false);
+        const selection = global.getSelection();
+        selection.removeAllRanges();
+        selection.addRange(range);
+    }
+    function richEditorValue(editorId) {
+        const editor = document.getElementById(editorId);
+        return editor && editor.innerText.trim() ? sanitizeRichHtml(editor.innerHTML) : '';
     }
     function render() {
         if (!initialized) return;
@@ -404,13 +505,12 @@
             button.classList.toggle('active', button.dataset.taskTab === selectedTab);
         });
         const list = document.getElementById('tasksList');
-        const summary = document.getElementById('tasksSummary');
-        if (!list || !summary) return;
+        if (!list) return;
         const groups = activityGroups();
         const allToday = activities.filter(item => item.data === todayKey() && (selectedArea === 'todos' || item.setorId === selectedArea));
-        const overdueCount = allToday.filter(item => taskTiming(item).overdue).length;
-        const runningCount = allToday.filter(item => item.status === 'em_execucao').length;
-        summary.innerHTML = `<span>${allToday.length} hoje</span><span>${runningCount} em execução</span>${overdueCount ? `<span class="task-summary-late">${overdueCount} atrasada(s)</span>` : ''}`;
+        document.getElementById('taskTabTodayCount').innerText = `(${allToday.length})`;
+        document.getElementById('taskTabPendingCount').innerText = `(${allToday.filter(item => item.status === 'pendente').length})`;
+        document.getElementById('taskTabCompletedCount').innerText = `(${allToday.filter(item => item.status === 'concluida').length})`;
         if (!groups.length) {
             const text = selectedTab === 'hoje' ? 'Nenhuma atividade programada para hoje.' : (selectedTab === 'pendentes' ? 'Nenhuma atividade pendente.' : 'Nenhuma atividade concluída hoje.');
             list.innerHTML = `<li class="tasks-empty">${text}</li>`;
@@ -425,7 +525,7 @@
             const stateClass = activity.status === 'em_execucao' ? 'running' : (timing.overdue ? 'late' : activity.status);
             let actions = '';
             if (activity.status === 'pendente') {
-                actions = `<button class="task-primary-action" onclick="event.stopPropagation();AloTasks.startTask('${activity.id}')">▶ Iniciar</button><button class="task-complete-action" onclick="event.stopPropagation();AloTasks.completeTask('${activity.id}', true)">✓ Concluir</button>${canReschedule ? `<button class="task-reschedule-action" onclick="event.stopPropagation();AloTasks.openReschedule('${activity.id}')" aria-label="Remarcar atividade" title="Remarcar">📅</button>` : ''}<button class="task-skip-action" onclick="event.stopPropagation();AloTasks.markTaskNotDone('${activity.id}')" aria-label="Marcar como não realizada" title="Não foi feita">⚠</button>`;
+                actions = `<button class="task-primary-action" onclick="event.stopPropagation();AloTasks.startTask('${activity.id}')">▶ Iniciar</button><button class="task-complete-action" onclick="event.stopPropagation();AloTasks.completeTask('${activity.id}', true)">✓ Concluir</button>${canReschedule ? `<button class="task-reschedule-action" onclick="event.stopPropagation();AloTasks.openReschedule('${activity.id}')" aria-label="Remarcar atividade" title="Remarcar">📅</button>` : ''}<button class="task-skip-action" onclick="event.stopPropagation();AloTasks.markTaskNotDone('${activity.id}')" aria-label="Marcar como não realizada" title="Não foi feita">❌</button>`;
             } else if (activity.status === 'em_execucao') {
                 actions = `<button class="task-complete-action" onclick="event.stopPropagation();AloTasks.completeTask('${activity.id}', false)">✓ Concluir</button>${canReschedule ? `<button class="task-reschedule-action" onclick="event.stopPropagation();AloTasks.openReschedule('${activity.id}')" aria-label="Remarcar atividade" title="Remarcar">📅</button>` : ''}`;
             }
@@ -512,7 +612,7 @@
         const procedureFormat = activity.procedimentoFormato || template.procedimentoFormato || 'texto';
         document.getElementById('taskPopProcedure').innerHTML = `<strong>Procedimento</strong><div class="task-procedure-content">${procedureHtml(activity.procedimento || template.instrucoes || 'Sem procedimento informado.', procedureFormat)}</div>`;
         document.getElementById('taskPopEmployee').innerHTML = employees.map(employee => `<option value="${escapeHtml(employee.id)}" ${employee.id === selected ? 'selected' : ''}>${escapeHtml(employee.nome)}</option>`).join('');
-        document.getElementById('taskPopObservation').value = '';
+        document.getElementById('taskPopObservation').innerHTML = '';
         deps.openModalTop('modalTaskPop');
     }
     function cancelPopCompletion() {
@@ -528,7 +628,7 @@
         document.getElementById('modalTaskPop').style.display = 'none';
         completeTask(pending.activityId, pending.direct, employeeId, {
             employeeId,
-            observacao: document.getElementById('taskPopObservation').value.trim()
+            observacao: richEditorValue('taskPopObservation')
         });
     }
     function markTaskNotDone(id) {
@@ -563,16 +663,22 @@
         const timing = taskTiming(activity);
         const statusText = activity.status === 'em_execucao' ? 'Em execução' : activity.status === 'concluida' ? 'Concluída' : activity.status === 'nao_realizada' ? 'Não realizada' : activity.status === 'cancelada' ? 'Cancelada' : (timing.overdue ? 'Atrasada' : 'Pendente');
         const isFinished = isFinalStatus(activity.status);
+        const editableStatus = isFinished || activity.status === 'em_execucao';
+        const statusClass = activity.status === 'em_execucao' ? 'running' : (activity.status === 'concluida' ? 'completed' : (timing.overdue ? 'late' : 'pending'));
         finishedActivityId = id;
         document.getElementById('taskDetailsTitle').innerText = isFinished ? 'Registro da Atividade' : 'Detalhes da Atividade';
-        const canReturnToPending = isFinished || activity.status === 'em_execucao';
         const choices = document.getElementById('taskFinishedChoices');
-        choices.style.display = canReturnToPending ? '' : 'none';
+        choices.style.display = 'none';
         choices.style.gridTemplateColumns = isFinished ? '' : '1fr';
         document.getElementById('taskResumeButton').style.display = isFinished ? '' : 'none';
-        document.getElementById('taskPendingButton').style.display = canReturnToPending ? '' : 'none';
+        document.getElementById('taskPendingButton').style.display = editableStatus ? '' : 'none';
+        const detailActions = document.getElementById('taskDetailActions');
+        detailActions.style.gridTemplateColumns = activity.status === 'pendente' ? 'repeat(2, minmax(0, 1fr))' : '1fr';
+        detailActions.innerHTML = activity.status === 'pendente'
+            ? `<button class="task-primary-action" onclick="AloTasks.runTaskDetailAction('start')">▶ Iniciar</button><button class="task-complete-action" onclick="AloTasks.runTaskDetailAction('complete')">✓ Concluir</button>`
+            : (activity.status === 'em_execucao' ? `<button class="task-complete-action" onclick="AloTasks.runTaskDetailAction('complete')">✓ Concluir</button>` : '');
         document.getElementById('taskFinishedContent').innerHTML = `
-            <div class="task-finished-summary"><strong>${escapeHtml(activity.nome)}</strong><span>${statusText}</span></div>
+            <div class="task-finished-summary"><strong>${escapeHtml(activity.nome)}</strong><span class="task-detail-status ${statusClass}">${statusText}${editableStatus ? `<button type="button" class="task-status-edit-button" onclick="AloTasks.toggleTaskStatusEditMenu()" aria-label="Editar estado" title="Editar estado" aria-expanded="false">✎</button>` : ''}</span></div>
             <div class="task-detail-grid">
                 <div><small>Setor</small><strong>${escapeHtml(area.emoji)} ${escapeHtml(area.nome)}</strong></div>
                 <div><small>Responsável</small><strong>${escapeHtml(activity.funcionarioNome || employee?.nome || 'Qualquer pessoa da área')}</strong></div>
@@ -585,13 +691,30 @@
             </div>
             ${activity.registroPop ? '<div class="task-pop-badge">POP registrado</div>' : ''}
             ${procedure ? `<div class="task-procedure-box"><strong>Procedimento</strong><div class="task-procedure-content">${procedureHtml(procedure, procedureFormat)}</div></div>` : ''}
-            ${activity.observacao ? `<div class="task-procedure-box"><strong>Observação</strong><div class="task-procedure-content">${procedureHtml(activity.observacao, 'texto')}</div></div>` : ''}`;
+            ${activity.observacao ? `<div class="task-procedure-box"><strong>Observação</strong><div class="task-procedure-content">${sanitizeRichHtml(activity.observacao)}</div></div>` : ''}`;
         deps.openModalTop('modalTaskFinished');
     }
     function openFinishedTask(id) { openTaskDetails(id); }
     function closeFinishedTask() {
         finishedActivityId = '';
+        document.getElementById('taskFinishedChoices').style.display = 'none';
         document.getElementById('modalTaskFinished').style.display = 'none';
+    }
+    function toggleTaskStatusEditMenu() {
+        const choices = document.getElementById('taskFinishedChoices');
+        const button = document.querySelector('#taskFinishedContent .task-status-edit-button');
+        const opening = choices.style.display === 'none';
+        choices.style.display = opening ? 'grid' : 'none';
+        if (button) button.setAttribute('aria-expanded', String(opening));
+    }
+    function runTaskDetailAction(action) {
+        const activity = activities.find(item => item.id === finishedActivityId);
+        if (!activity) return;
+        const id = activity.id;
+        const direct = activity.status === 'pendente';
+        closeFinishedTask();
+        if (action === 'start') startTask(id);
+        if (action === 'complete') completeTask(id, direct);
     }
     function undoFinishedTask(targetStatus) {
         const activity = activities.find(item => item.id === finishedActivityId);
@@ -631,7 +754,7 @@
             duracaoSegundos: 0,
             funcionarioId: template.funcionarioId || '',
             funcionarioNome: '',
-            alarmeStatus: 'reconhecido'
+            alarmeStatus: template.alarme === false ? 'desativado' : 'aguardando'
         }, previousStatus);
     }
     function openReschedule(id) {
@@ -797,7 +920,8 @@
     }
     function backToControlPanel() {
         closeAllSettings();
-        deps.openModalTop('modalPainelUnificado');
+        if (typeof global.voltarConfiguracoesTarefas === 'function') global.voltarConfiguracoesTarefas();
+        else deps.openModalTop('modalPainelUnificado');
     }
     function backToSettingsMenu(closeId) {
         if (closeId) document.getElementById(closeId).style.display = 'none';
@@ -855,18 +979,10 @@
             title.innerText = index >= 0 ? 'Editar Funcionário' : 'Novo Funcionário';
             body.innerHTML = `<div class="form-group"><label>Nome:</label><input id="taskEmployeeName" value="${escapeHtml(employee.nome)}" placeholder="Nome do funcionário"></div><div class="form-group"><label>Setor principal:</label><select id="taskEmployeeArea"><option value="">Trabalha em vários setores</option>${areaOptions(employee.setorId)}</select></div><label class="task-simple-switch"><input id="taskEmployeeActive" type="checkbox" ${employee.ativo !== false ? 'checked' : ''}><span>Funcionário ativo</span></label>`;
         } else {
-            const task = index >= 0 ? db().tarefas[index] : { nome: '', setorId: db().setoresTarefas[0]?.id || '', funcionarioId: '', horario: '09:00', recorrencia: 'diaria', dias: [1,2,3,4,5,6,0], dataUnica: todayKey(), prioridade: 'normal', alarme: true, tempoEsperadoMin: 0, instrucoes: '', procedimentoFormato: 'texto', permiteRemarcacao: false, registroPop: false, ativo: true };
+            const task = index >= 0 ? db().tarefas[index] : { nome: '', setorId: db().setoresTarefas[0]?.id || '', funcionarioId: '', horario: '09:00', recorrencia: 'diaria', dias: [1,2,3,4,5,6,0], dataUnica: todayKey(), prioridade: 'normal', alarme: true, tempoEsperadoMin: 0, instrucoes: '', procedimentoFormato: 'rico', permiteRemarcacao: false, registroPop: false, ativo: true };
             title.innerText = index >= 0 ? 'Editar Tarefa' : 'Nova Tarefa';
             const dayNames = ['Dom','Seg','Ter','Qua','Qui','Sex','Sáb'];
-            body.innerHTML = `<div class="form-group"><label>Nome curto:</label><input id="taskName" value="${escapeHtml(task.nome)}" placeholder="Ex: Limpar a chapa"></div><div class="task-form-grid"><div class="form-group"><label>Setor:</label><select id="taskArea" onchange="AloTasks.refreshTaskEmployeeOptions()">${areaOptions(task.setorId)}</select></div><div class="form-group"><label>Horário:</label><input id="taskTime" type="time" value="${escapeHtml(task.horario)}"></div></div><div class="form-group"><label>Responsável:</label><select id="taskEmployee">${employeeOptions(task.funcionarioId, task.setorId)}</select></div><div class="task-form-grid"><div class="form-group"><label>Frequência:</label><select id="taskRecurrence" onchange="AloTasks.toggleRecurrenceFields()"><option value="diaria" ${task.recorrencia === 'diaria' ? 'selected' : ''}>Todos os dias</option><option value="semanal" ${task.recorrencia === 'semanal' ? 'selected' : ''}>Dias específicos</option><option value="unica" ${task.recorrencia === 'unica' ? 'selected' : ''}>Uma única vez</option></select></div><div class="form-group"><label>Prioridade:</label><select id="taskPriority"><option value="normal" ${task.prioridade !== 'urgente' ? 'selected' : ''}>Normal</option><option value="urgente" ${task.prioridade === 'urgente' ? 'selected' : ''}>Urgente</option></select></div></div><div id="taskWeekDays" class="task-weekdays">${dayNames.map((name, day) => `<label><input type="checkbox" value="${day}" ${(task.dias || []).map(Number).includes(day) ? 'checked' : ''}><span>${name}</span></label>`).join('')}</div><div id="taskOneDate" class="form-group"><label>Data:</label><input id="taskDate" type="date" value="${escapeHtml(task.dataUnica)}"></div><div class="task-form-grid"><div class="form-group"><label>Tempo esperado (min.):</label><input id="taskExpected" type="number" min="0" value="${Number(task.tempoEsperadoMin || 0)}"></div><label class="task-simple-switch task-alarm-switch"><input id="taskAlarmEnabled" type="checkbox" ${task.alarme !== false ? 'checked' : ''}><span>⏰ Alarme</span></label></div><div class="form-group"><label>Formato do procedimento:</label><select id="taskProcedureFormat"><option value="texto" ${normalizeProcedureFormat(task.procedimentoFormato) === 'texto' ? 'selected' : ''}>Texto sem marcador</option><option value="bolinhas" ${task.procedimentoFormato === 'bolinhas' ? 'selected' : ''}>• Bolinhas</option><option value="numeros" ${task.procedimentoFormato === 'numeros' ? 'selected' : ''}>1. Numeração</option><option value="tracos" ${task.procedimentoFormato === 'tracos' ? 'selected' : ''}>– Tracinhos</option></select></div><div class="form-group"><label>Procedimento:</label><textarea id="taskInstructions" rows="7" maxlength="1000" placeholder="Escreva uma etapa por linha. Linhas em branco separam os blocos.">${escapeHtml(task.instrucoes)}</textarea></div><label class="task-simple-switch"><input id="taskAllowReschedule" type="checkbox" ${task.permiteRemarcacao ? 'checked' : ''}><span>📅 Permitir remarcar para outro dia</span></label><label class="task-simple-switch"><input id="taskPopRequired" type="checkbox" ${task.registroPop ? 'checked' : ''}><span>📋 Exigir registro POP ao concluir</span></label><label class="task-simple-switch"><input id="taskActive" type="checkbox" ${task.ativo !== false ? 'checked' : ''}><span>Tarefa ativa</span></label>`;
-            const procedureInput = document.getElementById('taskInstructions');
-            const procedurePreview = document.createElement('div');
-            procedurePreview.id = 'taskProcedurePreview';
-            procedurePreview.className = 'task-procedure-preview';
-            procedureInput.parentElement.appendChild(procedurePreview);
-            procedureInput.addEventListener('input', updateProcedurePreview);
-            document.getElementById('taskProcedureFormat').addEventListener('change', updateProcedurePreview);
-            updateProcedurePreview();
+            body.innerHTML = `<div class="form-group"><label>Nome curto:</label><input id="taskName" value="${escapeHtml(task.nome)}" placeholder="Ex: Limpar a chapa"></div><div class="task-form-grid"><div class="form-group"><label>Setor:</label><select id="taskArea" onchange="AloTasks.refreshTaskEmployeeOptions()">${areaOptions(task.setorId)}</select></div><div class="form-group"><label>Horário:</label><input id="taskTime" type="time" value="${escapeHtml(task.horario)}"></div></div><div class="form-group"><label>Responsável:</label><select id="taskEmployee">${employeeOptions(task.funcionarioId, task.setorId)}</select></div><div class="task-form-grid"><div class="form-group"><label>Frequência:</label><select id="taskRecurrence" onchange="AloTasks.toggleRecurrenceFields()"><option value="diaria" ${task.recorrencia === 'diaria' ? 'selected' : ''}>Todos os dias</option><option value="semanal" ${task.recorrencia === 'semanal' ? 'selected' : ''}>Dias específicos</option><option value="unica" ${task.recorrencia === 'unica' ? 'selected' : ''}>Uma única vez</option></select></div><div class="form-group"><label>Prioridade:</label><select id="taskPriority"><option value="normal" ${task.prioridade !== 'urgente' ? 'selected' : ''}>Normal</option><option value="urgente" ${task.prioridade === 'urgente' ? 'selected' : ''}>Urgente</option></select></div></div><div id="taskWeekDays" class="task-weekdays">${dayNames.map((name, day) => `<label><input type="checkbox" value="${day}" ${(task.dias || []).map(Number).includes(day) ? 'checked' : ''}><span>${name}</span></label>`).join('')}</div><div id="taskOneDate" class="form-group"><label>Data:</label><input id="taskDate" type="date" value="${escapeHtml(task.dataUnica)}"></div><div class="task-form-grid"><div class="form-group"><label>Tempo esperado (min.):</label><input id="taskExpected" type="number" min="0" value="${Number(task.tempoEsperadoMin || 0)}"></div><label class="task-simple-switch task-alarm-switch"><input id="taskAlarmEnabled" type="checkbox" ${task.alarme !== false ? 'checked' : ''}><span>⏰ Alarme</span></label></div><div class="form-group"><label>Procedimento:</label>${richEditorMarkup('taskInstructions', task.instrucoes, task.procedimentoFormato, 'Escreva o procedimento', 1000)}</div><label class="task-simple-switch"><input id="taskAllowReschedule" type="checkbox" ${task.permiteRemarcacao ? 'checked' : ''}><span>📅 Permitir remarcar para outro dia</span></label><label class="task-simple-switch"><input id="taskPopRequired" type="checkbox" ${task.registroPop ? 'checked' : ''}><span>📋 Exigir registro POP ao concluir</span></label><label class="task-simple-switch"><input id="taskActive" type="checkbox" ${task.ativo !== false ? 'checked' : ''}><span>Tarefa ativa</span></label>`;
             toggleRecurrenceFields();
         }
         deps.openModalTop('modalTaskForm');
@@ -915,8 +1031,8 @@
                 prioridade: document.getElementById('taskPriority').value,
                 alarme: document.getElementById('taskAlarmEnabled').checked,
                 tempoEsperadoMin: Number(document.getElementById('taskExpected').value || 0),
-                instrucoes: document.getElementById('taskInstructions').value.trim(),
-                procedimentoFormato: normalizeProcedureFormat(document.getElementById('taskProcedureFormat').value),
+                instrucoes: richEditorValue('taskInstructions'),
+                procedimentoFormato: 'rico',
                 permiteRemarcacao: document.getElementById('taskAllowReschedule').checked,
                 registroPop: document.getElementById('taskPopRequired').checked,
                 ativo: document.getElementById('taskActive').checked
@@ -1022,10 +1138,8 @@
         document.getElementById('taskHistoryTitle').innerText = `Histórico: ${name}`;
         document.getElementById('taskHistoryContent').innerHTML = records.length ? `<div class="task-history-list">${records.map(item => {
             const employee = item.funcionarioNome || getEmployee(item.funcionarioId)?.nome || 'Não informado';
-            const procedure = item.procedimento || template.instrucoes || '';
             const area = getArea(item.setorId);
-            const procedureFormat = item.procedimentoFormato || template.procedimentoFormato || 'texto';
-            return `<article class="task-history-record"><header><strong>${escapeHtml(formatDateTime(item.finalizadoEm))}</strong><span>${item.iniciadoEm ? escapeHtml(formatDuration(item.duracaoSegundos)) : 'Sem medição'}</span></header><div class="task-history-worker"><span>${escapeHtml(area.emoji)} ${escapeHtml(area.nome)}</span><span>Realizada por: <strong>${escapeHtml(employee)}</strong>${item.registroPop ? '<b>POP</b>' : ''}</span></div>${procedure ? `<div class="task-procedure-content">${procedureHtml(procedure, procedureFormat)}</div>` : ''}${item.observacao ? `<div class="task-history-observation"><strong>Observação</strong><span>${escapeHtml(item.observacao)}</span></div>` : ''}</article>`;
+            return `<article class="task-history-record"><header><strong>${escapeHtml(formatDateTime(item.finalizadoEm))}</strong><span>${item.iniciadoEm ? escapeHtml(formatDuration(item.duracaoSegundos)) : 'Sem medição'}</span></header><div class="task-history-worker"><span>${escapeHtml(area.emoji)} ${escapeHtml(area.nome)}</span><span>Realizada por: <strong>${escapeHtml(employee)}</strong>${item.registroPop ? '<b>POP</b>' : ''}</span></div>${item.observacao ? `<div class="task-history-observation"><strong>Observação</strong><div class="task-procedure-content">${sanitizeRichHtml(item.observacao)}</div></div>` : ''}</article>`;
         }).join('')}</div>` : '<div class="tasks-empty">Nenhuma execução registrada neste período.</div>';
         deps.openModalTop('modalTaskHistory');
     }
@@ -1078,12 +1192,14 @@
         init, refreshDefinitions, showHome, openModule, setTab, setArea, syncNow,
         startTask, completeTask, markTaskNotDone, confirmEmployeeSelection,
         openTaskDetails, openFinishedTask, closeFinishedTask, undoFinishedTask, returnTaskToPending,
+        toggleTaskStatusEditMenu, runTaskDetailAction,
         openReschedule, cancelReschedule, confirmReschedule,
         cancelPopCompletion, confirmPopCompletion,
         openAlarmTask, startAlarmTask, completeAlarmTask, dismissAlarm,
         openSettingsMenu, backToControlPanel, backToSettingsMenu,
         manageTaskAreas, manageEmployees, manageTemplates, editManagedItem,
-        cancelForm, saveCurrentForm, toggleRecurrenceFields, refreshTaskEmployeeOptions, updateProcedurePreview,
+        cancelForm, saveCurrentForm, toggleRecurrenceFields, refreshTaskEmployeeOptions,
+        formatRichEditor, limitRichEditor,
         openBasicSettings, saveBasicSettings, openReports, renderReports, changeReportArea,
         openTaskHistory, closeTaskHistory, printTaskHistory, closeReports
     });

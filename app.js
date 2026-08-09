@@ -1078,9 +1078,23 @@ let db = carregarBanco();
         });
     }
 
+    let destinoConfiguracoes = 'painel';
+
     function abrirPainelControle() {
         document.getElementById('configUrlApp').value = db.configs.url || '';
         abrirModalNoTopo('modalPainelUnificado');
+    }
+
+    function abrirDestinoConfiguracoes() {
+        if (destinoConfiguracoes === 'kds') {
+            abrirConfiguracoesKds();
+            return;
+        }
+        if (destinoConfiguracoes === 'tasks') {
+            AloTasks.openSettingsMenu();
+            return;
+        }
+        abrirPainelControle();
     }
 
     function abrirConfiguracoesKds() {
@@ -1090,12 +1104,18 @@ let db = carregarBanco();
 
     function voltarConfiguracoesKds() {
         fecharModal('modalConfigKds');
-        abrirModalNoTopo('modalPainelUnificado');
+        if (destinoConfiguracoes !== 'kds') abrirModalNoTopo('modalPainelUnificado');
     }
 
-    function abrirLoginAdmin() {
+    function voltarConfiguracoesTarefas() {
+        fecharModal('modalConfigTasksMenu');
+        if (destinoConfiguracoes !== 'tasks') abrirModalNoTopo('modalPainelUnificado');
+    }
+
+    function abrirLoginAdmin(destino = 'painel') {
+        destinoConfiguracoes = ['painel', 'kds', 'tasks'].includes(destino) ? destino : 'painel';
         if (!db.configs.senhaMestra) {
-            abrirPainelControle();
+            abrirDestinoConfiguracoes();
             return;
         }
         document.getElementById('senhaAdmin').value = '';
@@ -1588,7 +1608,7 @@ let db = carregarBanco();
         fecharModal('modalLoginAdmin');
         input.value = '';
         limparErroSenha('erroSenhaAdmin');
-        abrirPainelControle();
+        abrirDestinoConfiguracoes();
     }
 
     function confirmarSenhaAvancada() {
@@ -2007,7 +2027,7 @@ let db = carregarBanco();
     };
 
     if ('serviceWorker' in navigator) {
-        window.addEventListener('load', () => navigator.serviceWorker.register('./service-worker.js?v=2.0.5').catch(() => {}));
+        window.addEventListener('load', () => navigator.serviceWorker.register('./service-worker.js?v=2.0.6').catch(() => {}));
     }
 
     iniciarComSyncConfiavel();
