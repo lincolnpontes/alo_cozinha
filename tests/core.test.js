@@ -498,10 +498,11 @@ function testPasswordDialogsHaveExplicitConfirmation() {
     assert.equal(app.includes('Senha incorreta. Tente novamente.'), true);
 }
 
-function testV204TaskExperience() {
+function testV205TaskExperience() {
     const html = fs.readFileSync(path.join(root, 'index.html'), 'utf8');
     const tasks = fs.readFileSync(path.join(root, 'tasks.js'), 'utf8');
     const css = fs.readFileSync(path.join(root, 'tasks.css'), 'utf8');
+    const gas = fs.readFileSync(path.join(root, 'google-apps-script.gs'), 'utf8');
     const panel = html.slice(html.indexOf('id="modalPainelUnificado"'), html.indexOf('id="modalConfigKds"'));
     const kdsSettings = html.slice(html.indexOf('id="modalConfigKds"'), html.indexOf('id="modalConfigTasksMenu"'));
 
@@ -532,9 +533,18 @@ function testV204TaskExperience() {
     assert.equal(tasks.includes('}, 3500);'), true, 'o lembrete deve desaparecer rapidamente dentro do modulo');
     assert.equal(tasks.includes('remarcadoDe: activity.remarcadoDe || activity.data'), true, 'remarcacoes sucessivas devem preservar a data original');
     assert.equal(tasks.includes("selectedTab = 'hoje'"), true, 'o lembrete deve abrir a aba Hoje');
-    assert.equal(tasks.includes('function procedureHtml(value)'), true, 'procedimentos devem aceitar listas e paragrafos');
+    assert.equal(tasks.includes('function procedureHtml(value, requestedFormat'), true, 'procedimentos devem aceitar formato explicito');
     assert.equal(tasks.includes('function openTaskHistory(taskId)'), true, 'relatorios devem abrir o historico por tarefa');
     assert.equal(tasks.includes('Aguardando confirmação'), false, 'cartoes nao devem ocupar espaco com confirmacao de sincronizacao');
+    assert.equal(tasks.includes('function returnTaskToPending()'), true, 'uma tarefa em execucao deve poder voltar para pendente');
+    assert.equal(tasks.includes('function procedurePreview'), false, 'procedimento nao deve aparecer nos cartoes operacionais');
+    assert.equal(tasks.includes('task-completed-meta'), false, 'duracao e POP nao devem aparecer nos cartoes operacionais');
+    assert.equal(tasks.includes('Registros POP'), false, 'POP deve ficar integrado ao historico da tarefa');
+    assert.equal(tasks.includes('function changeReportArea(value)'), true, 'relatorios precisam de filtro por area');
+    assert.equal(tasks.includes('task-report-area-section'), true, 'relatorios precisam agrupar tarefas por area');
+    assert.equal(html.indexOf('id="modalTaskHistory"') > html.indexOf('id="modalTaskReports"'), true, 'historico deve ficar acima do relatorio');
+    assert.equal(css.includes('#modalTaskHistory { z-index: 1300; }'), true, 'historico precisa de camada superior');
+    assert.equal(gas.includes("'ProcedimentoFormato'"), true, 'o formato do procedimento precisa sincronizar entre aparelhos');
     assert.equal(html.includes('class="kds-header-title"'), true, 'o cabecalho deve identificar o KDS');
     assert.equal(css.includes('background: #fde8e8'), true);
     assert.equal(css.includes('background: #eee5f6'), true);
@@ -652,10 +662,10 @@ async function testCatalogAutoPublish() {
     testAppsScriptKeepsActivityIdempotentAndRejectsStaleStatus();
     testOldClientPreservesV2TaskCatalog();
     testPasswordDialogsHaveExplicitConfirmation();
-    testV204TaskExperience();
+    testV205TaskExperience();
     testAudioMode();
     await testCatalogAutoPublish();
-    console.log('Testes críticos da v2.0.4 passaram.');
+    console.log('Testes críticos da v2.0.5 passaram.');
 })().catch(error => {
     console.error(error);
     process.exitCode = 1;

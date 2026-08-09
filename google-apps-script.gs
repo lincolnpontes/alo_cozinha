@@ -14,7 +14,8 @@ const HEADERS_ATIVIDADES = [
   'ID', 'TarefaId', 'Nome', 'SetorId', 'FuncionarioId', 'Status', 'Data', 'Horario',
   'IniciadoEm', 'FinalizadoEm', 'DuracaoSegundos', 'AlarmeStatus', 'AtualizadoEm',
   'Revisao', 'OperacaoId', 'Prioridade', 'TempoEsperadoMin', 'Observacao',
-  'PermiteRemarcacao', 'RegistroPop', 'Procedimento', 'FuncionarioNome', 'RemarcadoDe', 'RemarcadoEm'
+  'PermiteRemarcacao', 'RegistroPop', 'Procedimento', 'FuncionarioNome', 'RemarcadoDe', 'RemarcadoEm',
+  'ProcedimentoFormato'
 ];
 const VALID_ACTIVITY_STATUSES = new Set(['pendente', 'em_execucao', 'concluida', 'nao_realizada', 'cancelada']);
 
@@ -290,7 +291,8 @@ function activityFromRow_(row) {
     procedimento: row[20] || '',
     funcionarioNome: row[21] || '',
     remarcadoDe: row[22] || '',
-    remarcadoEm: asIso_(row[23])
+    remarcadoEm: asIso_(row[23]),
+    procedimentoFormato: row[24] || 'texto'
   };
 }
 
@@ -303,7 +305,8 @@ function activityToRow_(activity, revision) {
     activity.atualizadoEm || new Date().toISOString(), revision, activity.operacaoId || '',
     activity.prioridade || 'normal', Number(activity.tempoEsperadoMin || 0), activity.observacao || '',
     Boolean(activity.permiteRemarcacao), Boolean(activity.registroPop), activity.procedimento || '',
-    activity.funcionarioNome || '', activity.remarcadoDe || '', activity.remarcadoEm || ''
+    activity.funcionarioNome || '', activity.remarcadoDe || '', activity.remarcadoEm || '',
+    activity.procedimentoFormato || 'texto'
   ];
 }
 

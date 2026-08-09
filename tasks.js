@@ -31,6 +31,8 @@
     let finishedActivityId = '';
     let rescheduleActivityId = '';
     let reportActivitiesCache = [];
+    let reportDays = 7;
+    let reportAreaId = 'todos';
     let initialized = false;
 
     function db() { return deps.getDatabase(); }
@@ -78,6 +80,7 @@
             permiteRemarcacao: Boolean(activity.permiteRemarcacao),
             registroPop: Boolean(activity.registroPop),
             procedimento: activity.procedimento || '',
+            procedimentoFormato: normalizeProcedureFormat(activity.procedimentoFormato),
             remarcadoDe: activity.remarcadoDe || '',
             remarcadoEm: activity.remarcadoEm || '',
             syncState: activity.syncState || 'confirmed'
@@ -96,6 +99,10 @@
             ativo: employee.ativo !== false
         }));
         if (!Array.isArray(data.tarefas)) data.tarefas = [];
+        data.tarefas = data.tarefas.map(task => ({
+            ...task,
+            procedimentoFormato: normalizeProcedureFormat(task.procedimentoFormato)
+        }));
         data.configsTarefas = {
             som: 'beep', volume: '80', repeticaoMinutos: '5',
             ...(data.configsTarefas || {})
@@ -140,6 +147,7 @@
                 permiteRemarcacao: Boolean(task.permiteRemarcacao),
                 registroPop: Boolean(task.registroPop),
                 procedimento: task.instrucoes || '',
+                procedimentoFormato: normalizeProcedureFormat(task.procedimentoFormato),
                 alarmeStatus: task.alarme ? 'aguardando' : 'desativado',
                 status: 'pendente',
                 atualizadoEm: nowIso(),
@@ -333,41 +341,61 @@
         const hours = Math.floor(minutes / 60);
         return `${hours}h ${minutes % 60}min`;
     }
-    function procedureHtml(value) {
+    function normalizeProcedureFormat(value) {
+        return ['texto', 'bolinhas', 'numeros', 'tracos'].includes(value) ? value : 'texto';
+    }
+    function cleanProcedureLine(value) {
+        return String(value || '').trim().replace(/^([-*•–—]|\d+[.)])\s+/, '');
+    }
+    function procedureHtml(value, requestedFormat = 'texto') {
         const lines = String(value || '').replace(/\r/g, '').split('\n');
+        const format = normalizeProcedureFormat(requestedFormat);
         const blocks = [];
         let listType = '';
+        let listClass = '';
         let listItems = [];
         const flushList = () => {
             if (!listItems.length) return;
             const tag = listType === 'ordered' ? 'ol' : 'ul';
-            blocks.push(`<${tag}>${listItems.map(item => `<li>${escapeHtml(item)}</li>`).join('')}</${tag}>`);
+            blocks.push(`<${tag}${listClass ? ` class="${listClass}"` : ''}>${listItems.map(item => `<li>${escapeHtml(item)}</li>`).join('')}</${tag}>`);
             listType = '';
+            listClass = '';
             listItems = [];
         };
         lines.forEach(line => {
             const text = line.trim();
             if (!text) {
                 flushList();
+                if (blocks.length && !blocks[blocks.length - 1].includes('task-procedure-spacer')) blocks.push('<div class="task-procedure-spacer"></div>');
                 return;
             }
-            const bullet = text.match(/^[-*•]\s+(.+)$/);
-            const numbered = text.match(/^\d+[.)]\s+(.+)$/);
-            if (bullet || numbered) {
-                const nextType = numbered ? 'ordered' : 'unordered';
+            const manualBullet = text.match(/^[-*•–—]\s+(.+)$/);
+            const manualNumber = text.match(/^\d+[.)]\s+(.+)$/);
+            const forcedList = format !== 'texto';
+            if (forcedList || manualBullet || manualNumber) {
+                const nextType = format === 'numeros' || (!forcedList && manualNumber) ? 'ordered' : 'unordered';
+                const nextClass = format === 'tracos' ? 'procedure-dashes' : '';
                 if (listType && listType !== nextType) flushList();
                 listType = nextType;
-                listItems.push((bullet || numbered)[1]);
+                listClass = nextClass;
+                listItems.push(forcedList ? cleanProcedureLine(text) : (manualBullet || manualNumber)[1]);
                 return;
             }
             flushList();
             blocks.push(`<p>${escapeHtml(text)}</p>`);
         });
         flushList();
+        while (blocks[blocks.length - 1]?.includes('task-procedure-spacer')) blocks.pop();
         return blocks.join('');
     }
-    function procedurePreview(value) {
-        return String(value || '').replace(/\r/g, '').split('\n').map(line => line.trim().replace(/^([-*•]|\d+[.)])\s+/, '')).find(Boolean) || '';
+    function updateProcedurePreview() {
+        const input = document.getElementById('taskInstructions');
+        const format = document.getElementById('taskProcedureFormat');
+        const preview = document.getElementById('taskProcedurePreview');
+        if (!input || !format || !preview) return;
+        const value = input.value.trim();
+        preview.style.display = value ? 'block' : 'none';
+        preview.innerHTML = value ? `<strong>Prévia</strong><div class="task-procedure-content">${procedureHtml(value, format.value)}</div>` : '';
     }
     function render() {
         if (!initialized) return;
@@ -395,7 +423,6 @@
             const template = db().tarefas.find(item => item.id === activity.tarefaId) || {};
             const canReschedule = activity.permiteRemarcacao || template.permiteRemarcacao;
             const stateClass = activity.status === 'em_execucao' ? 'running' : (timing.overdue ? 'late' : activity.status);
-            const statusText = activity.status === 'em_execucao' ? 'Em execução' : (timing.overdue ? 'Atrasada' : activity.status === 'concluida' ? 'Concluída' : activity.status === 'nao_realizada' ? 'Não realizada' : activity.status === 'cancelada' ? 'Cancelada' : 'Pendente');
             let actions = '';
             if (activity.status === 'pendente') {
                 actions = `<button class="task-primary-action" onclick="event.stopPropagation();AloTasks.startTask('${activity.id}')">▶ Iniciar</button><button class="task-complete-action" onclick="event.stopPropagation();AloTasks.completeTask('${activity.id}', true)">✓ Concluir</button>${canReschedule ? `<button class="task-reschedule-action" onclick="event.stopPropagation();AloTasks.openReschedule('${activity.id}')" aria-label="Remarcar atividade" title="Remarcar">📅</button>` : ''}<button class="task-skip-action" onclick="event.stopPropagation();AloTasks.markTaskNotDone('${activity.id}')" aria-label="Marcar como não realizada" title="Não foi feita">⚠</button>`;
@@ -403,14 +430,13 @@
                 actions = `<button class="task-complete-action" onclick="event.stopPropagation();AloTasks.completeTask('${activity.id}', false)">✓ Concluir</button>${canReschedule ? `<button class="task-reschedule-action" onclick="event.stopPropagation();AloTasks.openReschedule('${activity.id}')" aria-label="Remarcar atividade" title="Remarcar">📅</button>` : ''}`;
             }
             const detailsAction = ` onclick="AloTasks.openTaskDetails('${activity.id}')" onkeydown="if(event.target===event.currentTarget&&(event.key==='Enter'||event.key===' ')){event.preventDefault();AloTasks.openTaskDetails('${activity.id}')}" tabindex="0" aria-label="Abrir detalhes de ${escapeHtml(activity.nome)}"`;
-            const preview = procedurePreview(activity.procedimento || template.instrucoes);
+            const urgent = activity.prioridade === 'urgente' ? '<b class="task-urgent-label">URGENTE</b>' : '';
             return `<article class="task-card ${stateClass} details-clickable" id="task-${escapeHtml(activity.id)}"${detailsAction}>
                 <div class="task-card-main">
                     <div class="task-time">${formatTime(activity.horario)}</div>
-                    <div class="task-card-copy"><strong>${escapeHtml(activity.nome)}</strong><span>${escapeHtml(area.emoji)} ${escapeHtml(area.nome)}${employee ? ` · ${escapeHtml(employee.nome)}` : ''}</span>${preview ? `<small>${escapeHtml(preview)}</small>` : ''}</div>
-                    <div class="task-card-side"><div class="task-status">${activity.prioridade === 'urgente' ? '<b>URGENTE</b>' : ''}<span>${statusText}</span></div>${actions ? `<div class="task-card-actions">${actions}</div>` : ''}</div>
+                    <div class="task-card-copy"><strong>${escapeHtml(activity.nome)}</strong><span>${escapeHtml(area.emoji)} ${escapeHtml(area.nome)}${employee ? ` · ${escapeHtml(employee.nome)}` : ''}</span></div>
+                    ${urgent || actions ? `<div class="task-card-side">${urgent}${actions ? `<div class="task-card-actions">${actions}</div>` : ''}</div>` : ''}
                 </div>
-                ${activity.status === 'concluida' ? `<div class="task-completed-meta">${activity.registroPop ? 'POP registrado · ' : ''}${activity.iniciadoEm ? `Tempo: ${formatDuration(activity.duracaoSegundos)}` : 'Concluída sem iniciar'}</div>` : ''}
             </article>`;
         };
         list.innerHTML = groups.map(group => `<li class="task-section"><div class="task-section-title">${group.title}<span>${group.items.length}</span></div><div class="task-section-grid">${group.items.map(renderCard).join('')}</div></li>`).join('');
@@ -468,6 +494,7 @@
             duracaoSegundos: duration,
             registroPop: requiresPop,
             procedimento: activity.procedimento || template.instrucoes || '',
+            procedimentoFormato: activity.procedimentoFormato || template.procedimentoFormato || 'texto',
             observacao: popRecord?.observacao || activity.observacao || '',
             alarmeStatus: 'reconhecido'
         }, activity.status);
@@ -482,7 +509,8 @@
         const selected = employeeId || activity.funcionarioId || employees[0].id;
         pendingPopCompletion = { activityId: activity.id, direct: Boolean(direct) };
         document.getElementById('taskPopName').innerText = activity.nome;
-        document.getElementById('taskPopProcedure').innerHTML = `<strong>Procedimento</strong><div class="task-procedure-content">${procedureHtml(activity.procedimento || template.instrucoes || 'Sem procedimento informado.')}</div>`;
+        const procedureFormat = activity.procedimentoFormato || template.procedimentoFormato || 'texto';
+        document.getElementById('taskPopProcedure').innerHTML = `<strong>Procedimento</strong><div class="task-procedure-content">${procedureHtml(activity.procedimento || template.instrucoes || 'Sem procedimento informado.', procedureFormat)}</div>`;
         document.getElementById('taskPopEmployee').innerHTML = employees.map(employee => `<option value="${escapeHtml(employee.id)}" ${employee.id === selected ? 'selected' : ''}>${escapeHtml(employee.nome)}</option>`).join('');
         document.getElementById('taskPopObservation').value = '';
         deps.openModalTop('modalTaskPop');
@@ -531,12 +559,18 @@
         const employee = getEmployee(activity.funcionarioId);
         const area = getArea(activity.setorId);
         const procedure = activity.procedimento || template.instrucoes || '';
+        const procedureFormat = activity.procedimentoFormato || template.procedimentoFormato || 'texto';
         const timing = taskTiming(activity);
         const statusText = activity.status === 'em_execucao' ? 'Em execução' : activity.status === 'concluida' ? 'Concluída' : activity.status === 'nao_realizada' ? 'Não realizada' : activity.status === 'cancelada' ? 'Cancelada' : (timing.overdue ? 'Atrasada' : 'Pendente');
         const isFinished = isFinalStatus(activity.status);
         finishedActivityId = id;
         document.getElementById('taskDetailsTitle').innerText = isFinished ? 'Registro da Atividade' : 'Detalhes da Atividade';
-        document.getElementById('taskFinishedChoices').style.display = isFinished ? '' : 'none';
+        const canReturnToPending = isFinished || activity.status === 'em_execucao';
+        const choices = document.getElementById('taskFinishedChoices');
+        choices.style.display = canReturnToPending ? '' : 'none';
+        choices.style.gridTemplateColumns = isFinished ? '' : '1fr';
+        document.getElementById('taskResumeButton').style.display = isFinished ? '' : 'none';
+        document.getElementById('taskPendingButton').style.display = canReturnToPending ? '' : 'none';
         document.getElementById('taskFinishedContent').innerHTML = `
             <div class="task-finished-summary"><strong>${escapeHtml(activity.nome)}</strong><span>${statusText}</span></div>
             <div class="task-detail-grid">
@@ -550,8 +584,8 @@
                 ${activity.remarcadoDe ? `<div><small>Remarcada da data</small><strong>${escapeHtml(formatDateKey(activity.remarcadoDe))}</strong></div>` : ''}
             </div>
             ${activity.registroPop ? '<div class="task-pop-badge">POP registrado</div>' : ''}
-            ${procedure ? `<div class="task-procedure-box"><strong>Procedimento</strong><div class="task-procedure-content">${procedureHtml(procedure)}</div></div>` : ''}
-            ${activity.observacao ? `<div class="task-procedure-box"><strong>Observação</strong><div class="task-procedure-content">${procedureHtml(activity.observacao)}</div></div>` : ''}`;
+            ${procedure ? `<div class="task-procedure-box"><strong>Procedimento</strong><div class="task-procedure-content">${procedureHtml(procedure, procedureFormat)}</div></div>` : ''}
+            ${activity.observacao ? `<div class="task-procedure-box"><strong>Observação</strong><div class="task-procedure-content">${procedureHtml(activity.observacao, 'texto')}</div></div>` : ''}`;
         deps.openModalTop('modalTaskFinished');
     }
     function openFinishedTask(id) { openTaskDetails(id); }
@@ -576,6 +610,28 @@
             funcionarioId: targetStatus === 'em_execucao' ? activity.funcionarioId : (template.funcionarioId || ''),
             funcionarioNome: targetStatus === 'em_execucao' ? activity.funcionarioNome : '',
             alarmeStatus: targetStatus === 'em_execucao' ? 'reconhecido' : (template.alarme === false ? 'desativado' : 'aguardando')
+        }, previousStatus);
+    }
+    function returnTaskToPending() {
+        const activity = activities.find(item => item.id === finishedActivityId);
+        if (!activity) return;
+        if (isFinalStatus(activity.status)) {
+            undoFinishedTask('pendente');
+            return;
+        }
+        if (activity.status !== 'em_execucao') return;
+        const template = db().tarefas.find(item => item.id === activity.tarefaId) || {};
+        const previousStatus = activity.status;
+        closeFinishedTask();
+        queueActivity({
+            ...activity,
+            status: 'pendente',
+            iniciadoEm: '',
+            finalizadoEm: '',
+            duracaoSegundos: 0,
+            funcionarioId: template.funcionarioId || '',
+            funcionarioNome: '',
+            alarmeStatus: 'reconhecido'
         }, previousStatus);
     }
     function openReschedule(id) {
@@ -732,7 +788,7 @@
     }
 
     function closeAllSettings() {
-        ['modalPainelUnificado', 'modalConfigTasksMenu', 'modalTasksManager', 'modalTaskForm', 'modalTaskReports', 'modalTaskBasicSettings']
+        ['modalPainelUnificado', 'modalConfigTasksMenu', 'modalTasksManager', 'modalTaskForm', 'modalTaskReports', 'modalTaskHistory', 'modalTaskBasicSettings']
             .forEach(id => { const element = document.getElementById(id); if (element) element.style.display = 'none'; });
     }
     function openSettingsMenu() {
@@ -799,10 +855,18 @@
             title.innerText = index >= 0 ? 'Editar Funcionário' : 'Novo Funcionário';
             body.innerHTML = `<div class="form-group"><label>Nome:</label><input id="taskEmployeeName" value="${escapeHtml(employee.nome)}" placeholder="Nome do funcionário"></div><div class="form-group"><label>Setor principal:</label><select id="taskEmployeeArea"><option value="">Trabalha em vários setores</option>${areaOptions(employee.setorId)}</select></div><label class="task-simple-switch"><input id="taskEmployeeActive" type="checkbox" ${employee.ativo !== false ? 'checked' : ''}><span>Funcionário ativo</span></label>`;
         } else {
-            const task = index >= 0 ? db().tarefas[index] : { nome: '', setorId: db().setoresTarefas[0]?.id || '', funcionarioId: '', horario: '09:00', recorrencia: 'diaria', dias: [1,2,3,4,5,6,0], dataUnica: todayKey(), prioridade: 'normal', alarme: true, tempoEsperadoMin: 0, instrucoes: '', permiteRemarcacao: false, registroPop: false, ativo: true };
+            const task = index >= 0 ? db().tarefas[index] : { nome: '', setorId: db().setoresTarefas[0]?.id || '', funcionarioId: '', horario: '09:00', recorrencia: 'diaria', dias: [1,2,3,4,5,6,0], dataUnica: todayKey(), prioridade: 'normal', alarme: true, tempoEsperadoMin: 0, instrucoes: '', procedimentoFormato: 'texto', permiteRemarcacao: false, registroPop: false, ativo: true };
             title.innerText = index >= 0 ? 'Editar Tarefa' : 'Nova Tarefa';
             const dayNames = ['Dom','Seg','Ter','Qua','Qui','Sex','Sáb'];
-            body.innerHTML = `<div class="form-group"><label>Nome curto:</label><input id="taskName" value="${escapeHtml(task.nome)}" placeholder="Ex: Limpar a chapa"></div><div class="task-form-grid"><div class="form-group"><label>Setor:</label><select id="taskArea" onchange="AloTasks.refreshTaskEmployeeOptions()">${areaOptions(task.setorId)}</select></div><div class="form-group"><label>Horário:</label><input id="taskTime" type="time" value="${escapeHtml(task.horario)}"></div></div><div class="form-group"><label>Responsável:</label><select id="taskEmployee">${employeeOptions(task.funcionarioId, task.setorId)}</select></div><div class="task-form-grid"><div class="form-group"><label>Frequência:</label><select id="taskRecurrence" onchange="AloTasks.toggleRecurrenceFields()"><option value="diaria" ${task.recorrencia === 'diaria' ? 'selected' : ''}>Todos os dias</option><option value="semanal" ${task.recorrencia === 'semanal' ? 'selected' : ''}>Dias específicos</option><option value="unica" ${task.recorrencia === 'unica' ? 'selected' : ''}>Uma única vez</option></select></div><div class="form-group"><label>Prioridade:</label><select id="taskPriority"><option value="normal" ${task.prioridade !== 'urgente' ? 'selected' : ''}>Normal</option><option value="urgente" ${task.prioridade === 'urgente' ? 'selected' : ''}>Urgente</option></select></div></div><div id="taskWeekDays" class="task-weekdays">${dayNames.map((name, day) => `<label><input type="checkbox" value="${day}" ${(task.dias || []).map(Number).includes(day) ? 'checked' : ''}><span>${name}</span></label>`).join('')}</div><div id="taskOneDate" class="form-group"><label>Data:</label><input id="taskDate" type="date" value="${escapeHtml(task.dataUnica)}"></div><div class="task-form-grid"><div class="form-group"><label>Tempo esperado (min.):</label><input id="taskExpected" type="number" min="0" value="${Number(task.tempoEsperadoMin || 0)}"></div><label class="task-simple-switch task-alarm-switch"><input id="taskAlarmEnabled" type="checkbox" ${task.alarme !== false ? 'checked' : ''}><span>⏰ Alarme</span></label></div><div class="form-group"><label>Procedimento:</label><textarea id="taskInstructions" rows="6" maxlength="1000" placeholder="Uma orientação por linha. Use - no início para criar marcadores.">${escapeHtml(task.instrucoes)}</textarea></div><label class="task-simple-switch"><input id="taskAllowReschedule" type="checkbox" ${task.permiteRemarcacao ? 'checked' : ''}><span>📅 Permitir remarcar para outro dia</span></label><label class="task-simple-switch"><input id="taskPopRequired" type="checkbox" ${task.registroPop ? 'checked' : ''}><span>📋 Exigir registro POP ao concluir</span></label><label class="task-simple-switch"><input id="taskActive" type="checkbox" ${task.ativo !== false ? 'checked' : ''}><span>Tarefa ativa</span></label>`;
+            body.innerHTML = `<div class="form-group"><label>Nome curto:</label><input id="taskName" value="${escapeHtml(task.nome)}" placeholder="Ex: Limpar a chapa"></div><div class="task-form-grid"><div class="form-group"><label>Setor:</label><select id="taskArea" onchange="AloTasks.refreshTaskEmployeeOptions()">${areaOptions(task.setorId)}</select></div><div class="form-group"><label>Horário:</label><input id="taskTime" type="time" value="${escapeHtml(task.horario)}"></div></div><div class="form-group"><label>Responsável:</label><select id="taskEmployee">${employeeOptions(task.funcionarioId, task.setorId)}</select></div><div class="task-form-grid"><div class="form-group"><label>Frequência:</label><select id="taskRecurrence" onchange="AloTasks.toggleRecurrenceFields()"><option value="diaria" ${task.recorrencia === 'diaria' ? 'selected' : ''}>Todos os dias</option><option value="semanal" ${task.recorrencia === 'semanal' ? 'selected' : ''}>Dias específicos</option><option value="unica" ${task.recorrencia === 'unica' ? 'selected' : ''}>Uma única vez</option></select></div><div class="form-group"><label>Prioridade:</label><select id="taskPriority"><option value="normal" ${task.prioridade !== 'urgente' ? 'selected' : ''}>Normal</option><option value="urgente" ${task.prioridade === 'urgente' ? 'selected' : ''}>Urgente</option></select></div></div><div id="taskWeekDays" class="task-weekdays">${dayNames.map((name, day) => `<label><input type="checkbox" value="${day}" ${(task.dias || []).map(Number).includes(day) ? 'checked' : ''}><span>${name}</span></label>`).join('')}</div><div id="taskOneDate" class="form-group"><label>Data:</label><input id="taskDate" type="date" value="${escapeHtml(task.dataUnica)}"></div><div class="task-form-grid"><div class="form-group"><label>Tempo esperado (min.):</label><input id="taskExpected" type="number" min="0" value="${Number(task.tempoEsperadoMin || 0)}"></div><label class="task-simple-switch task-alarm-switch"><input id="taskAlarmEnabled" type="checkbox" ${task.alarme !== false ? 'checked' : ''}><span>⏰ Alarme</span></label></div><div class="form-group"><label>Formato do procedimento:</label><select id="taskProcedureFormat"><option value="texto" ${normalizeProcedureFormat(task.procedimentoFormato) === 'texto' ? 'selected' : ''}>Texto sem marcador</option><option value="bolinhas" ${task.procedimentoFormato === 'bolinhas' ? 'selected' : ''}>• Bolinhas</option><option value="numeros" ${task.procedimentoFormato === 'numeros' ? 'selected' : ''}>1. Numeração</option><option value="tracos" ${task.procedimentoFormato === 'tracos' ? 'selected' : ''}>– Tracinhos</option></select></div><div class="form-group"><label>Procedimento:</label><textarea id="taskInstructions" rows="7" maxlength="1000" placeholder="Escreva uma etapa por linha. Linhas em branco separam os blocos.">${escapeHtml(task.instrucoes)}</textarea></div><label class="task-simple-switch"><input id="taskAllowReschedule" type="checkbox" ${task.permiteRemarcacao ? 'checked' : ''}><span>📅 Permitir remarcar para outro dia</span></label><label class="task-simple-switch"><input id="taskPopRequired" type="checkbox" ${task.registroPop ? 'checked' : ''}><span>📋 Exigir registro POP ao concluir</span></label><label class="task-simple-switch"><input id="taskActive" type="checkbox" ${task.ativo !== false ? 'checked' : ''}><span>Tarefa ativa</span></label>`;
+            const procedureInput = document.getElementById('taskInstructions');
+            const procedurePreview = document.createElement('div');
+            procedurePreview.id = 'taskProcedurePreview';
+            procedurePreview.className = 'task-procedure-preview';
+            procedureInput.parentElement.appendChild(procedurePreview);
+            procedureInput.addEventListener('input', updateProcedurePreview);
+            document.getElementById('taskProcedureFormat').addEventListener('change', updateProcedurePreview);
+            updateProcedurePreview();
             toggleRecurrenceFields();
         }
         deps.openModalTop('modalTaskForm');
@@ -852,6 +916,7 @@
                 alarme: document.getElementById('taskAlarmEnabled').checked,
                 tempoEsperadoMin: Number(document.getElementById('taskExpected').value || 0),
                 instrucoes: document.getElementById('taskInstructions').value.trim(),
+                procedimentoFormato: normalizeProcedureFormat(document.getElementById('taskProcedureFormat').value),
                 permiteRemarcacao: document.getElementById('taskAllowReschedule').checked,
                 registroPop: document.getElementById('taskPopRequired').checked,
                 ativo: document.getElementById('taskActive').checked
@@ -887,44 +952,68 @@
         openSettingsMenu();
     }
 
+    function renderReportAreaOptions() {
+        const select = document.getElementById('taskReportsArea');
+        if (!select) return;
+        const areas = db().setoresTarefas;
+        if (reportAreaId !== 'todos' && !areas.some(area => area.id === reportAreaId)) reportAreaId = 'todos';
+        select.innerHTML = '<option value="todos">Todas as áreas</option>' + areas.map(area => `<option value="${escapeHtml(area.id)}">${escapeHtml(area.emoji)} ${escapeHtml(area.nome)}</option>`).join('');
+        select.value = reportAreaId;
+    }
     async function openReports() {
         document.getElementById('modalConfigTasksMenu').style.display = 'none';
+        renderReportAreaOptions();
         deps.openModalTop('modalTaskReports');
         await renderReports(7, document.querySelector('#modalTaskReports .task-report-tabs button'));
     }
-    async function renderReports(days, button) {
+    async function renderReports(days, button, useCache = false) {
+        reportDays = Number(days || 7);
         document.querySelectorAll('#modalTaskReports .task-report-tabs button').forEach(item => item.classList.toggle('active', item === button));
         const content = document.getElementById('taskReportsContent');
-        content.innerHTML = '<div class="tasks-empty">Atualizando relatório...</div>';
-        const end = new Date();
-        const start = new Date();
-        start.setDate(start.getDate() - (days - 1));
-        let reportActivities = activities.filter(activity => activity.data >= todayKey(start) && activity.data <= todayKey(end));
-        if (deps.getUrl() && navigator.onLine) {
-            try {
-                const response = await global.AloApi.getActivityHistory(deps.getUrl(), todayKey(start), todayKey(end));
-                if (response && Array.isArray(response.atividades)) {
-                    const map = new Map(reportActivities.map(item => [item.id, item]));
-                    response.atividades.map(normalizeActivity).forEach(item => map.set(item.id, item));
-                    reportActivities = Array.from(map.values());
-                }
-            } catch (error) {}
+        if (!useCache) {
+            content.innerHTML = '<div class="tasks-empty">Atualizando relatório...</div>';
+            const end = new Date();
+            const start = new Date();
+            start.setDate(start.getDate() - (reportDays - 1));
+            let reportActivities = activities.filter(activity => activity.data >= todayKey(start) && activity.data <= todayKey(end));
+            if (deps.getUrl() && navigator.onLine) {
+                try {
+                    const response = await global.AloApi.getActivityHistory(deps.getUrl(), todayKey(start), todayKey(end));
+                    if (response && Array.isArray(response.atividades)) {
+                        const map = new Map(reportActivities.map(item => [item.id, item]));
+                        response.atividades.map(normalizeActivity).forEach(item => map.set(item.id, item));
+                        reportActivities = Array.from(map.values());
+                    }
+                } catch (error) {}
+            }
+            reportActivitiesCache = reportActivities.slice();
         }
+        const reportActivities = reportActivitiesCache.filter(item => reportAreaId === 'todos' || item.setorId === reportAreaId);
         const completed = reportActivities.filter(item => item.status === 'concluida');
-        reportActivitiesCache = reportActivities.slice();
         const measured = completed.filter(item => item.iniciadoEm && item.duracaoSegundos > 0);
         const direct = completed.length - measured.length;
         const avg = measured.length ? Math.round(measured.reduce((sum, item) => sum + item.duracaoSegundos, 0) / measured.length) : 0;
         const late = reportActivities.filter(item => item.status === 'pendente' && scheduledDate(item) < new Date()).length;
-        const byTask = new Map();
+        const byArea = new Map();
         completed.forEach(item => {
-            const current = byTask.get(item.tarefaId) || { id: item.tarefaId, nome: item.nome, count: 0, seconds: 0, measured: 0 };
+            if (!byArea.has(item.setorId)) byArea.set(item.setorId, new Map());
+            const byTask = byArea.get(item.setorId);
+            const current = byTask.get(item.tarefaId) || { id: item.tarefaId, nome: item.nome, count: 0, popCount: 0, seconds: 0, measured: 0 };
             current.count += 1;
+            if (item.registroPop) current.popCount += 1;
             if (item.duracaoSegundos) { current.seconds += item.duracaoSegundos; current.measured += 1; }
             byTask.set(item.tarefaId, current);
         });
-        const popRecords = completed.filter(item => item.registroPop).sort(sortByFinished);
-        content.innerHTML = `<div class="task-report-summary"><div><strong>${completed.length}</strong><span>Concluídas</span></div><div><strong>${formatDuration(avg)}</strong><span>Tempo médio</span></div><div><strong>${late}</strong><span>Atrasadas</span></div><div><strong>${direct}</strong><span>Sem início</span></div></div><div class="task-report-list">${Array.from(byTask.values()).sort((a,b) => b.count-a.count).map(item => `<button type="button" onclick="AloTasks.openTaskHistory('${escapeHtml(item.id)}')"><span><strong>${escapeHtml(item.nome)}</strong><small>${item.count} conclusão(ões) · ver histórico</small></span><b>${item.measured ? formatDuration(Math.round(item.seconds / item.measured)) : 'sem medição'}</b></button>`).join('') || '<div class="tasks-empty">Nenhuma tarefa concluída no período.</div>'}</div>${popRecords.length ? `<div class="task-report-section-title">Registros POP</div><div class="task-pop-records">${popRecords.map(item => `<button type="button" onclick="AloTasks.openTaskHistory('${escapeHtml(item.tarefaId)}')"><strong>${escapeHtml(item.nome)}</strong><span>${escapeHtml(item.funcionarioNome || getEmployee(item.funcionarioId)?.nome || 'Não informado')} · ${escapeHtml(formatDateTime(item.finalizadoEm))}</span>${item.observacao ? `<small>${escapeHtml(item.observacao)}</small>` : ''}</button>`).join('')}</div>` : ''}`;
+        const areaSections = Array.from(byArea.entries()).sort((left, right) => getArea(left[0]).nome.localeCompare(getArea(right[0]).nome, 'pt-BR')).map(([areaId, byTask]) => {
+            const area = getArea(areaId);
+            const tasksHtml = Array.from(byTask.values()).sort((a,b) => b.count-a.count).map(item => `<button type="button" onclick="AloTasks.openTaskHistory('${escapeHtml(item.id)}')"><span><strong>${escapeHtml(item.nome)}</strong><small>${item.count} registro(s)${item.popCount ? ` · ${item.popCount} POP` : ''}</small></span><b>${item.measured ? formatDuration(Math.round(item.seconds / item.measured)) : 'sem medição'}</b></button>`).join('');
+            return `<section class="task-report-area-section"><h3>${escapeHtml(area.emoji)} ${escapeHtml(area.nome)}</h3><div class="task-report-list">${tasksHtml}</div></section>`;
+        }).join('');
+        content.innerHTML = `<div class="task-report-summary"><div><strong>${completed.length}</strong><span>Concluídas</span></div><div><strong>${formatDuration(avg)}</strong><span>Tempo médio</span></div><div><strong>${late}</strong><span>Atrasadas</span></div><div><strong>${direct}</strong><span>Sem início</span></div></div>${areaSections || '<div class="tasks-empty">Nenhuma tarefa concluída no período e na área escolhida.</div>'}`;
+    }
+    function changeReportArea(value) {
+        reportAreaId = value || 'todos';
+        renderReports(reportDays, document.querySelector('#modalTaskReports .task-report-tabs button.active'), true);
     }
     function openTaskHistory(taskId) {
         const records = reportActivitiesCache.filter(item => item.tarefaId === taskId && item.status === 'concluida').sort(sortByFinished);
@@ -934,13 +1023,16 @@
         document.getElementById('taskHistoryContent').innerHTML = records.length ? `<div class="task-history-list">${records.map(item => {
             const employee = item.funcionarioNome || getEmployee(item.funcionarioId)?.nome || 'Não informado';
             const procedure = item.procedimento || template.instrucoes || '';
-            return `<article class="task-history-record"><header><strong>${escapeHtml(formatDateTime(item.finalizadoEm))}</strong><span>${item.iniciadoEm ? escapeHtml(formatDuration(item.duracaoSegundos)) : 'Sem medição'}</span></header><div class="task-history-worker">Realizada por: <strong>${escapeHtml(employee)}</strong>${item.registroPop ? '<b>POP</b>' : ''}</div>${procedure ? `<div class="task-procedure-content">${procedureHtml(procedure)}</div>` : ''}${item.observacao ? `<div class="task-history-observation"><strong>Observação</strong><span>${escapeHtml(item.observacao)}</span></div>` : ''}</article>`;
+            const area = getArea(item.setorId);
+            const procedureFormat = item.procedimentoFormato || template.procedimentoFormato || 'texto';
+            return `<article class="task-history-record"><header><strong>${escapeHtml(formatDateTime(item.finalizadoEm))}</strong><span>${item.iniciadoEm ? escapeHtml(formatDuration(item.duracaoSegundos)) : 'Sem medição'}</span></header><div class="task-history-worker"><span>${escapeHtml(area.emoji)} ${escapeHtml(area.nome)}</span><span>Realizada por: <strong>${escapeHtml(employee)}</strong>${item.registroPop ? '<b>POP</b>' : ''}</span></div>${procedure ? `<div class="task-procedure-content">${procedureHtml(procedure, procedureFormat)}</div>` : ''}${item.observacao ? `<div class="task-history-observation"><strong>Observação</strong><span>${escapeHtml(item.observacao)}</span></div>` : ''}</article>`;
         }).join('')}</div>` : '<div class="tasks-empty">Nenhuma execução registrada neste período.</div>';
         deps.openModalTop('modalTaskHistory');
     }
     function closeTaskHistory() {
         document.getElementById('modalTaskHistory').style.display = 'none';
     }
+    function printTaskHistory() { global.print(); }
     function closeReports() {
         document.getElementById('modalTaskReports').style.display = 'none';
         openSettingsMenu();
@@ -985,13 +1077,14 @@
     global.AloTasks = Object.freeze({
         init, refreshDefinitions, showHome, openModule, setTab, setArea, syncNow,
         startTask, completeTask, markTaskNotDone, confirmEmployeeSelection,
-        openTaskDetails, openFinishedTask, closeFinishedTask, undoFinishedTask,
+        openTaskDetails, openFinishedTask, closeFinishedTask, undoFinishedTask, returnTaskToPending,
         openReschedule, cancelReschedule, confirmReschedule,
         cancelPopCompletion, confirmPopCompletion,
         openAlarmTask, startAlarmTask, completeAlarmTask, dismissAlarm,
         openSettingsMenu, backToControlPanel, backToSettingsMenu,
         manageTaskAreas, manageEmployees, manageTemplates, editManagedItem,
-        cancelForm, saveCurrentForm, toggleRecurrenceFields, refreshTaskEmployeeOptions,
-        openBasicSettings, saveBasicSettings, openReports, renderReports, openTaskHistory, closeTaskHistory, closeReports
+        cancelForm, saveCurrentForm, toggleRecurrenceFields, refreshTaskEmployeeOptions, updateProcedurePreview,
+        openBasicSettings, saveBasicSettings, openReports, renderReports, changeReportArea,
+        openTaskHistory, closeTaskHistory, printTaskHistory, closeReports
     });
 })(window);

@@ -1,9 +1,14 @@
-# Alô Cozinha v2.0.4
+# Alô Cozinha v2.0.5
 
 Aplicativo para operação de restaurante com dois módulos: pedidos entre áreas (KDS) e lista de atividades por setor.
 
 ## Novidades da v2
 
+- A v2.0.5 deixa os cartões operacionais compactos: sem procedimento, estado escrito, POP ou duração na lista inicial.
+- Atividades em execução podem voltar para pendente pelos detalhes, com ações de retorno mais claras.
+- Procedimentos agora têm formato explícito: texto, bolinhas, numeração ou tracinhos, preservando blocos separados por linhas em branco.
+- Relatórios agrupam e filtram registros por área, integram registros POP na mesma lista e oferecem períodos de até um ano.
+- O histórico abre acima do relatório, pode ser impresso e mantém funcionário, área, data, horário, duração, POP e observação.
 - A v2.0.4 alinha `Hoje`, `Pendentes` e `Concluídas` ao dia atual, evitando contagens diferentes entre as abas.
 - Qualquer cartão de atividade abre seus detalhes e o procedimento, sem alterar o estado; somente os botões iniciam ou concluem.
 - Procedimentos aceitam parágrafos, linhas em branco, marcadores com `-` e etapas numeradas.
