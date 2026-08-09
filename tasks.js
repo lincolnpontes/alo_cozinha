@@ -30,6 +30,7 @@
     let pendingPopCompletion = null;
     let finishedActivityId = '';
     let rescheduleActivityId = '';
+    let reportActivitiesCache = [];
     let initialized = false;
 
     function db() { return deps.getDatabase(); }
@@ -281,9 +282,9 @@
     function activityGroups() {
         const now = new Date();
         const filtered = activities.filter(activity => selectedArea === 'todos' || activity.setorId === selectedArea);
+        const today = filtered.filter(activity => activity.data === todayKey());
 
         if (selectedTab === 'hoje') {
-            const today = filtered.filter(activity => activity.data === todayKey());
             return [
                 {
                     title: 'Pendentes',
@@ -295,7 +296,11 @@
                 },
                 {
                     title: 'Concluídas',
-                    items: today.filter(activity => isFinalStatus(activity.status)).sort(sortByFinished)
+                    items: today.filter(activity => activity.status === 'concluida').sort(sortByFinished)
+                },
+                {
+                    title: 'Não realizadas',
+                    items: today.filter(activity => ['nao_realizada', 'cancelada'].includes(activity.status)).sort(sortByFinished)
                 }
             ].filter(group => group.items.length);
         }
@@ -304,22 +309,18 @@
             return [
                 {
                     title: 'Atrasadas',
-                    items: filtered.filter(activity => activity.status === 'pendente' && scheduledDate(activity) < now).sort(sortBySchedule)
-                },
-                {
-                    title: 'Em execução',
-                    items: filtered.filter(activity => activity.status === 'em_execucao').sort(sortByStarted)
+                    items: today.filter(activity => activity.status === 'pendente' && scheduledDate(activity) < now).sort(sortBySchedule)
                 },
                 {
                     title: 'Mais tarde',
-                    items: filtered.filter(activity => activity.status === 'pendente' && scheduledDate(activity) >= now).sort(sortBySchedule)
+                    items: today.filter(activity => activity.status === 'pendente' && scheduledDate(activity) >= now).sort(sortBySchedule)
                 }
             ].filter(group => group.items.length);
         }
 
         return [{
             title: 'Concluídas',
-            items: filtered.filter(activity => activity.data === todayKey() && isFinalStatus(activity.status)).sort(sortByFinished)
+            items: today.filter(activity => activity.status === 'concluida').sort(sortByFinished)
         }].filter(group => group.items.length);
     }
     function formatTime(value) { return value || '--:--'; }
@@ -331,6 +332,42 @@
         if (minutes < 60) return `${minutes} min`;
         const hours = Math.floor(minutes / 60);
         return `${hours}h ${minutes % 60}min`;
+    }
+    function procedureHtml(value) {
+        const lines = String(value || '').replace(/\r/g, '').split('\n');
+        const blocks = [];
+        let listType = '';
+        let listItems = [];
+        const flushList = () => {
+            if (!listItems.length) return;
+            const tag = listType === 'ordered' ? 'ol' : 'ul';
+            blocks.push(`<${tag}>${listItems.map(item => `<li>${escapeHtml(item)}</li>`).join('')}</${tag}>`);
+            listType = '';
+            listItems = [];
+        };
+        lines.forEach(line => {
+            const text = line.trim();
+            if (!text) {
+                flushList();
+                return;
+            }
+            const bullet = text.match(/^[-*•]\s+(.+)$/);
+            const numbered = text.match(/^\d+[.)]\s+(.+)$/);
+            if (bullet || numbered) {
+                const nextType = numbered ? 'ordered' : 'unordered';
+                if (listType && listType !== nextType) flushList();
+                listType = nextType;
+                listItems.push((bullet || numbered)[1]);
+                return;
+            }
+            flushList();
+            blocks.push(`<p>${escapeHtml(text)}</p>`);
+        });
+        flushList();
+        return blocks.join('');
+    }
+    function procedurePreview(value) {
+        return String(value || '').replace(/\r/g, '').split('\n').map(line => line.trim().replace(/^([-*•]|\d+[.)])\s+/, '')).find(Boolean) || '';
     }
     function render() {
         if (!initialized) return;
@@ -361,20 +398,19 @@
             const statusText = activity.status === 'em_execucao' ? 'Em execução' : (timing.overdue ? 'Atrasada' : activity.status === 'concluida' ? 'Concluída' : activity.status === 'nao_realizada' ? 'Não realizada' : activity.status === 'cancelada' ? 'Cancelada' : 'Pendente');
             let actions = '';
             if (activity.status === 'pendente') {
-                actions = `<button class="task-primary-action" onclick="AloTasks.startTask('${activity.id}')">▶ Iniciar</button><button class="task-complete-action" onclick="AloTasks.completeTask('${activity.id}', true)">✓ Concluir</button>${canReschedule ? `<button class="task-reschedule-action" onclick="AloTasks.openReschedule('${activity.id}')" aria-label="Remarcar atividade" title="Remarcar">📅</button>` : ''}<button class="task-skip-action" onclick="AloTasks.markTaskNotDone('${activity.id}')" aria-label="Marcar como não realizada" title="Não foi feita">⚠</button>`;
+                actions = `<button class="task-primary-action" onclick="event.stopPropagation();AloTasks.startTask('${activity.id}')">▶ Iniciar</button><button class="task-complete-action" onclick="event.stopPropagation();AloTasks.completeTask('${activity.id}', true)">✓ Concluir</button>${canReschedule ? `<button class="task-reschedule-action" onclick="event.stopPropagation();AloTasks.openReschedule('${activity.id}')" aria-label="Remarcar atividade" title="Remarcar">📅</button>` : ''}<button class="task-skip-action" onclick="event.stopPropagation();AloTasks.markTaskNotDone('${activity.id}')" aria-label="Marcar como não realizada" title="Não foi feita">⚠</button>`;
             } else if (activity.status === 'em_execucao') {
-                actions = `<button class="task-complete-action" onclick="AloTasks.completeTask('${activity.id}', false)">✓ Concluir</button>${canReschedule ? `<button class="task-reschedule-action" onclick="AloTasks.openReschedule('${activity.id}')" aria-label="Remarcar atividade" title="Remarcar">📅</button>` : ''}`;
+                actions = `<button class="task-complete-action" onclick="event.stopPropagation();AloTasks.completeTask('${activity.id}', false)">✓ Concluir</button>${canReschedule ? `<button class="task-reschedule-action" onclick="event.stopPropagation();AloTasks.openReschedule('${activity.id}')" aria-label="Remarcar atividade" title="Remarcar">📅</button>` : ''}`;
             }
-            const syncText = activity.syncState === 'offline' ? 'Salvo neste aparelho' : (activity.syncState === 'queued' ? 'Aguardando confirmação' : '');
-            const finishedAction = isFinalStatus(activity.status) ? ` onclick="AloTasks.openFinishedTask('${activity.id}')" onkeydown="if(event.key==='Enter'||event.key===' '){event.preventDefault();AloTasks.openFinishedTask('${activity.id}')}" role="button" tabindex="0" aria-label="Abrir registro de ${escapeHtml(activity.nome)}"` : '';
-            return `<article class="task-card ${stateClass}${isFinalStatus(activity.status) ? ' finished-clickable' : ''}" id="task-${escapeHtml(activity.id)}"${finishedAction}>
+            const detailsAction = ` onclick="AloTasks.openTaskDetails('${activity.id}')" onkeydown="if(event.target===event.currentTarget&&(event.key==='Enter'||event.key===' ')){event.preventDefault();AloTasks.openTaskDetails('${activity.id}')}" tabindex="0" aria-label="Abrir detalhes de ${escapeHtml(activity.nome)}"`;
+            const preview = procedurePreview(activity.procedimento || template.instrucoes);
+            return `<article class="task-card ${stateClass} details-clickable" id="task-${escapeHtml(activity.id)}"${detailsAction}>
                 <div class="task-card-main">
                     <div class="task-time">${formatTime(activity.horario)}</div>
-                    <div class="task-card-copy"><strong>${escapeHtml(activity.nome)}</strong><span>${escapeHtml(area.emoji)} ${escapeHtml(area.nome)}${employee ? ` · ${escapeHtml(employee.nome)}` : ''}</span>${template.instrucoes ? `<small>${escapeHtml(template.instrucoes)}</small>` : ''}</div>
+                    <div class="task-card-copy"><strong>${escapeHtml(activity.nome)}</strong><span>${escapeHtml(area.emoji)} ${escapeHtml(area.nome)}${employee ? ` · ${escapeHtml(employee.nome)}` : ''}</span>${preview ? `<small>${escapeHtml(preview)}</small>` : ''}</div>
                     <div class="task-card-side"><div class="task-status">${activity.prioridade === 'urgente' ? '<b>URGENTE</b>' : ''}<span>${statusText}</span></div>${actions ? `<div class="task-card-actions">${actions}</div>` : ''}</div>
                 </div>
                 ${activity.status === 'concluida' ? `<div class="task-completed-meta">${activity.registroPop ? 'POP registrado · ' : ''}${activity.iniciadoEm ? `Tempo: ${formatDuration(activity.duracaoSegundos)}` : 'Concluída sem iniciar'}</div>` : ''}
-                ${syncText ? `<div class="task-sync-text">${syncText}</div>` : ''}
             </article>`;
         };
         list.innerHTML = groups.map(group => `<li class="task-section"><div class="task-section-title">${group.title}<span>${group.items.length}</span></div><div class="task-section-grid">${group.items.map(renderCard).join('')}</div></li>`).join('');
@@ -446,7 +482,7 @@
         const selected = employeeId || activity.funcionarioId || employees[0].id;
         pendingPopCompletion = { activityId: activity.id, direct: Boolean(direct) };
         document.getElementById('taskPopName').innerText = activity.nome;
-        document.getElementById('taskPopProcedure').innerHTML = `<strong>Procedimento</strong><span>${escapeHtml(activity.procedimento || template.instrucoes || 'Sem procedimento informado.')}</span>`;
+        document.getElementById('taskPopProcedure').innerHTML = `<strong>Procedimento</strong><div class="task-procedure-content">${procedureHtml(activity.procedimento || template.instrucoes || 'Sem procedimento informado.')}</div>`;
         document.getElementById('taskPopEmployee').innerHTML = employees.map(employee => `<option value="${escapeHtml(employee.id)}" ${employee.id === selected ? 'selected' : ''}>${escapeHtml(employee.nome)}</option>`).join('');
         document.getElementById('taskPopObservation').value = '';
         deps.openModalTop('modalTaskPop');
@@ -488,27 +524,37 @@
         const parts = String(value || '').split('-');
         return parts.length === 3 ? `${parts[2]}/${parts[1]}/${parts[0]}` : String(value || 'Não informado');
     }
-    function openFinishedTask(id) {
+    function openTaskDetails(id) {
         const activity = activities.find(item => item.id === id);
-        if (!activity || !isFinalStatus(activity.status)) return;
+        if (!activity) return;
         const template = db().tarefas.find(item => item.id === activity.tarefaId) || {};
         const employee = getEmployee(activity.funcionarioId);
+        const area = getArea(activity.setorId);
         const procedure = activity.procedimento || template.instrucoes || '';
+        const timing = taskTiming(activity);
+        const statusText = activity.status === 'em_execucao' ? 'Em execução' : activity.status === 'concluida' ? 'Concluída' : activity.status === 'nao_realizada' ? 'Não realizada' : activity.status === 'cancelada' ? 'Cancelada' : (timing.overdue ? 'Atrasada' : 'Pendente');
+        const isFinished = isFinalStatus(activity.status);
         finishedActivityId = id;
+        document.getElementById('taskDetailsTitle').innerText = isFinished ? 'Registro da Atividade' : 'Detalhes da Atividade';
+        document.getElementById('taskFinishedChoices').style.display = isFinished ? '' : 'none';
         document.getElementById('taskFinishedContent').innerHTML = `
-            <div class="task-finished-summary"><strong>${escapeHtml(activity.nome)}</strong><span>${activity.status === 'concluida' ? 'Concluída' : activity.status === 'nao_realizada' ? 'Não realizada' : 'Cancelada'}</span></div>
+            <div class="task-finished-summary"><strong>${escapeHtml(activity.nome)}</strong><span>${statusText}</span></div>
             <div class="task-detail-grid">
-                <div><small>Realizada por</small><strong>${escapeHtml(activity.funcionarioNome || employee?.nome || 'Não informado')}</strong></div>
-                <div><small>Data e horário</small><strong>${escapeHtml(formatDateTime(activity.finalizadoEm))}</strong></div>
-                <div><small>Tempo registrado</small><strong>${activity.iniciadoEm ? escapeHtml(formatDuration(activity.duracaoSegundos)) : 'Sem medição'}</strong></div>
+                <div><small>Setor</small><strong>${escapeHtml(area.emoji)} ${escapeHtml(area.nome)}</strong></div>
+                <div><small>Responsável</small><strong>${escapeHtml(activity.funcionarioNome || employee?.nome || 'Qualquer pessoa da área')}</strong></div>
                 <div><small>Data programada</small><strong>${escapeHtml(formatDateKey(activity.data))}</strong></div>
+                <div><small>Horário programado</small><strong>${escapeHtml(formatTime(activity.horario))}</strong></div>
+                ${activity.iniciadoEm ? `<div><small>Iniciada em</small><strong>${escapeHtml(formatDateTime(activity.iniciadoEm))}</strong></div>` : ''}
+                ${activity.finalizadoEm ? `<div><small>Finalizada em</small><strong>${escapeHtml(formatDateTime(activity.finalizadoEm))}</strong></div>` : ''}
+                ${activity.status === 'concluida' ? `<div><small>Tempo registrado</small><strong>${activity.iniciadoEm ? escapeHtml(formatDuration(activity.duracaoSegundos)) : 'Sem medição'}</strong></div>` : ''}
                 ${activity.remarcadoDe ? `<div><small>Remarcada da data</small><strong>${escapeHtml(formatDateKey(activity.remarcadoDe))}</strong></div>` : ''}
             </div>
             ${activity.registroPop ? '<div class="task-pop-badge">POP registrado</div>' : ''}
-            ${procedure ? `<div class="task-procedure-box"><strong>Procedimento</strong><span>${escapeHtml(procedure)}</span></div>` : ''}
-            ${activity.observacao ? `<div class="task-procedure-box"><strong>Observação</strong><span>${escapeHtml(activity.observacao)}</span></div>` : ''}`;
+            ${procedure ? `<div class="task-procedure-box"><strong>Procedimento</strong><div class="task-procedure-content">${procedureHtml(procedure)}</div></div>` : ''}
+            ${activity.observacao ? `<div class="task-procedure-box"><strong>Observação</strong><div class="task-procedure-content">${procedureHtml(activity.observacao)}</div></div>` : ''}`;
         deps.openModalTop('modalTaskFinished');
     }
+    function openFinishedTask(id) { openTaskDetails(id); }
     function closeFinishedTask() {
         finishedActivityId = '';
         document.getElementById('modalTaskFinished').style.display = 'none';
@@ -756,7 +802,7 @@
             const task = index >= 0 ? db().tarefas[index] : { nome: '', setorId: db().setoresTarefas[0]?.id || '', funcionarioId: '', horario: '09:00', recorrencia: 'diaria', dias: [1,2,3,4,5,6,0], dataUnica: todayKey(), prioridade: 'normal', alarme: true, tempoEsperadoMin: 0, instrucoes: '', permiteRemarcacao: false, registroPop: false, ativo: true };
             title.innerText = index >= 0 ? 'Editar Tarefa' : 'Nova Tarefa';
             const dayNames = ['Dom','Seg','Ter','Qua','Qui','Sex','Sáb'];
-            body.innerHTML = `<div class="form-group"><label>Nome curto:</label><input id="taskName" value="${escapeHtml(task.nome)}" placeholder="Ex: Limpar a chapa"></div><div class="task-form-grid"><div class="form-group"><label>Setor:</label><select id="taskArea" onchange="AloTasks.refreshTaskEmployeeOptions()">${areaOptions(task.setorId)}</select></div><div class="form-group"><label>Horário:</label><input id="taskTime" type="time" value="${escapeHtml(task.horario)}"></div></div><div class="form-group"><label>Responsável:</label><select id="taskEmployee">${employeeOptions(task.funcionarioId, task.setorId)}</select></div><div class="task-form-grid"><div class="form-group"><label>Frequência:</label><select id="taskRecurrence" onchange="AloTasks.toggleRecurrenceFields()"><option value="diaria" ${task.recorrencia === 'diaria' ? 'selected' : ''}>Todos os dias</option><option value="semanal" ${task.recorrencia === 'semanal' ? 'selected' : ''}>Dias específicos</option><option value="unica" ${task.recorrencia === 'unica' ? 'selected' : ''}>Uma única vez</option></select></div><div class="form-group"><label>Prioridade:</label><select id="taskPriority"><option value="normal" ${task.prioridade !== 'urgente' ? 'selected' : ''}>Normal</option><option value="urgente" ${task.prioridade === 'urgente' ? 'selected' : ''}>Urgente</option></select></div></div><div id="taskWeekDays" class="task-weekdays">${dayNames.map((name, day) => `<label><input type="checkbox" value="${day}" ${(task.dias || []).map(Number).includes(day) ? 'checked' : ''}><span>${name}</span></label>`).join('')}</div><div id="taskOneDate" class="form-group"><label>Data:</label><input id="taskDate" type="date" value="${escapeHtml(task.dataUnica)}"></div><div class="task-form-grid"><div class="form-group"><label>Tempo esperado (min.):</label><input id="taskExpected" type="number" min="0" value="${Number(task.tempoEsperadoMin || 0)}"></div><label class="task-simple-switch task-alarm-switch"><input id="taskAlarmEnabled" type="checkbox" ${task.alarme !== false ? 'checked' : ''}><span>⏰ Alarme</span></label></div><div class="form-group"><label>Procedimento:</label><textarea id="taskInstructions" rows="4" maxlength="500" placeholder="Passo a passo simples para executar corretamente">${escapeHtml(task.instrucoes)}</textarea></div><label class="task-simple-switch"><input id="taskAllowReschedule" type="checkbox" ${task.permiteRemarcacao ? 'checked' : ''}><span>📅 Permitir remarcar para outro dia</span></label><label class="task-simple-switch"><input id="taskPopRequired" type="checkbox" ${task.registroPop ? 'checked' : ''}><span>📋 Exigir registro POP ao concluir</span></label><label class="task-simple-switch"><input id="taskActive" type="checkbox" ${task.ativo !== false ? 'checked' : ''}><span>Tarefa ativa</span></label>`;
+            body.innerHTML = `<div class="form-group"><label>Nome curto:</label><input id="taskName" value="${escapeHtml(task.nome)}" placeholder="Ex: Limpar a chapa"></div><div class="task-form-grid"><div class="form-group"><label>Setor:</label><select id="taskArea" onchange="AloTasks.refreshTaskEmployeeOptions()">${areaOptions(task.setorId)}</select></div><div class="form-group"><label>Horário:</label><input id="taskTime" type="time" value="${escapeHtml(task.horario)}"></div></div><div class="form-group"><label>Responsável:</label><select id="taskEmployee">${employeeOptions(task.funcionarioId, task.setorId)}</select></div><div class="task-form-grid"><div class="form-group"><label>Frequência:</label><select id="taskRecurrence" onchange="AloTasks.toggleRecurrenceFields()"><option value="diaria" ${task.recorrencia === 'diaria' ? 'selected' : ''}>Todos os dias</option><option value="semanal" ${task.recorrencia === 'semanal' ? 'selected' : ''}>Dias específicos</option><option value="unica" ${task.recorrencia === 'unica' ? 'selected' : ''}>Uma única vez</option></select></div><div class="form-group"><label>Prioridade:</label><select id="taskPriority"><option value="normal" ${task.prioridade !== 'urgente' ? 'selected' : ''}>Normal</option><option value="urgente" ${task.prioridade === 'urgente' ? 'selected' : ''}>Urgente</option></select></div></div><div id="taskWeekDays" class="task-weekdays">${dayNames.map((name, day) => `<label><input type="checkbox" value="${day}" ${(task.dias || []).map(Number).includes(day) ? 'checked' : ''}><span>${name}</span></label>`).join('')}</div><div id="taskOneDate" class="form-group"><label>Data:</label><input id="taskDate" type="date" value="${escapeHtml(task.dataUnica)}"></div><div class="task-form-grid"><div class="form-group"><label>Tempo esperado (min.):</label><input id="taskExpected" type="number" min="0" value="${Number(task.tempoEsperadoMin || 0)}"></div><label class="task-simple-switch task-alarm-switch"><input id="taskAlarmEnabled" type="checkbox" ${task.alarme !== false ? 'checked' : ''}><span>⏰ Alarme</span></label></div><div class="form-group"><label>Procedimento:</label><textarea id="taskInstructions" rows="6" maxlength="1000" placeholder="Uma orientação por linha. Use - no início para criar marcadores.">${escapeHtml(task.instrucoes)}</textarea></div><label class="task-simple-switch"><input id="taskAllowReschedule" type="checkbox" ${task.permiteRemarcacao ? 'checked' : ''}><span>📅 Permitir remarcar para outro dia</span></label><label class="task-simple-switch"><input id="taskPopRequired" type="checkbox" ${task.registroPop ? 'checked' : ''}><span>📋 Exigir registro POP ao concluir</span></label><label class="task-simple-switch"><input id="taskActive" type="checkbox" ${task.ativo !== false ? 'checked' : ''}><span>Tarefa ativa</span></label>`;
             toggleRecurrenceFields();
         }
         deps.openModalTop('modalTaskForm');
@@ -865,19 +911,35 @@
             } catch (error) {}
         }
         const completed = reportActivities.filter(item => item.status === 'concluida');
+        reportActivitiesCache = reportActivities.slice();
         const measured = completed.filter(item => item.iniciadoEm && item.duracaoSegundos > 0);
         const direct = completed.length - measured.length;
         const avg = measured.length ? Math.round(measured.reduce((sum, item) => sum + item.duracaoSegundos, 0) / measured.length) : 0;
         const late = reportActivities.filter(item => item.status === 'pendente' && scheduledDate(item) < new Date()).length;
         const byTask = new Map();
         completed.forEach(item => {
-            const current = byTask.get(item.tarefaId) || { nome: item.nome, count: 0, seconds: 0, measured: 0 };
+            const current = byTask.get(item.tarefaId) || { id: item.tarefaId, nome: item.nome, count: 0, seconds: 0, measured: 0 };
             current.count += 1;
             if (item.duracaoSegundos) { current.seconds += item.duracaoSegundos; current.measured += 1; }
             byTask.set(item.tarefaId, current);
         });
         const popRecords = completed.filter(item => item.registroPop).sort(sortByFinished);
-        content.innerHTML = `<div class="task-report-summary"><div><strong>${completed.length}</strong><span>Concluídas</span></div><div><strong>${formatDuration(avg)}</strong><span>Tempo médio</span></div><div><strong>${late}</strong><span>Atrasadas</span></div><div><strong>${direct}</strong><span>Sem início</span></div></div><div class="task-report-list">${Array.from(byTask.values()).sort((a,b) => b.count-a.count).map(item => `<div><span><strong>${escapeHtml(item.nome)}</strong><small>${item.count} conclusão(ões)</small></span><b>${item.measured ? formatDuration(Math.round(item.seconds / item.measured)) : 'sem medição'}</b></div>`).join('') || '<div class="tasks-empty">Nenhuma tarefa concluída no período.</div>'}</div>${popRecords.length ? `<div class="task-report-section-title">Registros POP</div><div class="task-pop-records">${popRecords.map(item => `<div><strong>${escapeHtml(item.nome)}</strong><span>${escapeHtml(item.funcionarioNome || getEmployee(item.funcionarioId)?.nome || 'Não informado')} · ${escapeHtml(formatDateTime(item.finalizadoEm))}</span>${item.observacao ? `<small>${escapeHtml(item.observacao)}</small>` : ''}</div>`).join('')}</div>` : ''}`;
+        content.innerHTML = `<div class="task-report-summary"><div><strong>${completed.length}</strong><span>Concluídas</span></div><div><strong>${formatDuration(avg)}</strong><span>Tempo médio</span></div><div><strong>${late}</strong><span>Atrasadas</span></div><div><strong>${direct}</strong><span>Sem início</span></div></div><div class="task-report-list">${Array.from(byTask.values()).sort((a,b) => b.count-a.count).map(item => `<button type="button" onclick="AloTasks.openTaskHistory('${escapeHtml(item.id)}')"><span><strong>${escapeHtml(item.nome)}</strong><small>${item.count} conclusão(ões) · ver histórico</small></span><b>${item.measured ? formatDuration(Math.round(item.seconds / item.measured)) : 'sem medição'}</b></button>`).join('') || '<div class="tasks-empty">Nenhuma tarefa concluída no período.</div>'}</div>${popRecords.length ? `<div class="task-report-section-title">Registros POP</div><div class="task-pop-records">${popRecords.map(item => `<button type="button" onclick="AloTasks.openTaskHistory('${escapeHtml(item.tarefaId)}')"><strong>${escapeHtml(item.nome)}</strong><span>${escapeHtml(item.funcionarioNome || getEmployee(item.funcionarioId)?.nome || 'Não informado')} · ${escapeHtml(formatDateTime(item.finalizadoEm))}</span>${item.observacao ? `<small>${escapeHtml(item.observacao)}</small>` : ''}</button>`).join('')}</div>` : ''}`;
+    }
+    function openTaskHistory(taskId) {
+        const records = reportActivitiesCache.filter(item => item.tarefaId === taskId && item.status === 'concluida').sort(sortByFinished);
+        const template = db().tarefas.find(item => item.id === taskId) || {};
+        const name = records[0]?.nome || template.nome || 'Tarefa';
+        document.getElementById('taskHistoryTitle').innerText = `Histórico: ${name}`;
+        document.getElementById('taskHistoryContent').innerHTML = records.length ? `<div class="task-history-list">${records.map(item => {
+            const employee = item.funcionarioNome || getEmployee(item.funcionarioId)?.nome || 'Não informado';
+            const procedure = item.procedimento || template.instrucoes || '';
+            return `<article class="task-history-record"><header><strong>${escapeHtml(formatDateTime(item.finalizadoEm))}</strong><span>${item.iniciadoEm ? escapeHtml(formatDuration(item.duracaoSegundos)) : 'Sem medição'}</span></header><div class="task-history-worker">Realizada por: <strong>${escapeHtml(employee)}</strong>${item.registroPop ? '<b>POP</b>' : ''}</div>${procedure ? `<div class="task-procedure-content">${procedureHtml(procedure)}</div>` : ''}${item.observacao ? `<div class="task-history-observation"><strong>Observação</strong><span>${escapeHtml(item.observacao)}</span></div>` : ''}</article>`;
+        }).join('')}</div>` : '<div class="tasks-empty">Nenhuma execução registrada neste período.</div>';
+        deps.openModalTop('modalTaskHistory');
+    }
+    function closeTaskHistory() {
+        document.getElementById('modalTaskHistory').style.display = 'none';
     }
     function closeReports() {
         document.getElementById('modalTaskReports').style.display = 'none';
@@ -923,13 +985,13 @@
     global.AloTasks = Object.freeze({
         init, refreshDefinitions, showHome, openModule, setTab, setArea, syncNow,
         startTask, completeTask, markTaskNotDone, confirmEmployeeSelection,
-        openFinishedTask, closeFinishedTask, undoFinishedTask,
+        openTaskDetails, openFinishedTask, closeFinishedTask, undoFinishedTask,
         openReschedule, cancelReschedule, confirmReschedule,
         cancelPopCompletion, confirmPopCompletion,
         openAlarmTask, startAlarmTask, completeAlarmTask, dismissAlarm,
         openSettingsMenu, backToControlPanel, backToSettingsMenu,
         manageTaskAreas, manageEmployees, manageTemplates, editManagedItem,
         cancelForm, saveCurrentForm, toggleRecurrenceFields, refreshTaskEmployeeOptions,
-        openBasicSettings, saveBasicSettings, openReports, renderReports, closeReports
+        openBasicSettings, saveBasicSettings, openReports, renderReports, openTaskHistory, closeTaskHistory, closeReports
     });
 })(window);

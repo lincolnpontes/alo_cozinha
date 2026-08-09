@@ -498,7 +498,7 @@ function testPasswordDialogsHaveExplicitConfirmation() {
     assert.equal(app.includes('Senha incorreta. Tente novamente.'), true);
 }
 
-function testV203TaskExperience() {
+function testV204TaskExperience() {
     const html = fs.readFileSync(path.join(root, 'index.html'), 'utf8');
     const tasks = fs.readFileSync(path.join(root, 'tasks.js'), 'utf8');
     const css = fs.readFileSync(path.join(root, 'tasks.css'), 'utf8');
@@ -520,14 +520,22 @@ function testV203TaskExperience() {
     assert.equal(tasks.includes('function undoFinishedTask(targetStatus)'), true);
     assert.equal(tasks.includes('function openReschedule(id)'), true);
     assert.equal(tasks.includes('function confirmPopCompletion()'), true);
-    assert.equal(tasks.includes('onclick="AloTasks.openTask'), false, 'o corpo do cartao nao pode alterar o status');
+    assert.equal(tasks.includes('onclick="AloTasks.openTaskDetails'), true, 'o corpo do cartao deve abrir somente os detalhes');
+    assert.equal(tasks.includes('event.stopPropagation();AloTasks.startTask'), true, 'iniciar nao pode disparar o clique do cartao');
+    assert.equal(tasks.includes('event.stopPropagation();AloTasks.completeTask'), true, 'concluir nao pode disparar o clique do cartao');
     assert.equal(tasks.includes('taskEmployeeRole'), false, 'o cadastro nao pode pedir cargo');
     assert.equal(tasks.includes('employee.cargo'), false, 'o cargo nao pode aparecer no modulo de tarefas');
-    assert.equal(tasks.includes("activity.data === todayKey() && isFinalStatus(activity.status)"), true, 'concluidas deve usar o mesmo dia da aba Hoje');
+    assert.equal(tasks.includes("const today = filtered.filter(activity => activity.data === todayKey())"), true, 'todas as abas devem partir do mesmo dia');
+    assert.equal(tasks.includes("items: today.filter(activity => activity.status === 'pendente'"), true, 'Pendentes deve contar apenas as pendencias de hoje');
+    assert.equal(tasks.includes("items: today.filter(activity => activity.status === 'concluida')"), true, 'Concluidas deve contar apenas as conclusoes de hoje');
     assert.equal(tasks.includes('inOneHour'), false, 'Hoje deve mostrar todas as atividades do dia');
     assert.equal(tasks.includes('}, 3500);'), true, 'o lembrete deve desaparecer rapidamente dentro do modulo');
     assert.equal(tasks.includes('remarcadoDe: activity.remarcadoDe || activity.data'), true, 'remarcacoes sucessivas devem preservar a data original');
     assert.equal(tasks.includes("selectedTab = 'hoje'"), true, 'o lembrete deve abrir a aba Hoje');
+    assert.equal(tasks.includes('function procedureHtml(value)'), true, 'procedimentos devem aceitar listas e paragrafos');
+    assert.equal(tasks.includes('function openTaskHistory(taskId)'), true, 'relatorios devem abrir o historico por tarefa');
+    assert.equal(tasks.includes('Aguardando confirmação'), false, 'cartoes nao devem ocupar espaco com confirmacao de sincronizacao');
+    assert.equal(html.includes('class="kds-header-title"'), true, 'o cabecalho deve identificar o KDS');
     assert.equal(css.includes('background: #fde8e8'), true);
     assert.equal(css.includes('background: #eee5f6'), true);
     assert.equal(css.includes('background: #e4f3e7'), true);
@@ -644,10 +652,10 @@ async function testCatalogAutoPublish() {
     testAppsScriptKeepsActivityIdempotentAndRejectsStaleStatus();
     testOldClientPreservesV2TaskCatalog();
     testPasswordDialogsHaveExplicitConfirmation();
-    testV203TaskExperience();
+    testV204TaskExperience();
     testAudioMode();
     await testCatalogAutoPublish();
-    console.log('Testes críticos da v2.0.3 passaram.');
+    console.log('Testes críticos da v2.0.4 passaram.');
 })().catch(error => {
     console.error(error);
     process.exitCode = 1;
