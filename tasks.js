@@ -296,18 +296,22 @@
             return [
                 {
                     title: 'Pendentes',
+                    className: 'pending',
                     items: today.filter(activity => activity.status === 'pendente').sort(sortBySchedule)
                 },
                 {
                     title: 'Em execução',
+                    className: 'running',
                     items: today.filter(activity => activity.status === 'em_execucao').sort(sortByStarted)
                 },
                 {
                     title: 'Concluídas',
+                    className: 'completed',
                     items: today.filter(activity => activity.status === 'concluida').sort(sortByFinished)
                 },
                 {
                     title: 'Não realizadas',
+                    className: 'missed',
                     items: today.filter(activity => ['nao_realizada', 'cancelada'].includes(activity.status)).sort(sortByFinished)
                 }
             ].filter(group => group.items.length);
@@ -317,10 +321,12 @@
             return [
                 {
                     title: 'Atrasadas',
+                    className: 'pending',
                     items: today.filter(activity => activity.status === 'pendente' && scheduledDate(activity) < now).sort(sortBySchedule)
                 },
                 {
                     title: 'Mais tarde',
+                    className: 'pending',
                     items: today.filter(activity => activity.status === 'pendente' && scheduledDate(activity) >= now).sort(sortBySchedule)
                 }
             ].filter(group => group.items.length);
@@ -329,12 +335,14 @@
         if (selectedTab === 'em_execucao') {
             return [{
                 title: 'Em execução',
+                className: 'running',
                 items: today.filter(activity => activity.status === 'em_execucao').sort(sortByStarted)
             }].filter(group => group.items.length);
         }
 
         return [{
             title: 'Concluídas',
+            className: 'completed',
             items: today.filter(activity => activity.status === 'concluida').sort(sortByFinished)
         }].filter(group => group.items.length);
     }
@@ -438,10 +446,28 @@
     function richEditorMarkup(editorId, value, format, placeholder, maxLength) {
         return `<div class="task-rich-shell">${richEditorToolbar(editorId, 'Formatação do procedimento')}<div id="${editorId}" class="task-rich-editor" contenteditable="true" role="textbox" aria-multiline="true" data-placeholder="${escapeHtml(placeholder)}" oninput="AloTasks.limitRichEditor(this, ${maxLength})">${richEditorInitialHtml(value, format)}</div></div>`;
     }
+    function insertEmptyList(editor, command) {
+        const list = document.createElement(command === 'insertOrderedList' ? 'ol' : 'ul');
+        if (command === 'dashList') list.classList.add('procedure-dashes');
+        const item = document.createElement('li');
+        item.appendChild(document.createElement('br'));
+        list.appendChild(item);
+        editor.replaceChildren(list);
+        const range = document.createRange();
+        range.setStart(item, 0);
+        range.collapse(true);
+        const selection = global.getSelection();
+        selection.removeAllRanges();
+        selection.addRange(range);
+    }
     function formatRichEditor(editorId, command) {
         const editor = document.getElementById(editorId);
         if (!editor) return;
         editor.focus();
+        if (['insertUnorderedList', 'insertOrderedList', 'dashList'].includes(command) && !editor.innerText.trim()) {
+            insertEmptyList(editor, command);
+            return;
+        }
         const selection = global.getSelection();
         const origin = selection?.anchorNode?.nodeType === Node.TEXT_NODE ? selection.anchorNode.parentElement : selection?.anchorNode;
         let currentList = origin?.closest?.('ul, ol');
@@ -468,11 +494,6 @@
                 changedOrigin?.closest?.('ul')?.classList.remove('procedure-dashes');
             }
         }
-        if (command.startsWith('justify') && currentList && editor.contains(currentList)) {
-            const alignment = { justifyLeft: 'left', justifyCenter: 'center', justifyRight: 'right', justifyFull: 'justify' }[command] || 'left';
-            currentList.style.textAlign = alignment;
-            Array.from(currentList.children).forEach(item => { item.style.textAlign = alignment; });
-        }
         normalizeRichEditorLists(editor);
     }
     function cycleRichEditorAlignment(editorId, button) {
@@ -491,9 +512,12 @@
         button.innerHTML = `<span class="align-lines ${next.className}" aria-hidden="true"><i></i><i></i><i></i><i></i></span>`;
     }
     function normalizeRichEditorLists(editor) {
+        const selection = global.getSelection();
+        const selectionNode = selection?.anchorNode?.nodeType === Node.TEXT_NODE ? selection.anchorNode.parentElement : selection?.anchorNode;
         Array.from(editor.querySelectorAll('ul, ol')).forEach(list => {
             const emptyItem = Array.from(list.children).find(item => item.tagName === 'LI' && !item.textContent.trim());
             if (!emptyItem) return;
+            if (selectionNode && emptyItem.contains(selectionNode)) return;
             const trailingItems = [];
             let next = emptyItem.nextElementSibling;
             while (next) {
@@ -568,7 +592,7 @@
                 </div>
             </article>`;
         };
-        list.innerHTML = groups.map(group => `<li class="task-section"><div class="task-section-title">${group.title}<span>${group.items.length}</span></div><div class="task-section-grid">${group.items.map(renderCard).join('')}</div></li>`).join('');
+        list.innerHTML = groups.map(group => `<li class="task-section ${group.className || ''}"><div class="task-section-title">${group.title}<span>${group.items.length}</span></div><div class="task-section-grid">${group.items.map(renderCard).join('')}</div></li>`).join('');
     }
 
     function employeesForActivity(activity) {
@@ -663,8 +687,8 @@
     async function markTaskNotDone(id) {
         const activity = activities.find(item => item.id === id);
         if (!activity || activity.status !== 'pendente') return;
-        const confirmed = await global.AloUiDialog.confirm(`Marcar “${activity.nome}” como não realizada?`, {
-            title: 'Atividade não realizada', icon: '❌', tone: 'danger', confirmText: 'Marcar como não feita'
+        const confirmed = await global.AloUiDialog.confirm(`A atividade “${activity.nome}” foi marcada como não realizada?`, {
+            title: '', icon: '', tone: 'danger', confirmText: 'Confirmar', compact: true
         });
         if (!confirmed) return;
         queueActivity({

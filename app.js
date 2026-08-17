@@ -106,13 +106,29 @@ let db = carregarBanco();
         if (nomeAtual) nomeAtual.innerText = areaAtual.nome;
         const options = document.getElementById('areaPickerOptions');
         if (options) {
-            options.replaceChildren(...db.areas.map(area => {
+            const title = document.createElement('div');
+            title.className = 'header-area-options-title';
+            title.textContent = 'Trocar área';
+            options.replaceChildren(title, ...db.areas.map(area => {
                 const button = document.createElement('button');
                 button.type = 'button';
                 button.className = `header-area-option${area.id === areaAtual.id ? ' selected' : ''}`;
                 button.setAttribute('role', 'option');
                 button.setAttribute('aria-selected', String(area.id === areaAtual.id));
-                button.innerHTML = `<span class="header-area-option-emoji">${getEmojiAreaHtml(area.emoji)}</span><span>${area.nome}</span><b aria-hidden="true">${area.id === areaAtual.id ? '✓' : ''}</b>`;
+                const emoji = document.createElement('span');
+                emoji.className = 'header-area-option-emoji';
+                emoji.innerHTML = getEmojiAreaHtml(area.emoji);
+                const copy = document.createElement('span');
+                copy.className = 'header-area-option-copy';
+                const name = document.createElement('strong');
+                name.textContent = area.nome;
+                const role = document.createElement('small');
+                role.textContent = area.tipo === 'recebimento' ? 'Recebe pedidos' : 'Envia pedidos';
+                copy.append(name, role);
+                const check = document.createElement('b');
+                check.setAttribute('aria-hidden', 'true');
+                check.textContent = area.id === areaAtual.id ? '✓' : '';
+                button.append(emoji, copy, check);
                 button.addEventListener('click', () => selecionarAreaCabecalho(area.id));
                 return button;
             }));
@@ -2110,7 +2126,7 @@ let db = carregarBanco();
     };
 
     if ('serviceWorker' in navigator) {
-        window.addEventListener('load', () => navigator.serviceWorker.register('./service-worker.js?v=2.0.7').catch(() => {}));
+        window.addEventListener('load', () => navigator.serviceWorker.register('./service-worker.js?v=2.0.8').catch(() => {}));
     }
 
     iniciarComSyncConfiavel();

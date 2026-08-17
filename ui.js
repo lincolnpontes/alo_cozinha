@@ -5,6 +5,7 @@
     function elements() {
         return {
             overlay: document.getElementById('appDialog'),
+            dialog: document.querySelector('#appDialog .app-dialog'),
             title: document.getElementById('appDialogTitle'),
             message: document.getElementById('appDialogMessage'),
             icon: document.getElementById('appDialogIcon'),
@@ -23,6 +24,7 @@
         const options = activeRequest.options;
         parts.title.textContent = options.title;
         parts.message.textContent = options.message;
+        parts.dialog.classList.toggle('compact', Boolean(options.compact));
         parts.icon.textContent = options.icon;
         parts.icon.className = `app-dialog-icon ${options.tone}`;
         parts.field.style.display = activeRequest.type === 'prompt' ? 'block' : 'none';
@@ -68,7 +70,8 @@
             cancelText: 'Cancelar',
             inputLabel: 'Digite abaixo',
             defaultValue: '',
-            placeholder: ''
+            placeholder: '',
+            compact: false
         };
         return new Promise(resolve => {
             queue.push({

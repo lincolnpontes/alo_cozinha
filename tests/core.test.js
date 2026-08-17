@@ -498,7 +498,7 @@ function testPasswordDialogsHaveExplicitConfirmation() {
     assert.equal(app.includes('Senha incorreta. Tente novamente.'), true);
 }
 
-function testV207TaskExperience() {
+function testV208TaskExperience() {
     const html = fs.readFileSync(path.join(root, 'index.html'), 'utf8');
     const tasks = fs.readFileSync(path.join(root, 'tasks.js'), 'utf8');
     const app = fs.readFileSync(path.join(root, 'app.js'), 'utf8');
@@ -562,6 +562,9 @@ function testV207TaskExperience() {
     assert.equal(tasks.includes('function cycleRichEditorAlignment(editorId, button)'), true, 'o editor deve ter um unico controle ciclico de alinhamento');
     assert.equal(tasks.includes("format === 'rico' || hasRichMarkup(value)"), true, 'procedimentos antigos com HTML devem ser reconhecidos');
     assert.equal(tasks.includes('function normalizeRichEditorLists(editor)'), true, 'trocar marcadores nao pode criar itens vazios');
+    assert.equal(tasks.includes('function insertEmptyList(editor, command)'), true, 'a primeira linha deve mostrar o marcador antes da digitacao');
+    assert.equal(tasks.includes('emptyItem.contains(selectionNode)'), true, 'o marcador vazio ativo deve continuar visivel');
+    assert.equal(tasks.includes('Array.from(currentList.children).forEach'), false, 'alinhamento nao pode afetar a lista inteira');
     assert.equal(tasks.includes("procedimentoFormato: 'rico'"), true, 'o formato rico deve ser salvo');
     assert.equal(html.includes('id="taskPopObservation" class="task-rich-editor" contenteditable="true"'), true, 'a observacao POP deve usar o editor fixo');
     assert.equal(html.includes('<textarea id="taskPopObservation"'), false, 'a observacao nao deve ser redimensionavel');
@@ -580,6 +583,11 @@ function testV207TaskExperience() {
     assert.equal(html.includes('id="areaPickerOptions"'), true, 'o KDS deve usar seletor de area com emojis');
     assert.equal(app.includes('function selecionarAreaCabecalho(areaId)'), true, 'o seletor visual deve trocar a area');
     assert.equal(ui.includes('global.AloUiDialog'), true, 'dialogos do app devem substituir caixas do navegador');
+    assert.equal(ui.includes("classList.toggle('compact'"), true, 'confirmacoes curtas devem usar o modo compacto');
+    assert.equal(tasks.includes("confirmText: 'Confirmar', compact: true"), true, 'nao realizada deve ter confirmacao enxuta');
+    assert.equal(tasks.includes("className: 'running'"), true, 'separadores devem receber estado visual');
+    assert.equal(app.includes("title.textContent = 'Trocar área'"), true, 'seletor do KDS deve identificar a troca de area');
+    assert.equal(app.includes("role.textContent = area.tipo === 'recebimento'"), true, 'seletor do KDS deve explicar a funcao da area');
     const appWithoutDialogApi = app.replaceAll('AloUiDialog.confirm(', '').replaceAll('AloUiDialog.prompt(', '');
     const tasksWithoutDialogApi = tasks.replaceAll('global.AloUiDialog.confirm(', '');
     assert.equal(/\bconfirm\(/.test(appWithoutDialogApi) || /\bprompt\(/.test(appWithoutDialogApi) || /\bconfirm\(/.test(tasksWithoutDialogApi), false, 'nao pode restar dialogo nativo');
@@ -696,10 +704,10 @@ async function testCatalogAutoPublish() {
     testAppsScriptKeepsActivityIdempotentAndRejectsStaleStatus();
     testOldClientPreservesV2TaskCatalog();
     testPasswordDialogsHaveExplicitConfirmation();
-    testV207TaskExperience();
+    testV208TaskExperience();
     testAudioMode();
     await testCatalogAutoPublish();
-    console.log('Testes críticos da v2.0.7 passaram.');
+    console.log('Testes críticos da v2.0.8 passaram.');
 })().catch(error => {
     console.error(error);
     process.exitCode = 1;
