@@ -13,7 +13,7 @@
     let activities = [];
     let outbox = [];
     let revision = localStorage.getItem(STORAGE_REVISION) || '';
-    let selectedTab = 'hoje';
+    let selectedTab = 'total';
     let selectedArea = localStorage.getItem(STORAGE_SELECTED_AREA) || 'todos';
     let activeModule = 'home';
     let syncRunning = false;
@@ -80,7 +80,7 @@
             permiteRemarcacao: Boolean(activity.permiteRemarcacao),
             registroPop: Boolean(activity.registroPop),
             procedimento: activity.procedimento || '',
-            procedimentoFormato: normalizeProcedureFormat(activity.procedimentoFormato),
+            procedimentoFormato: hasRichMarkup(activity.procedimento) ? 'rico' : normalizeProcedureFormat(activity.procedimentoFormato),
             remarcadoDe: activity.remarcadoDe || '',
             remarcadoEm: activity.remarcadoEm || '',
             syncState: activity.syncState || 'confirmed'
@@ -101,7 +101,7 @@
         if (!Array.isArray(data.tarefas)) data.tarefas = [];
         data.tarefas = data.tarefas.map(task => ({
             ...task,
-            procedimentoFormato: normalizeProcedureFormat(task.procedimentoFormato)
+            procedimentoFormato: hasRichMarkup(task.instrucoes) ? 'rico' : normalizeProcedureFormat(task.procedimentoFormato)
         }));
         data.configsTarefas = {
             som: 'beep', volume: '80', repeticaoMinutos: '5',
@@ -147,7 +147,7 @@
                 permiteRemarcacao: Boolean(task.permiteRemarcacao),
                 registroPop: Boolean(task.registroPop),
                 procedimento: task.instrucoes || '',
-                procedimentoFormato: normalizeProcedureFormat(task.procedimentoFormato),
+                procedimentoFormato: hasRichMarkup(task.instrucoes) ? 'rico' : normalizeProcedureFormat(task.procedimentoFormato),
                 alarmeStatus: task.alarme ? 'aguardando' : 'desativado',
                 status: 'pendente',
                 atualizadoEm: nowIso(),
@@ -292,7 +292,7 @@
         const filtered = activities.filter(activity => selectedArea === 'todos' || activity.setorId === selectedArea);
         const today = filtered.filter(activity => activity.data === todayKey());
 
-        if (selectedTab === 'hoje') {
+        if (selectedTab === 'total') {
             return [
                 {
                     title: 'Pendentes',
@@ -326,6 +326,13 @@
             ].filter(group => group.items.length);
         }
 
+        if (selectedTab === 'em_execucao') {
+            return [{
+                title: 'Em execução',
+                items: today.filter(activity => activity.status === 'em_execucao').sort(sortByStarted)
+            }].filter(group => group.items.length);
+        }
+
         return [{
             title: 'Concluídas',
             items: today.filter(activity => activity.status === 'concluida').sort(sortByFinished)
@@ -344,13 +351,16 @@
     function normalizeProcedureFormat(value) {
         return ['texto', 'bolinhas', 'numeros', 'tracos', 'rico'].includes(value) ? value : 'texto';
     }
+    function hasRichMarkup(value) {
+        return /<(p|div|br|strong|b|u|ul|ol|li)(\s|>)/i.test(String(value || ''));
+    }
     function cleanProcedureLine(value) {
         return String(value || '').trim().replace(/^([-*•–—]|\d+[.)])\s+/, '');
     }
     function procedureHtml(value, requestedFormat = 'texto') {
         const lines = String(value || '').replace(/\r/g, '').split('\n');
         const format = normalizeProcedureFormat(requestedFormat);
-        if (format === 'rico') return sanitizeRichHtml(value);
+        if (format === 'rico' || hasRichMarkup(value)) return sanitizeRichHtml(value);
         const blocks = [];
         let listType = '';
         let listClass = '';
@@ -411,7 +421,7 @@
         return root.innerHTML;
     }
     function richEditorInitialHtml(value, format) {
-        const html = normalizeProcedureFormat(format) === 'rico' ? sanitizeRichHtml(value) : procedureHtml(value, format);
+        const html = normalizeProcedureFormat(format) === 'rico' || hasRichMarkup(value) ? sanitizeRichHtml(value) : procedureHtml(value, format);
         return html.replaceAll('<div class="task-procedure-spacer"></div>', '<p><br></p>');
     }
     function richEditorToolbar(editorId, label) {
@@ -422,9 +432,7 @@
             ${commandButton('insertUnorderedList', 'Lista com bolinhas', '•')}
             ${commandButton('insertOrderedList', 'Lista numerada', '1.')}
             ${commandButton('dashList', 'Lista com traços', '–')}
-            ${commandButton('justifyLeft', 'Alinhar à esquerda', '☰')}
-            ${commandButton('justifyCenter', 'Centralizar', '≡')}
-            ${commandButton('justifyRight', 'Alinhar à direita', '☷')}
+            <button type="button" class="task-alignment-button" data-alignment="justifyLeft" onmousedown="event.preventDefault()" onclick="AloTasks.cycleRichEditorAlignment('${editorId}',this)" aria-label="Alinhar à esquerda" title="Alinhar à esquerda"><span class="align-lines align-left" aria-hidden="true"><i></i><i></i><i></i><i></i></span></button>
         </div>`;
     }
     function richEditorMarkup(editorId, value, format, placeholder, maxLength) {
@@ -460,7 +468,27 @@
                 changedOrigin?.closest?.('ul')?.classList.remove('procedure-dashes');
             }
         }
+        if (command.startsWith('justify') && currentList && editor.contains(currentList)) {
+            const alignment = { justifyLeft: 'left', justifyCenter: 'center', justifyRight: 'right', justifyFull: 'justify' }[command] || 'left';
+            currentList.style.textAlign = alignment;
+            Array.from(currentList.children).forEach(item => { item.style.textAlign = alignment; });
+        }
         normalizeRichEditorLists(editor);
+    }
+    function cycleRichEditorAlignment(editorId, button) {
+        const alignments = [
+            { command: 'justifyLeft', className: 'align-left', title: 'Alinhar à esquerda' },
+            { command: 'justifyCenter', className: 'align-center', title: 'Centralizar' },
+            { command: 'justifyRight', className: 'align-right', title: 'Alinhar à direita' },
+            { command: 'justifyFull', className: 'align-justify', title: 'Justificar' }
+        ];
+        const currentIndex = Math.max(0, alignments.findIndex(item => item.command === button.dataset.alignment));
+        const next = alignments[(currentIndex + 1) % alignments.length];
+        formatRichEditor(editorId, next.command);
+        button.dataset.alignment = next.command;
+        button.title = next.title;
+        button.setAttribute('aria-label', next.title);
+        button.innerHTML = `<span class="align-lines ${next.className}" aria-hidden="true"><i></i><i></i><i></i><i></i></span>`;
     }
     function normalizeRichEditorLists(editor) {
         Array.from(editor.querySelectorAll('ul, ol')).forEach(list => {
@@ -508,11 +536,12 @@
         if (!list) return;
         const groups = activityGroups();
         const allToday = activities.filter(item => item.data === todayKey() && (selectedArea === 'todos' || item.setorId === selectedArea));
-        document.getElementById('taskTabTodayCount').innerText = `(${allToday.length})`;
+        document.getElementById('taskTabTotalCount').innerText = `(${allToday.length})`;
         document.getElementById('taskTabPendingCount').innerText = `(${allToday.filter(item => item.status === 'pendente').length})`;
+        document.getElementById('taskTabRunningCount').innerText = `(${allToday.filter(item => item.status === 'em_execucao').length})`;
         document.getElementById('taskTabCompletedCount').innerText = `(${allToday.filter(item => item.status === 'concluida').length})`;
         if (!groups.length) {
-            const text = selectedTab === 'hoje' ? 'Nenhuma atividade programada para hoje.' : (selectedTab === 'pendentes' ? 'Nenhuma atividade pendente.' : 'Nenhuma atividade concluída hoje.');
+            const text = selectedTab === 'total' ? 'Nenhuma atividade programada para hoje.' : (selectedTab === 'pendentes' ? 'Nenhuma atividade pendente.' : (selectedTab === 'em_execucao' ? 'Nenhuma atividade em execução.' : 'Nenhuma atividade concluída hoje.'));
             list.innerHTML = `<li class="tasks-empty">${text}</li>`;
             return;
         }
@@ -594,7 +623,7 @@
             duracaoSegundos: duration,
             registroPop: requiresPop,
             procedimento: activity.procedimento || template.instrucoes || '',
-            procedimentoFormato: activity.procedimentoFormato || template.procedimentoFormato || 'texto',
+            procedimentoFormato: hasRichMarkup(activity.procedimento || template.instrucoes) ? 'rico' : (activity.procedimentoFormato || template.procedimentoFormato || 'texto'),
             observacao: popRecord?.observacao || activity.observacao || '',
             alarmeStatus: 'reconhecido'
         }, activity.status);
@@ -631,10 +660,13 @@
             observacao: richEditorValue('taskPopObservation')
         });
     }
-    function markTaskNotDone(id) {
+    async function markTaskNotDone(id) {
         const activity = activities.find(item => item.id === id);
         if (!activity || activity.status !== 'pendente') return;
-        if (!confirm(`Marcar "${activity.nome}" como não realizada?`)) return;
+        const confirmed = await global.AloUiDialog.confirm(`Marcar “${activity.nome}” como não realizada?`, {
+            title: 'Atividade não realizada', icon: '❌', tone: 'danger', confirmText: 'Marcar como não feita'
+        });
+        if (!confirmed) return;
         queueActivity({
             ...activity,
             status: 'nao_realizada',
@@ -659,7 +691,7 @@
         const employee = getEmployee(activity.funcionarioId);
         const area = getArea(activity.setorId);
         const procedure = activity.procedimento || template.instrucoes || '';
-        const procedureFormat = activity.procedimentoFormato || template.procedimentoFormato || 'texto';
+        const procedureFormat = hasRichMarkup(procedure) ? 'rico' : (activity.procedimentoFormato || template.procedimentoFormato || 'texto');
         const timing = taskTiming(activity);
         const statusText = activity.status === 'em_execucao' ? 'Em execução' : activity.status === 'concluida' ? 'Concluída' : activity.status === 'nao_realizada' ? 'Não realizada' : activity.status === 'cancelada' ? 'Cancelada' : (timing.overdue ? 'Atrasada' : 'Pendente');
         const isFinished = isFinalStatus(activity.status);
@@ -697,15 +729,45 @@
     function openFinishedTask(id) { openTaskDetails(id); }
     function closeFinishedTask() {
         finishedActivityId = '';
-        document.getElementById('taskFinishedChoices').style.display = 'none';
+        closeTaskStatusEditMenu();
         document.getElementById('modalTaskFinished').style.display = 'none';
+    }
+    function closeTaskStatusEditMenu() {
+        const choices = document.getElementById('taskFinishedChoices');
+        const button = document.querySelector('#taskFinishedContent .task-status-edit-button');
+        if (choices) {
+            choices.style.display = 'none';
+            choices.style.visibility = '';
+        }
+        if (button) button.setAttribute('aria-expanded', 'false');
+    }
+    function positionTaskStatusEditMenu() {
+        const choices = document.getElementById('taskFinishedChoices');
+        const button = document.querySelector('#taskFinishedContent .task-status-edit-button');
+        if (!choices || !button || choices.style.display === 'none') return;
+        const buttonRect = button.getBoundingClientRect();
+        const menuRect = choices.getBoundingClientRect();
+        const gap = 10;
+        const left = Math.min(global.innerWidth - menuRect.width - 10, Math.max(10, buttonRect.right - menuRect.width));
+        const roomAbove = buttonRect.top - menuRect.height - gap;
+        const top = roomAbove >= 10 ? roomAbove : Math.min(global.innerHeight - menuRect.height - 10, buttonRect.bottom + gap);
+        choices.dataset.placement = roomAbove >= 10 ? 'above' : 'below';
+        choices.style.left = `${left}px`;
+        choices.style.top = `${top}px`;
+        choices.style.visibility = 'visible';
     }
     function toggleTaskStatusEditMenu() {
         const choices = document.getElementById('taskFinishedChoices');
         const button = document.querySelector('#taskFinishedContent .task-status-edit-button');
         const opening = choices.style.display === 'none';
-        choices.style.display = opening ? 'grid' : 'none';
-        if (button) button.setAttribute('aria-expanded', String(opening));
+        if (!opening) {
+            closeTaskStatusEditMenu();
+            return;
+        }
+        choices.style.visibility = 'hidden';
+        choices.style.display = 'grid';
+        if (button) button.setAttribute('aria-expanded', 'true');
+        requestAnimationFrame(positionTaskStatusEditMenu);
     }
     function runTaskDetailAction(action) {
         const activity = activities.find(item => item.id === finishedActivityId);
@@ -873,7 +935,7 @@
         if (!currentAlarmId) return;
         const activity = activities.find(item => item.id === currentAlarmId);
         if (activity) selectedArea = activity.setorId;
-        selectedTab = 'hoje';
+        selectedTab = 'total';
         openModule('tasks');
         requestAnimationFrame(() => document.getElementById(`task-${currentAlarmId}`)?.scrollIntoView({ block: 'center' }));
     }
@@ -1186,6 +1248,13 @@
         };
         document.addEventListener('click', unlockAlarm, { once: true });
         document.addEventListener('touchstart', unlockAlarm, { once: true });
+        document.addEventListener('pointerdown', event => {
+            const choices = document.getElementById('taskFinishedChoices');
+            const button = document.querySelector('#taskFinishedContent .task-status-edit-button');
+            if (!choices || choices.style.display === 'none' || choices.contains(event.target) || button?.contains(event.target)) return;
+            closeTaskStatusEditMenu();
+        });
+        global.addEventListener('resize', positionTaskStatusEditMenu);
     }
 
     global.AloTasks = Object.freeze({
@@ -1199,7 +1268,7 @@
         openSettingsMenu, backToControlPanel, backToSettingsMenu,
         manageTaskAreas, manageEmployees, manageTemplates, editManagedItem,
         cancelForm, saveCurrentForm, toggleRecurrenceFields, refreshTaskEmployeeOptions,
-        formatRichEditor, limitRichEditor,
+        formatRichEditor, cycleRichEditorAlignment, limitRichEditor,
         openBasicSettings, saveBasicSettings, openReports, renderReports, changeReportArea,
         openTaskHistory, closeTaskHistory, printTaskHistory, closeReports
     });

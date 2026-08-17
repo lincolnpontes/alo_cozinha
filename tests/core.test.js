@@ -498,11 +498,12 @@ function testPasswordDialogsHaveExplicitConfirmation() {
     assert.equal(app.includes('Senha incorreta. Tente novamente.'), true);
 }
 
-function testV206TaskExperience() {
+function testV207TaskExperience() {
     const html = fs.readFileSync(path.join(root, 'index.html'), 'utf8');
     const tasks = fs.readFileSync(path.join(root, 'tasks.js'), 'utf8');
     const app = fs.readFileSync(path.join(root, 'app.js'), 'utf8');
     const css = fs.readFileSync(path.join(root, 'tasks.css'), 'utf8');
+    const ui = fs.readFileSync(path.join(root, 'ui.js'), 'utf8');
     const gas = fs.readFileSync(path.join(root, 'google-apps-script.gs'), 'utf8');
     const panel = html.slice(html.indexOf('id="modalPainelUnificado"'), html.indexOf('id="modalConfigKds"'));
     const kdsSettings = html.slice(html.indexOf('id="modalConfigKds"'), html.indexOf('id="modalConfigTasksMenu"'));
@@ -513,12 +514,14 @@ function testV206TaskExperience() {
     assert.equal((html.match(/class="module-wordmark-button"/g) || []).length, 2);
     assert.equal(panel.includes("abrirGerenciar('areas')"), false);
     assert.equal(kdsSettings.includes("abrirGerenciar('areas')"), true);
-    assert.equal(html.includes('data-task-tab="hoje"'), true);
+    assert.equal(html.includes('data-task-tab="total"'), true);
     assert.equal(html.includes('data-task-tab="pendentes"'), true);
+    assert.equal(html.includes('data-task-tab="em_execucao"'), true);
     assert.equal(html.includes('id="modalTaskFinished"'), true);
     assert.equal(html.includes('id="modalTaskPop"'), true);
     assert.equal(html.includes('id="modalTaskReschedule"'), true);
-    assert.equal((html.match(/class="module-wordmark-arrow" aria-hidden="true">☰/g) || []).length, 2);
+    assert.equal((html.match(/class="module-header-switch/g) || []).length, 2);
+    assert.equal(html.includes('aria-label="Trocar de módulo"'), true);
     assert.equal(tasks.includes('function undoFinishedTask(targetStatus)'), true);
     assert.equal(tasks.includes('function openReschedule(id)'), true);
     assert.equal(tasks.includes('function confirmPopCompletion()'), true);
@@ -533,7 +536,7 @@ function testV206TaskExperience() {
     assert.equal(tasks.includes('inOneHour'), false, 'Hoje deve mostrar todas as atividades do dia');
     assert.equal(tasks.includes('}, 3500);'), true, 'o lembrete deve desaparecer rapidamente dentro do modulo');
     assert.equal(tasks.includes('remarcadoDe: activity.remarcadoDe || activity.data'), true, 'remarcacoes sucessivas devem preservar a data original');
-    assert.equal(tasks.includes("selectedTab = 'hoje'"), true, 'o lembrete deve abrir a aba Hoje');
+    assert.equal(tasks.includes("selectedTab = 'total'"), true, 'o lembrete deve abrir a aba Total');
     assert.equal(tasks.includes('function procedureHtml(value, requestedFormat'), true, 'procedimentos devem aceitar formato explicito');
     assert.equal(tasks.includes('function openTaskHistory(taskId)'), true, 'relatorios devem abrir o historico por tarefa');
     assert.equal(tasks.includes('Aguardando confirmação'), false, 'cartoes nao devem ocupar espaco com confirmacao de sincronizacao');
@@ -546,21 +549,25 @@ function testV206TaskExperience() {
     assert.equal(html.indexOf('id="modalTaskHistory"') > html.indexOf('id="modalTaskReports"'), true, 'historico deve ficar acima do relatorio');
     assert.equal(css.includes('#modalTaskHistory { z-index: 1300; }'), true, 'historico precisa de camada superior');
     assert.equal(gas.includes("'ProcedimentoFormato'"), true, 'o formato do procedimento precisa sincronizar entre aparelhos');
-    assert.equal(html.includes('class="kds-header-title"'), true, 'o cabecalho deve identificar o KDS');
+    assert.equal(html.includes('kds-header-title'), true, 'o cabecalho deve identificar o KDS');
     assert.equal(html.includes('id="tasksSummary"'), false, 'a faixa redundante de resumo deve ser removida');
-    assert.equal(html.includes('id="taskTabTodayCount"'), true, 'Hoje deve mostrar sua contagem na aba');
+    assert.equal(html.includes('id="taskTabTotalCount"'), true, 'Total deve mostrar sua contagem na aba');
     assert.equal(html.includes('id="taskTabPendingCount"'), true, 'Pendentes deve mostrar sua contagem na aba');
+    assert.equal(html.includes('id="taskTabRunningCount"'), true, 'Em execucao deve mostrar sua contagem na aba');
     assert.equal(html.includes('id="taskTabCompletedCount"'), true, 'Concluidas deve mostrar sua contagem na aba');
     assert.equal(html.includes("abrirLoginAdmin('kds')"), true, 'o KDS deve abrir somente suas configuracoes');
     assert.equal(html.includes("abrirLoginAdmin('tasks')"), true, 'Atividades deve abrir somente suas configuracoes');
     assert.equal(html.includes('module-choice-settings'), true, 'a tela inicial deve oferecer o painel completo');
     assert.equal(tasks.includes('function formatRichEditor(editorId, command)'), true, 'o procedimento deve usar editor formatado');
+    assert.equal(tasks.includes('function cycleRichEditorAlignment(editorId, button)'), true, 'o editor deve ter um unico controle ciclico de alinhamento');
+    assert.equal(tasks.includes("format === 'rico' || hasRichMarkup(value)"), true, 'procedimentos antigos com HTML devem ser reconhecidos');
     assert.equal(tasks.includes('function normalizeRichEditorLists(editor)'), true, 'trocar marcadores nao pode criar itens vazios');
     assert.equal(tasks.includes("procedimentoFormato: 'rico'"), true, 'o formato rico deve ser salvo');
     assert.equal(html.includes('id="taskPopObservation" class="task-rich-editor" contenteditable="true"'), true, 'a observacao POP deve usar o editor fixo');
     assert.equal(html.includes('<textarea id="taskPopObservation"'), false, 'a observacao nao deve ser redimensionavel');
     assert.equal(tasks.includes("title=\"Não foi feita\">❌"), true, 'nao realizada deve usar o X vermelho');
     assert.equal(tasks.includes('function toggleTaskStatusEditMenu()'), true, 'o lapis deve abrir as correcoes de estado');
+    assert.equal(tasks.includes('function positionTaskStatusEditMenu()'), true, 'as correcoes devem abrir junto ao lapis');
     assert.equal(tasks.includes("runTaskDetailAction('start')"), true, 'detalhes pendentes devem permitir iniciar');
     assert.equal(tasks.includes("runTaskDetailAction('complete')"), true, 'detalhes devem permitir concluir');
     assert.equal(tasks.includes('const procedure = item.procedimento'), false, 'o historico nao deve repetir o procedimento');
@@ -570,6 +577,12 @@ function testV206TaskExperience() {
     assert.equal(css.includes('background: #fde8e8'), true);
     assert.equal(css.includes('background: #eee5f6'), true);
     assert.equal(css.includes('background: #e4f3e7'), true);
+    assert.equal(html.includes('id="areaPickerOptions"'), true, 'o KDS deve usar seletor de area com emojis');
+    assert.equal(app.includes('function selecionarAreaCabecalho(areaId)'), true, 'o seletor visual deve trocar a area');
+    assert.equal(ui.includes('global.AloUiDialog'), true, 'dialogos do app devem substituir caixas do navegador');
+    const appWithoutDialogApi = app.replaceAll('AloUiDialog.confirm(', '').replaceAll('AloUiDialog.prompt(', '');
+    const tasksWithoutDialogApi = tasks.replaceAll('global.AloUiDialog.confirm(', '');
+    assert.equal(/\bconfirm\(/.test(appWithoutDialogApi) || /\bprompt\(/.test(appWithoutDialogApi) || /\bconfirm\(/.test(tasksWithoutDialogApi), false, 'nao pode restar dialogo nativo');
 }
 
 function testAudioMode() {
@@ -683,10 +696,10 @@ async function testCatalogAutoPublish() {
     testAppsScriptKeepsActivityIdempotentAndRejectsStaleStatus();
     testOldClientPreservesV2TaskCatalog();
     testPasswordDialogsHaveExplicitConfirmation();
-    testV206TaskExperience();
+    testV207TaskExperience();
     testAudioMode();
     await testCatalogAutoPublish();
-    console.log('Testes críticos da v2.0.6 passaram.');
+    console.log('Testes críticos da v2.0.7 passaram.');
 })().catch(error => {
     console.error(error);
     process.exitCode = 1;

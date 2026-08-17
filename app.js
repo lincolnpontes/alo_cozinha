@@ -96,11 +96,48 @@ let db = carregarBanco();
         const seletor = document.getElementById('seletorModo');
         if (!seletor) return;
         seletor.innerHTML = db.areas.map(area =>
-            `<option value="${area.id}">${area.nome}</option>`
+            `<option value="${area.id}">${area.emoji} ${area.nome}</option>`
         ).join('');
         seletor.value = db.configs.areaAtual;
+        const areaAtual = getAreaAtual();
         const emojiAtual = document.getElementById('emojiAreaAtual');
-        if (emojiAtual) emojiAtual.innerHTML = getEmojiAreaHtml(getAreaAtual().emoji);
+        if (emojiAtual) emojiAtual.innerHTML = getEmojiAreaHtml(areaAtual.emoji);
+        const nomeAtual = document.getElementById('nomeAreaAtual');
+        if (nomeAtual) nomeAtual.innerText = areaAtual.nome;
+        const options = document.getElementById('areaPickerOptions');
+        if (options) {
+            options.replaceChildren(...db.areas.map(area => {
+                const button = document.createElement('button');
+                button.type = 'button';
+                button.className = `header-area-option${area.id === areaAtual.id ? ' selected' : ''}`;
+                button.setAttribute('role', 'option');
+                button.setAttribute('aria-selected', String(area.id === areaAtual.id));
+                button.innerHTML = `<span class="header-area-option-emoji">${getEmojiAreaHtml(area.emoji)}</span><span>${area.nome}</span><b aria-hidden="true">${area.id === areaAtual.id ? '✓' : ''}</b>`;
+                button.addEventListener('click', () => selecionarAreaCabecalho(area.id));
+                return button;
+            }));
+        }
+    }
+
+    function fecharSeletorAreas() {
+        const options = document.getElementById('areaPickerOptions');
+        const button = document.getElementById('areaPickerButton');
+        if (options) options.classList.remove('open');
+        if (button) button.setAttribute('aria-expanded', 'false');
+    }
+
+    function toggleSeletorAreas() {
+        const options = document.getElementById('areaPickerOptions');
+        const button = document.getElementById('areaPickerButton');
+        if (!options || !button) return;
+        const opening = !options.classList.contains('open');
+        options.classList.toggle('open', opening);
+        button.setAttribute('aria-expanded', String(opening));
+    }
+
+    function selecionarAreaCabecalho(areaId) {
+        fecharSeletorAreas();
+        iniciarTrocaModo(areaId);
     }
 
     normalizarAreasERotas();
@@ -135,6 +172,10 @@ let db = carregarBanco();
         }
     }
     document.addEventListener('touchstart', resetInatividade); document.addEventListener('mousemove', resetInatividade); document.addEventListener('click', resetInatividade);
+    document.addEventListener('pointerdown', event => {
+        const picker = document.querySelector('.header-area-picker');
+        if (picker && !picker.contains(event.target)) fecharSeletorAreas();
+    });
 
     function prepararAudioNoPrimeiroToque() {
         const ctx = getAudioCtx();
@@ -353,9 +394,9 @@ let db = carregarBanco();
 
     let modoPendente = null; let seletorGlobal = null;
     function iniciarTrocaModo(selectElement) {
-        const novoModo = selectElement.value;
+        const novoModo = typeof selectElement === 'string' ? selectElement : selectElement.value;
         if (db.configs.senhaModo && db.configs.senhaModo.trim() !== "") {
-            modoPendente = novoModo; seletorGlobal = selectElement; document.getElementById('inputSenhaModo').value = ''; limparErroSenha('erroSenhaModo'); document.getElementById('modalSenhaModo').style.display = 'flex'; setTimeout(() => document.getElementById('inputSenhaModo').focus(), 100); selectElement.value = db.configs.areaAtual;
+            modoPendente = novoModo; seletorGlobal = typeof selectElement === 'string' ? null : selectElement; document.getElementById('inputSenhaModo').value = ''; limparErroSenha('erroSenhaModo'); document.getElementById('modalSenhaModo').style.display = 'flex'; setTimeout(() => document.getElementById('inputSenhaModo').focus(), 100); if (seletorGlobal) seletorGlobal.value = db.configs.areaAtual;
         } else { efetivarTrocaModo(novoModo); }
     }
 
@@ -382,13 +423,13 @@ let db = carregarBanco();
         if (!senhaValida) return senhaIncorreta('inputSenhaModo', 'erroSenhaModo');
         input.blur();
         document.getElementById('modalSenhaModo').style.display = 'none';
-        seletorGlobal.value = modoPendente;
+        if (seletorGlobal) seletorGlobal.value = modoPendente;
         efetivarTrocaModo(modoPendente);
         input.value = '';
         limparErroSenha('erroSenhaModo');
     }
 
-    function cancelarTrocaModo() { document.getElementById('modalSenhaModo').style.display = 'none'; seletorGlobal.value = db.configs.areaAtual; modoPendente = null; document.getElementById('inputSenhaModo').value = ''; limparErroSenha('erroSenhaModo'); }
+    function cancelarTrocaModo() { document.getElementById('modalSenhaModo').style.display = 'none'; if (seletorGlobal) seletorGlobal.value = db.configs.areaAtual; modoPendente = null; document.getElementById('inputSenhaModo').value = ''; limparErroSenha('erroSenhaModo'); }
     function efetivarTrocaModo(areaId) {
         const area = db.areas.find(item => item.id === areaId) || getAreaAtual();
         db.configs.areaAtual = area.id;
@@ -423,6 +464,9 @@ let db = carregarBanco();
         db.configs.modo = modo;
         const emojiAtual = document.getElementById('emojiAreaAtual');
         if (emojiAtual) emojiAtual.innerHTML = getEmojiAreaHtml(area.emoji);
+        const nomeAtual = document.getElementById('nomeAreaAtual');
+        if (nomeAtual) nomeAtual.innerText = area.nome;
+        renderizarSeletorAreas();
         const themeColor = document.getElementById('metaThemeColor'); document.body.className = modo === 'panelas' ? 'theme-panelas' : 'theme-cozinha';
         if(loopSync) clearInterval(loopSync);
         loopSync = null;
@@ -577,7 +621,10 @@ let db = carregarBanco();
                 if(btnConfirmar) btnConfirmar.disabled = false;
                 return;
             } else if (configReenvio === 'confirmacao') {
-                if(!confirm("Esse item está em produção.\n\nEnviar assim mesmo?")) {
+                const confirmed = await AloUiDialog.confirm('Esse item já está em produção. Deseja enviar outro pedido mesmo assim?', {
+                    title: 'Pedido repetido', icon: '↻', confirmText: 'Enviar novamente'
+                });
+                if(!confirmed) {
                     document.getElementById('modalFazerPedido').style.display = 'none';
                     envioPedidoEmAndamento = false;
                     if(btnConfirmar) btnConfirmar.disabled = false;
@@ -1022,10 +1069,14 @@ let db = carregarBanco();
         parametroAcao = null;
     }
 
-    function solicitarAutorizacaoAcao() {
+    async function solicitarAutorizacaoAcao() {
         if (!db.configs.senhaMestra) {
             const descricao = document.getElementById('descModalAcao').innerText;
-            if (confirm(descricao)) executarAcaoPendenteAutorizada();
+            const confirmed = await AloUiDialog.confirm(descricao, {
+                title: document.getElementById('tituloModalAcao').innerText,
+                icon: '🗑️', tone: 'danger', confirmText: 'Excluir'
+            });
+            if (confirmed) executarAcaoPendenteAutorizada();
             else { acaoPendente = null; parametroAcao = null; }
             return;
         }
@@ -1155,7 +1206,10 @@ let db = carregarBanco();
     }
 
     async function forcarAtualizacao() {
-        if (confirm("Deseja recarregar o aplicativo limpando o cache?")) {
+        const confirmed = await AloUiDialog.confirm('Deseja recarregar o aplicativo e limpar os arquivos temporários?', {
+            title: 'Atualizar aplicativo', icon: '↻', confirmText: 'Atualizar agora'
+        });
+        if (confirmed) {
             sessionStorage.clear();
 
             if ('caches' in window) {
@@ -1487,8 +1541,27 @@ let db = carregarBanco();
         document.getElementById('modalListagem').style.display = 'flex';
     }
 
-    function novaObservacao(tipo) { const obs = prompt(tipo === 'obsPedidos' ? "Nova observação global:" : "Novo motivo de cancelamento:"); if(obs) { db[tipo].push(obs); marcarBancoAlterado(); abrirGerenciar(tipo); } }
-    function excluirItem(tipo, id) { if(!confirm("Certeza?")) return; if(tipo === 'produtos') db.produtos.splice(id, 1); if(tipo === 'categorias') db.categorias = db.categorias.filter(i => i.nome !== id); if(tipo === 'obsPedidos') db.obsPedidos = db.obsPedidos.filter(i => i !== id); if(tipo === 'obsCancelamentos') db.obsCancelamentos = db.obsCancelamentos.filter(i => i !== id); marcarBancoAlterado(); iniciar(); abrirGerenciar(tipo); }
+    async function novaObservacao(tipo) {
+        const isProductNote = tipo === 'obsPedidos';
+        const obs = await AloUiDialog.prompt(isProductNote ? 'Cadastre uma observação que poderá ser usada nos pedidos.' : 'Cadastre um motivo para o cancelamento.', {
+            title: isProductNote ? 'Nova observação' : 'Novo motivo',
+            icon: isProductNote ? '💬' : '🗑️',
+            inputLabel: isProductNote ? 'Observação' : 'Motivo do cancelamento',
+            placeholder: isProductNote ? 'Ex: Sem cebola' : 'Ex: Produto indisponível'
+        });
+        if(obs) { db[tipo].push(obs); marcarBancoAlterado(); abrirGerenciar(tipo); }
+    }
+    async function excluirItem(tipo, id) {
+        const confirmed = await AloUiDialog.confirm('Este cadastro será removido. Deseja continuar?', {
+            title: 'Excluir cadastro', icon: '🗑️', tone: 'danger', confirmText: 'Excluir'
+        });
+        if(!confirmed) return;
+        if(tipo === 'produtos') db.produtos.splice(id, 1);
+        if(tipo === 'categorias') db.categorias = db.categorias.filter(i => i.nome !== id);
+        if(tipo === 'obsPedidos') db.obsPedidos = db.obsPedidos.filter(i => i !== id);
+        if(tipo === 'obsCancelamentos') db.obsCancelamentos = db.obsCancelamentos.filter(i => i !== id);
+        marcarBancoAlterado(); iniciar(); abrirGerenciar(tipo);
+    }
 
     function abrirFormProduto(idx) {
         fecharModal('modalListagem');
@@ -1585,12 +1658,15 @@ let db = carregarBanco();
         normalizarAreasERotas(); marcarBancoAlterado(); iniciar(); abrirGerenciar('areas');
     }
 
-    function excluirArea(idx) {
+    async function excluirArea(idx) {
         const area = db.areas[idx];
         if (!area) return;
         if (area.id === 'panelas' || area.id === 'cozinha') return alert('As áreas padrão Panelas e Cozinha não podem ser excluídas.');
         if (db.produtos.some(produto => getAreasOrigemProduto(produto).includes(area.id) || produto.areaDestino === area.id)) return alert('Esta área está ligada a produtos. Altere primeiro a rota desses produtos.');
-        if (!confirm(`Excluir a área ${area.nome}?`)) return;
+        const confirmed = await AloUiDialog.confirm(`Excluir a área “${area.nome}”?`, {
+            title: 'Excluir área', icon: '🗑️', tone: 'danger', confirmText: 'Excluir área'
+        });
+        if (!confirmed) return;
         db.areas.splice(idx, 1);
         if (db.configs.areaAtual === area.id) db.configs.areaAtual = 'panelas';
         normalizarAreasERotas(); marcarBancoAlterado(); iniciar(); abrirGerenciar('areas');
@@ -1760,7 +1836,9 @@ let db = carregarBanco();
         const reenvio = db.configs.reenvio || 'permitido';
 
         if (existeItemEmProducao(nome) && reenvio !== 'permitido') {
-            const podeEnviar = reenvio === 'confirmacao' && confirm('Esse item está em produção.\n\nEnviar assim mesmo?');
+            const podeEnviar = reenvio === 'confirmacao' && await AloUiDialog.confirm('Esse item já está em produção. Deseja enviar outro pedido mesmo assim?', {
+                title: 'Pedido repetido', icon: '↻', confirmText: 'Enviar novamente'
+            });
             if (!podeEnviar) {
                 if (reenvio === 'bloqueado') alert('Esse item está em produção');
                 document.getElementById('modalFazerPedido').style.display = 'none';
@@ -2005,7 +2083,12 @@ let db = carregarBanco();
 
     sincronizarPuxarNuvem = async function(pedirConfirmacao) {
         if (!db.configs.url) return;
-        if (pedirConfirmacao && !confirm('Este aparelho recebera o cardapio salvo na nuvem. Deseja continuar?')) return;
+        if (pedirConfirmacao) {
+            const confirmed = await AloUiDialog.confirm('Este aparelho receberá o cardápio salvo na nuvem. Deseja continuar?', {
+                title: 'Receber dados da nuvem', icon: '☁️', confirmText: 'Receber dados'
+            });
+            if (!confirmed) return;
+        }
         try {
             const nuvemDB = await AloApi.getBank(db.configs.url);
             if (!bancoNuvemValido(nuvemDB)) {
@@ -2027,7 +2110,7 @@ let db = carregarBanco();
     };
 
     if ('serviceWorker' in navigator) {
-        window.addEventListener('load', () => navigator.serviceWorker.register('./service-worker.js?v=2.0.6').catch(() => {}));
+        window.addEventListener('load', () => navigator.serviceWorker.register('./service-worker.js?v=2.0.7').catch(() => {}));
     }
 
     iniciarComSyncConfiavel();

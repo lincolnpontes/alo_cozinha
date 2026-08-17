@@ -1,10 +1,12 @@
-# Alô Cozinha v2.0.6
+# Alô Cozinha v2.0.7
 
 Aplicativo para operação de restaurante com dois módulos: pedidos entre áreas (KDS) e lista de atividades por setor.
 
 ## Novidades da v2
 
-- A v2.0.6 adiciona um editor compacto de procedimentos e observações com marcadores, negrito, sublinhado e alinhamento, sem campos redimensionáveis.
+- A v2.0.7 refina a Lista de Atividades com estados visuais, filtro de execução, popover de edição e procedimentos formatados corretamente.
+- O editor usa um único controle de alinhamento visual, preserva marcadores centralizados e reconhece automaticamente procedimentos antigos em HTML.
+- Confirmações e entradas rápidas agora usam janelas do próprio app; o seletor de área do KDS ganhou emojis e opções responsivas.
 - O detalhe da atividade ganhou ações operacionais por estado e um lápis separado para retomar a execução ou excluir o registro e voltar para pendente.
 - As abas exibem os totais do dia e substituem a antiga faixa de resumo, liberando mais espaço para as atividades.
 - As configurações do cabeçalho abrem apenas o módulo atual; o painel completo e as configurações avançadas ficam no novo botão da tela inicial.
