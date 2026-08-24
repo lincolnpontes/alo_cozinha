@@ -35,6 +35,7 @@
     let reportAreaId = 'todos';
     let pendingTaskPhoto = '';
     let removeTaskPhoto = false;
+    let hygieneGroupFilter = 'Todos';
     const taskPhotoCache = new Map();
     let initialized = false;
 
@@ -54,6 +55,14 @@
         return String(value == null ? '' : value).replace(/[&<>'"]/g, char => ({
             '&': '&amp;', '<': '&lt;', '>': '&gt;', "'": '&#39;', '"': '&quot;'
         }[char]));
+    }
+    function adjustHeaderAreaName(element, name) {
+        if (!element) return;
+        const length = Array.from(String(name || '')).length;
+        const desktop = length > 24 ? 12 : (length > 17 ? 14 : (length > 11 ? 16 : 18));
+        const mobile = length > 24 ? 10 : (length > 17 ? 11 : (length > 11 ? 12 : 14));
+        element.style.setProperty('--area-name-size', `${desktop}px`);
+        element.style.setProperty('--area-name-size-mobile', `${mobile}px`);
     }
     function parseJson(key, fallback) {
         try { return JSON.parse(localStorage.getItem(key) || JSON.stringify(fallback)); }
@@ -327,7 +336,9 @@
             ? { id: 'todos', nome: 'Todos', emoji: '📍' }
             : getArea(selectedArea);
         document.getElementById('tasksAreaEmoji').textContent = current.emoji;
-        document.getElementById('tasksAreaName').textContent = current.nome;
+        const currentName = document.getElementById('tasksAreaName');
+        currentName.textContent = current.nome;
+        adjustHeaderAreaName(currentName, current.nome);
         const title = document.createElement('div');
         title.className = 'header-area-options-title';
         title.textContent = 'Trocar setor';
@@ -1192,6 +1203,14 @@
         else document.getElementById('modalTasksManager').style.display = 'none';
         deps.openModalTop('modalConfigTasksMenu');
     }
+    function backFromManager() {
+        if (managerType === 'employees') {
+            document.getElementById('modalTasksManager').style.display = 'none';
+            openManager('areas');
+            return;
+        }
+        backToSettingsMenu();
+    }
     function managerItem(title, subtitle, index, active, qrId = '') {
         return `<div class="task-manager-item ${active === false ? 'inactive' : ''}"><div><strong>${escapeHtml(title)}</strong><span>${escapeHtml(subtitle)}</span></div><div class="task-manager-actions">${qrId ? `<button onclick="AloTasks.openTaskQr('${escapeHtml(qrId)}')" aria-label="Gerar QR Code" title="Gerar QR Code">▦</button>` : ''}<button onclick="AloTasks.editManagedItem(${index})" aria-label="Editar" title="Editar">✏️</button></div></div>`;
     }
@@ -1202,10 +1221,12 @@
         const list = document.getElementById('tasksManagerList');
         const button = document.getElementById('tasksManagerNew');
         const hygieneButton = document.getElementById('tasksManagerHygiene');
+        const employeesButton = document.getElementById('tasksManagerEmployees');
         button.onclick = () => openForm(type, -1);
         if (hygieneButton) hygieneButton.style.display = type === 'templates' ? 'block' : 'none';
+        if (employeesButton) employeesButton.style.display = type === 'areas' ? 'block' : 'none';
         if (type === 'areas') {
-            title.innerText = 'Setores das Tarefas';
+            title.innerText = 'Setores do Estabelecimento';
             list.innerHTML = db().setoresTarefas.map((area, index) => managerItem(`${area.emoji} ${area.nome}`, area.ativo === false ? 'Inativo' : 'Ativo', index, area.ativo)).join('');
         } else if (type === 'employees') {
             title.innerText = 'Funcionários';
@@ -1333,15 +1354,27 @@
     function openHygieneLibrary() {
         document.getElementById('modalConfigTasksMenu').style.display = 'none';
         document.getElementById('modalTasksManager').style.display = 'none';
+        hygieneGroupFilter = 'Todos';
+        renderHygieneLibrary();
+        deps.openModalTop('modalTaskHygieneLibrary');
+    }
+    function renderHygieneLibrary() {
         const list = document.getElementById('taskHygieneLibraryList');
+        const filters = document.getElementById('taskHygieneFilters');
         const templates = global.AloTaskTemplates?.templates || [];
-        list.innerHTML = templates.map(template => `
+        const groups = ['Todos', ...new Set(templates.map(template => template.group || template.category))];
+        filters.innerHTML = groups.map(group => `<button type="button" class="${group === hygieneGroupFilter ? 'active' : ''}" onclick="AloTasks.setHygieneGroup('${escapeHtml(group)}')">${escapeHtml(group)}</button>`).join('');
+        const visible = hygieneGroupFilter === 'Todos' ? templates : templates.filter(template => (template.group || template.category) === hygieneGroupFilter);
+        list.innerHTML = visible.map(template => `
             <article class="task-hygiene-template">
                 <span class="task-hygiene-template-icon">${escapeHtml(template.icon)}</span>
-                <div><small>${escapeHtml(template.category)}</small><strong>${escapeHtml(template.name)}</strong><p>${escapeHtml(template.summary)}</p><span>${template.schedules.length} ${template.schedules.length === 1 ? 'horário sugerido' : 'horários sugeridos'} · ${template.pop ? 'Registro POP' : 'Registro simples'}</span></div>
+                <div><small>${escapeHtml(template.group || template.category)}</small><strong>${escapeHtml(template.name)}</strong><span>${template.pop ? 'POP' : 'Registro'} · ${template.schedules.length} ${template.schedules.length === 1 ? 'horário' : 'horários'}</span></div>
                 <button type="button" onclick="AloTasks.useHygieneTemplate('${escapeHtml(template.id)}')">Usar modelo</button>
             </article>`).join('');
-        deps.openModalTop('modalTaskHygieneLibrary');
+    }
+    function setHygieneGroup(group) {
+        hygieneGroupFilter = group;
+        renderHygieneLibrary();
     }
     function closeHygieneLibrary() {
         document.getElementById('modalTaskHygieneLibrary').style.display = 'none';
@@ -1467,7 +1500,7 @@
                 <div class="form-group"><label>Nome curto:</label><input id="taskName" value="${escapeHtml(task.nome)}" placeholder="Ex: Higienizar bancada"></div>
                 <div class="task-form-grid"><div class="form-group"><label>Setor:</label><select id="taskArea" onchange="AloTasks.refreshTaskEmployeeOptions()">${areaOptions(task.setorId)}</select></div><div class="form-group"><label>Responsável:</label><select id="taskEmployee">${employeeOptions(task.funcionarioId, task.setorId)}</select></div></div>
                 <section class="task-schedule-section"><div class="task-form-section-title"><strong>Horários e frequência</strong><button type="button" class="task-add-schedule" onclick="AloTasks.openScheduleEditor()">＋ Cadastrar horário</button></div><div id="taskScheduleList" class="task-schedule-list"></div><div id="taskScheduleEditor" class="task-schedule-editor" style="display:none"></div></section>
-                <div class="task-form-grid"><div class="form-group"><label>Prioridade:</label><select id="taskPriority"><option value="normal" ${task.prioridade !== 'urgente' ? 'selected' : ''}>Normal</option><option value="urgente" ${task.prioridade === 'urgente' ? 'selected' : ''}>Urgente</option></select></div><div class="form-group"><label>Tempo esperado (min.):</label><input id="taskExpected" type="number" min="0" value="${Number(task.tempoEsperadoMin || 0)}"></div></div>
+                <div class="task-form-grid"><div class="form-group"><label>Prioridade:</label><select id="taskPriority"><option value="normal" ${task.prioridade !== 'urgente' ? 'selected' : ''}>Normal</option><option value="urgente" ${task.prioridade === 'urgente' ? 'selected' : ''}>Urgente</option></select></div><div class="form-group"><label>Tempo esperado (min.):</label><input id="taskExpected" type="number" min="0" inputmode="numeric" value="${Number(task.tempoEsperadoMin || 0)}" onfocus="this.select()" onclick="this.select()"></div></div>
                 <div class="form-group"><label>Procedimento:</label>${richEditorMarkup('taskInstructions', task.instrucoes, task.procedimentoFormato, 'Escreva o procedimento', 1800)}</div>
                 <div class="task-photo-field"><div class="task-form-section-title"><strong>Foto de referência</strong><button type="button" class="task-photo-pick" onclick="document.getElementById('taskPhotoInput').click()">📷 Escolher foto</button></div><input id="taskPhotoInput" type="file" accept="image/jpeg,image/png,image/webp" hidden onchange="AloTasks.handleTaskPhoto(this)"><div class="task-photo-preview"><span id="taskPhotoPreviewEmpty">Nenhuma foto cadastrada</span><img id="taskPhotoPreviewImage" alt="Prévia da foto de referência" style="display:none"><button type="button" id="taskPhotoRemoveButton" onclick="AloTasks.removeTaskPhotoDraft()" style="display:none">Remover foto</button></div></div>
                 <div class="task-option-grid"><label class="task-toggle-row"><span class="task-toggle-copy"><b aria-hidden="true">📅</b><strong>Permitir remarcar</strong></span><span class="switch-moderno"><input id="taskAllowReschedule" type="checkbox" ${task.permiteRemarcacao ? 'checked' : ''}><span class="switch-trilho"></span></span></label><label class="task-toggle-row"><span class="task-toggle-copy"><b aria-hidden="true">📋</b><strong>Exigir registro POP</strong></span><span class="switch-moderno"><input id="taskPopRequired" type="checkbox" ${task.registroPop ? 'checked' : ''}><span class="switch-trilho"></span></span></label><label class="task-toggle-row"><span class="task-toggle-copy"><b aria-hidden="true">✓</b><strong>Tarefa ativa</strong></span><span class="switch-moderno"><input id="taskActive" type="checkbox" ${task.ativo !== false ? 'checked' : ''}><span class="switch-trilho"></span></span></label></div>`;
@@ -1719,13 +1752,13 @@
         openReschedule, cancelReschedule, confirmReschedule,
         cancelPopCompletion, confirmPopCompletion,
         openAlarmTask, startAlarmTask, completeAlarmTask, dismissAlarm,
-        openSettingsMenu, backToControlPanel, backToSettingsMenu,
+        openSettingsMenu, backToControlPanel, backToSettingsMenu, backFromManager,
         manageTaskAreas, manageEmployees, manageTemplates, editManagedItem,
         cancelForm, saveCurrentForm, toggleRecurrenceFields, refreshTaskEmployeeOptions,
         openScheduleEditor, saveScheduleDraft, cancelScheduleEditor, deleteScheduleDraft, toggleScheduleRecurrenceFields,
         formatRichEditor, cycleRichEditorAlignment, limitRichEditor,
         handleTaskPhoto, removeTaskPhotoDraft,
-        openHygieneLibrary, closeHygieneLibrary, useHygieneTemplate,
+        openHygieneLibrary, closeHygieneLibrary, setHygieneGroup, useHygieneTemplate,
         openTaskQr, closeTaskQr, printTaskQr,
         openBasicSettings, saveBasicSettings, openReports, renderReports, changeReportArea,
         openTaskHistory, closeTaskHistory, printTaskHistory, closeReports

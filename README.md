@@ -1,9 +1,10 @@
-# Alô Cozinha v2.0.10
+# Alô Cozinha v2.0.11
 
 Aplicativo para operação de restaurante com dois módulos: pedidos entre áreas (KDS) e checklist por setor.
 
 ## Novidades da v2
 
+- A v2.0.11 uniformiza os nomes dos setores, reorganiza funcionários e amplia os modelos sanitários para os controles da RDC 216.
 - A v2.0.10 identifica KDS e Checklist nos cabeçalhos, remove programações automáticas de tarefas novas e refina alarmes, frequências e switches.
 - A v2.0.9 leva a troca de setor para o cabeçalho das atividades e permite vários horários e frequências na mesma tarefa.
 - A biblioteca sanitária oferece modelos editáveis com base na RDC Anvisa 216/2004, sem fixar diluição ou tempo de contato de saneantes.

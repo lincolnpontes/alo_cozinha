@@ -498,7 +498,7 @@ function testPasswordDialogsHaveExplicitConfirmation() {
     assert.equal(app.includes('Senha incorreta. Tente novamente.'), true);
 }
 
-function testV2010TaskExperience() {
+function testV2011TaskExperience() {
     const html = fs.readFileSync(path.join(root, 'index.html'), 'utf8');
     const tasks = fs.readFileSync(path.join(root, 'tasks.js'), 'utf8');
     const app = fs.readFileSync(path.join(root, 'app.js'), 'utf8');
@@ -608,8 +608,24 @@ function testV2010TaskExperience() {
     assert.equal((tasks.match(/class="task-toggle-row"/g) || []).length >= 3, true, 'as opcoes da tarefa devem usar switches modernos');
     const tasksSettings = html.slice(html.indexOf('id="modalConfigTasksMenu"'), html.indexOf('id="modalTaskHygieneLibrary"'));
     const taskManager = html.slice(html.indexOf('id="modalTasksManager"'), html.indexOf('id="modalTaskForm"'));
-    assert.equal(tasksSettings.includes('Modelos de Higienização'), false, 'modelos nao devem ficar soltos nas configuracoes');
-    assert.equal(taskManager.includes('Modelos de Higienização'), true, 'modelos devem ficar dentro de Gerenciar Tarefas');
+    assert.equal(tasksSettings.includes('Modelos Sanitários'), false, 'modelos nao devem ficar soltos nas configuracoes');
+    assert.equal(taskManager.includes('Modelos Sanitários'), true, 'modelos devem ficar dentro de Gerenciar Tarefas');
+    assert.equal(html.includes('Setores do Estabelecimento'), true, 'setores devem representar o estabelecimento inteiro');
+    assert.equal(tasksSettings.includes('👤 Funcionários'), false, 'funcionarios nao devem ficar soltos nas configuracoes');
+    assert.equal(taskManager.includes('id="tasksManagerEmployees"'), true, 'funcionarios devem ficar dentro dos setores');
+    assert.equal(tasks.includes("managerType === 'employees'"), true, 'voltar de funcionarios deve retornar aos setores');
+    assert.equal(tasks.includes('onfocus="this.select()" onclick="this.select()"'), true, 'tempo esperado deve selecionar o valor ao receber foco');
+    assert.equal(tasks.includes('function adjustHeaderAreaName'), true, 'Checklist deve adaptar nomes longos de setor');
+    assert.equal(app.includes('function ajustarNomeAreaCabecalho'), true, 'KDS deve usar o mesmo ajuste de nomes longos');
+    assert.equal(css.includes('--area-name-size-mobile'), true, 'o tamanho adaptativo deve funcionar no celular');
+    assert.equal(html.includes('id="taskHygieneFilters"'), true, 'modelos sanitarios devem possuir filtros objetivos');
+    assert.equal(tasks.includes('function setHygieneGroup(group)'), true, 'os filtros sanitarios devem ser funcionais');
+    assert.equal(templates.includes('triagem_saude_manipuladores'), true, 'RDC 216 exige controle de saude dos manipuladores');
+    assert.equal(templates.includes('inspecionar_pragas'), true, 'RDC 216 exige controle integrado de pragas');
+    assert.equal(templates.includes('manejar_residuos'), true, 'RDC 216 exige manejo de residuos');
+    assert.equal(templates.includes('revisar_manual_pops'), true, 'RDC 216 exige Manual de Boas Praticas e POPs');
+    assert.equal((templates.match(/group: '/g) || []).length >= 20, true, 'a biblioteca deve cobrir os principais controles sanitarios');
+    assert.equal(html.includes('Revise produtos, responsáveis e horários antes de usar.'), false, 'a biblioteca nao deve abrir com microcopy redundante');
     assert.equal(html.includes('task-alarm-switch'), false, 'alarme gigante deve sair do formulario principal');
     assert.equal(html.includes('id="modalTaskHygieneLibrary"'), true);
     assert.equal(templates.includes('higienizar_reservatorio'), true);
@@ -736,10 +752,10 @@ async function testCatalogAutoPublish() {
     testAppsScriptKeepsActivityIdempotentAndRejectsStaleStatus();
     testOldClientPreservesV2TaskCatalog();
     testPasswordDialogsHaveExplicitConfirmation();
-    testV2010TaskExperience();
+    testV2011TaskExperience();
     testAudioMode();
     await testCatalogAutoPublish();
-    console.log('Testes críticos da v2.0.10 passaram.');
+    console.log('Testes críticos da v2.0.11 passaram.');
 })().catch(error => {
     console.error(error);
     process.exitCode = 1;

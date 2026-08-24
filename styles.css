@@ -13,7 +13,7 @@ body { font-family: Arial, sans-serif; background-color: #f0f2f5; margin: 0; pad
         .header { min-height: 52px; padding: 6px 10px; display: flex; justify-content: space-between; align-items: center; color: white; background-color: #1565C0; flex-shrink: 0; z-index: 10; box-sizing: border-box; }
         .header-area-picker { position: relative; min-width: 0; max-width: calc(100% - 105px); display: flex; align-items: center; }
         .header-area-button { min-width: 112px; max-width: 260px; min-height: 42px; display: grid; grid-template-columns: 30px minmax(0, 1fr) 20px; align-items: center; gap: 6px; padding: 5px 8px; border: 1px solid rgba(255,255,255,.34); border-radius: 7px; background: rgba(0,0,0,.13); color: #fff; cursor: pointer; text-align: left; }
-        .header-area-button strong { min-width: 0; overflow: hidden; font-size: 18px; text-overflow: ellipsis; white-space: nowrap; }
+        .header-area-button strong { min-width: 0; overflow: hidden; font-size: var(--area-name-size, 18px); text-overflow: ellipsis; white-space: nowrap; }
         .header-area-button[aria-expanded="true"] { background: rgba(0,0,0,.24); box-shadow: 0 0 0 2px rgba(255,255,255,.18); }
         .header-area-emoji { width: 30px; display: inline-flex; align-items: center; justify-content: center; font-size: 23px; }
         .header-area-chevron { font-size: 18px; font-weight: 900; line-height: 1; text-align: center; transition: transform .16s ease; }
@@ -128,7 +128,15 @@ body { font-family: Arial, sans-serif; background-color: #f0f2f5; margin: 0; pad
             .btn-pedido-acao { flex: 1; }
             .emoji-area-opcoes { grid-template-columns: repeat(4, 1fr); }
             .header-area-button { min-width: 104px; grid-template-columns: minmax(0, 1fr) 15px; gap: 3px; }
-            .header-area-button strong { font-size: 16px; }
+            .header-area-button strong {
+                display: -webkit-box;
+                overflow: hidden;
+                white-space: normal;
+                line-height: 1.05;
+                -webkit-box-orient: vertical;
+                -webkit-line-clamp: 2;
+                font-size: var(--area-name-size-mobile, 14px);
+            }
             .header-area-emoji { display: none; }
             .header-area-chevron { font-size: 14px; }
             .header-area-options { position: fixed; top: 62px; left: 10px; width: calc(100vw - 20px); transform: none; }

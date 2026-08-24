@@ -75,6 +75,15 @@ let db = carregarBanco();
             : emoji;
     }
 
+    function ajustarNomeAreaCabecalho(element, nome) {
+        if (!element) return;
+        const length = Array.from(String(nome || '')).length;
+        const desktop = length > 24 ? 12 : (length > 17 ? 14 : (length > 11 ? 16 : 18));
+        const mobile = length > 24 ? 10 : (length > 17 ? 11 : (length > 11 ? 12 : 14));
+        element.style.setProperty('--area-name-size', `${desktop}px`);
+        element.style.setProperty('--area-name-size-mobile', `${mobile}px`);
+    }
+
     function getAreasOrigemProduto(produto) {
         if (Array.isArray(produto.areasOrigem) && produto.areasOrigem.length) return produto.areasOrigem;
         return [produto.areaOrigem || 'panelas'];
@@ -103,7 +112,10 @@ let db = carregarBanco();
         const emojiAtual = document.getElementById('emojiAreaAtual');
         if (emojiAtual) emojiAtual.innerHTML = getEmojiAreaHtml(areaAtual.emoji);
         const nomeAtual = document.getElementById('nomeAreaAtual');
-        if (nomeAtual) nomeAtual.innerText = areaAtual.nome;
+        if (nomeAtual) {
+            nomeAtual.innerText = areaAtual.nome;
+            ajustarNomeAreaCabecalho(nomeAtual, areaAtual.nome);
+        }
         const options = document.getElementById('areaPickerOptions');
         if (options) {
             const title = document.createElement('div');
@@ -481,7 +493,10 @@ let db = carregarBanco();
         const emojiAtual = document.getElementById('emojiAreaAtual');
         if (emojiAtual) emojiAtual.innerHTML = getEmojiAreaHtml(area.emoji);
         const nomeAtual = document.getElementById('nomeAreaAtual');
-        if (nomeAtual) nomeAtual.innerText = area.nome;
+        if (nomeAtual) {
+            nomeAtual.innerText = area.nome;
+            ajustarNomeAreaCabecalho(nomeAtual, area.nome);
+        }
         renderizarSeletorAreas();
         const themeColor = document.getElementById('metaThemeColor'); document.body.className = modo === 'panelas' ? 'theme-panelas' : 'theme-cozinha';
         if(loopSync) clearInterval(loopSync);
@@ -2126,7 +2141,7 @@ let db = carregarBanco();
     };
 
     if ('serviceWorker' in navigator) {
-        window.addEventListener('load', () => navigator.serviceWorker.register('./service-worker.js?v=2.0.10').catch(() => {}));
+        window.addEventListener('load', () => navigator.serviceWorker.register('./service-worker.js?v=2.0.11').catch(() => {}));
     }
 
     iniciarComSyncConfiavel();

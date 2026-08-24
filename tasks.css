@@ -140,7 +140,7 @@
     color: #fff;
 }
 
-.tasks-area-picker { width: min(230px, 100%); min-width: 0; justify-content: center; }
+.tasks-area-picker { width: min(230px, 100%); min-width: 0; max-width: 230px; justify-content: center; }
 .tasks-area-picker .header-area-button { width: 100%; max-width: 230px; }
 
 .tasks-header-title {
@@ -412,13 +412,12 @@
 .task-manager-actions button:first-child:not(:last-child) { background: #e5f2ef; color: #075e54; font-size: 21px; }
 
 .task-hygiene-library-button { border-color: #4d8d80 !important; background: #eef7f5 !important; color: #075e54 !important; }
+.task-employees-button { border-color: #597e9f !important; background: #f0f5f9 !important; color: #244d6e !important; }
 .task-hygiene-library-modal { max-width: 720px; max-height: 92vh; overflow-y: auto; }
-.task-hygiene-intro { display: grid; grid-template-columns: 42px minmax(0, 1fr); gap: 10px; margin-bottom: 12px; padding: 11px; border: 1px solid #b8d5cf; border-radius: 7px; background: #eef7f5; }
-.task-hygiene-intro > span { display: grid; place-items: center; font-size: 27px; }
-.task-hygiene-intro p { margin: 0; }
-.task-hygiene-intro strong,
-.task-hygiene-intro small { display: block; }
-.task-hygiene-intro small { margin-top: 4px; color: #536b70; line-height: 1.4; }
+.task-hygiene-filters { display: flex; gap: 6px; margin-bottom: 12px; overflow-x: auto; padding: 1px 1px 5px; scrollbar-width: none; }
+.task-hygiene-filters::-webkit-scrollbar { display: none; }
+.task-hygiene-filters button { min-height: 38px; flex: 0 0 auto; padding: 7px 10px; border: 1px solid #cbd7d9; border-radius: 6px; background: #f4f7f7; color: #42595e; font-size: 12px; font-weight: 900; }
+.task-hygiene-filters button.active { border-color: #14816d; background: #dcefe9; color: #075e54; box-shadow: inset 0 -3px 0 #14816d; }
 .task-hygiene-library-list { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 8px; }
 .task-hygiene-template { min-width: 0; display: grid; grid-template-columns: 42px minmax(0, 1fr); gap: 8px; padding: 10px; border: 1px solid #d3dddf; border-radius: 7px; background: #fff; box-shadow: 0 2px 7px rgba(36, 66, 70, .06); }
 .task-hygiene-template-icon { width: 42px; height: 42px; display: grid; place-items: center; border-radius: 6px; background: #edf4f3; font-size: 24px; }
@@ -429,8 +428,7 @@
 .task-hygiene-template div > span { display: block; }
 .task-hygiene-template small { color: #708186; font-size: 10px; font-weight: 900; text-transform: uppercase; }
 .task-hygiene-template strong { margin-top: 2px; font-size: 15px; }
-.task-hygiene-template p { margin: 5px 0; color: #52666b; font-size: 12px; line-height: 1.35; }
-.task-hygiene-template div > span { color: #087f68; font-size: 10px; font-weight: 800; }
+.task-hygiene-template div > span { margin-top: 6px; color: #087f68; font-size: 10px; font-weight: 800; }
 .task-hygiene-template > button { grid-column: 1 / -1; min-height: 40px; border: 1px solid #83b6ac; border-radius: 6px; background: #e7f3f0; color: #075e54; font-weight: 900; }
 .task-hygiene-sources { display: flex; align-items: center; flex-wrap: wrap; gap: 6px 12px; margin-top: 12px; padding: 9px 10px; border-top: 1px solid #dce4e5; color: #5b7075; font-size: 11px; }
 .task-hygiene-sources a { color: #075e54; font-weight: 800; }
@@ -718,9 +716,9 @@
     .module-context-name { gap: 4px; }
     .module-context-name > span { font-size: 22px; }
     .module-context-name > strong { font-size: 16px; }
-    .module-header-center .header-area-picker { width: min(132px, 100%); }
+    .module-header-center .header-area-picker { width: min(132px, 100%); max-width: 132px; }
     .module-header-center .header-area-button { min-height: 28px; padding-block: 2px; }
-    .module-header-center .header-area-button strong { font-size: 14px; text-align: center; }
+    .module-header-center .header-area-button strong { font-size: var(--area-name-size-mobile, 14px); text-align: center; }
     .module-header-center .header-area-chevron { font-size: 13px; }
     .tasks-header-title,
     .kds-header-title { font-size: 22px; }
