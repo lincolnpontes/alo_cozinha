@@ -498,7 +498,7 @@ function testPasswordDialogsHaveExplicitConfirmation() {
     assert.equal(app.includes('Senha incorreta. Tente novamente.'), true);
 }
 
-function testV209TaskExperience() {
+function testV2010TaskExperience() {
     const html = fs.readFileSync(path.join(root, 'index.html'), 'utf8');
     const tasks = fs.readFileSync(path.join(root, 'tasks.js'), 'utf8');
     const app = fs.readFileSync(path.join(root, 'app.js'), 'utf8');
@@ -510,6 +510,8 @@ function testV209TaskExperience() {
     const kdsSettings = html.slice(html.indexOf('id="modalConfigKds"'), html.indexOf('id="modalConfigTasksMenu"'));
 
     assert.equal(html.includes('KDS - Sistema de Pedidos'), true);
+    assert.equal(html.includes('<strong>Checklist</strong>'), true, 'o modulo de atividades deve se chamar Checklist');
+    assert.equal(html.includes('<strong>KDS</strong>'), true, 'o nome KDS deve aparecer no cabecalho');
     assert.equal(html.includes('Pedidos por Área'), false);
     assert.equal(html.includes('Rotinas e tarefas'), false);
     assert.equal((html.match(/class="module-wordmark-button"/g) || []).length, 2);
@@ -522,7 +524,7 @@ function testV209TaskExperience() {
     assert.equal(html.includes('id="modalTaskPop"'), true);
     assert.equal(html.includes('id="modalTaskReschedule"'), true);
     assert.equal((html.match(/class="module-header-switch/g) || []).length, 0);
-    assert.equal((html.match(/class="module-context-icon"/g) || []).length, 2);
+    assert.equal((html.match(/class="module-context-name"/g) || []).length, 2, 'os dois cabecalhos devem identificar seus modulos');
     assert.equal(html.includes('aria-label="Trocar de módulo"'), false);
     assert.equal(tasks.includes('function undoFinishedTask(targetStatus)'), true);
     assert.equal(tasks.includes('function openReschedule(id)'), true);
@@ -596,6 +598,18 @@ function testV209TaskExperience() {
     assert.equal(tasks.includes("recorrencia === 'intervalo_meses'"), true, 'frequencias longas devem atender higienizacao semestral');
     assert.equal(tasks.includes('function openScheduleEditor(index = -1)'), true, 'cadastro deve permitir varios horarios');
     assert.equal(tasks.includes('＋ Cadastrar horário'), true);
+    assert.equal(tasks.includes('isNewTask ? [] : getTaskSchedules(task)'), true, 'tarefa nova nao pode ganhar horario automatico');
+    assert.equal(tasks.includes("horario: '', recorrencia: ''"), true, 'novo horario deve exigir escolhas explicitas');
+    assert.equal(tasks.includes('>4 meses</option>'), true, 'a frequencia deve oferecer intervalo de quatro meses');
+    assert.equal(tasks.includes('Você pode cadastrar manhã, noite ou dias diferentes.'), false, 'microcopy redundante deve ser removida');
+    assert.equal(tasks.includes('Mostre como o prato, o salão ou a montagem deve ficar.'), false, 'a foto nao precisa de texto auxiliar redundante');
+    assert.equal(html.includes('Atividade no horário'), false, 'o alarme deve destacar apenas a tarefa e seus dados');
+    assert.equal(tasks.includes('task-toggle-row task-alarm-toggle'), true, 'o alarme deve usar switch moderno');
+    assert.equal((tasks.match(/class="task-toggle-row"/g) || []).length >= 3, true, 'as opcoes da tarefa devem usar switches modernos');
+    const tasksSettings = html.slice(html.indexOf('id="modalConfigTasksMenu"'), html.indexOf('id="modalTaskHygieneLibrary"'));
+    const taskManager = html.slice(html.indexOf('id="modalTasksManager"'), html.indexOf('id="modalTaskForm"'));
+    assert.equal(tasksSettings.includes('Modelos de Higienização'), false, 'modelos nao devem ficar soltos nas configuracoes');
+    assert.equal(taskManager.includes('Modelos de Higienização'), true, 'modelos devem ficar dentro de Gerenciar Tarefas');
     assert.equal(html.includes('task-alarm-switch'), false, 'alarme gigante deve sair do formulario principal');
     assert.equal(html.includes('id="modalTaskHygieneLibrary"'), true);
     assert.equal(templates.includes('higienizar_reservatorio'), true);
@@ -722,10 +736,10 @@ async function testCatalogAutoPublish() {
     testAppsScriptKeepsActivityIdempotentAndRejectsStaleStatus();
     testOldClientPreservesV2TaskCatalog();
     testPasswordDialogsHaveExplicitConfirmation();
-    testV209TaskExperience();
+    testV2010TaskExperience();
     testAudioMode();
     await testCatalogAutoPublish();
-    console.log('Testes críticos da v2.0.9 passaram.');
+    console.log('Testes críticos da v2.0.10 passaram.');
 })().catch(error => {
     console.error(error);
     process.exitCode = 1;

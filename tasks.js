@@ -1110,7 +1110,7 @@
         }
         currentAlarmId = activity.id;
         document.getElementById('globalTaskAlarmName').innerText = activity.nome;
-        document.getElementById('globalTaskAlarmMeta').innerText = `${area.emoji} ${area.nome} · ${activity.horario}${due.length > 1 ? ` · +${due.length - 1}` : ''}`;
+        document.getElementById('globalTaskAlarmMeta').innerText = `${area.emoji} ${area.nome}\u00a0·\u00a0${activity.horario}${due.length > 1 ? `\u00a0·\u00a0+${due.length - 1}` : ''}`;
         if (activeModule === 'tasks') {
             banner.style.display = hiddenAlarmId === activity.id ? 'none' : 'flex';
             if (!hiddenAlarmId && !alarmBannerTimer) {
@@ -1201,7 +1201,9 @@
         const title = document.getElementById('tasksManagerTitle');
         const list = document.getElementById('tasksManagerList');
         const button = document.getElementById('tasksManagerNew');
+        const hygieneButton = document.getElementById('tasksManagerHygiene');
         button.onclick = () => openForm(type, -1);
+        if (hygieneButton) hygieneButton.style.display = type === 'templates' ? 'block' : 'none';
         if (type === 'areas') {
             title.innerText = 'Setores das Tarefas';
             list.innerHTML = db().setoresTarefas.map((area, index) => managerItem(`${area.emoji} ${area.nome}`, area.ativo === false ? 'Inativo' : 'Ativo', index, area.ativo)).join('');
@@ -1260,20 +1262,20 @@
         if (!panel) return;
         const schedule = index >= 0
             ? formState.schedules[index]
-            : normalizeSchedule({ horario: '09:00', recorrencia: 'diaria', dias: [0, 1, 2, 3, 4, 5, 6], dataUnica: todayKey(), alarme: true }, formState.schedules.length);
+            : { horario: '', recorrencia: '', dias: [], dataUnica: '', diaMes: 1, intervaloMeses: 2, dataInicio: todayKey(), alarme: false };
         formState.editingSchedule = index;
         const dayNames = ['Dom', 'Seg', 'Ter', 'Qua', 'Qui', 'Sex', 'Sáb'];
         panel.innerHTML = `
             <div class="task-schedule-editor-head"><strong>${index >= 0 ? 'Editar horário' : 'Novo horário'}</strong><button type="button" onclick="AloTasks.cancelScheduleEditor()" aria-label="Fechar">×</button></div>
             <div class="task-form-grid">
                 <div class="form-group"><label>Horário:</label><input id="taskScheduleTime" type="time" value="${escapeHtml(schedule.horario)}"></div>
-                <div class="form-group"><label>Frequência:</label><select id="taskScheduleRecurrence" onchange="AloTasks.toggleScheduleRecurrenceFields()"><option value="diaria" ${schedule.recorrencia === 'diaria' ? 'selected' : ''}>Todos os dias</option><option value="semanal" ${schedule.recorrencia === 'semanal' ? 'selected' : ''}>Dias específicos</option><option value="mensal" ${schedule.recorrencia === 'mensal' ? 'selected' : ''}>Todo mês</option><option value="intervalo_meses" ${schedule.recorrencia === 'intervalo_meses' ? 'selected' : ''}>A cada alguns meses</option><option value="unica" ${schedule.recorrencia === 'unica' ? 'selected' : ''}>Uma única vez</option></select></div>
+                <div class="form-group"><label>Frequência:</label><select id="taskScheduleRecurrence" onchange="AloTasks.toggleScheduleRecurrenceFields()"><option value="" ${!schedule.recorrencia ? 'selected' : ''} disabled>Selecione</option><option value="diaria" ${schedule.recorrencia === 'diaria' ? 'selected' : ''}>Todos os dias</option><option value="semanal" ${schedule.recorrencia === 'semanal' ? 'selected' : ''}>Dias específicos</option><option value="mensal" ${schedule.recorrencia === 'mensal' ? 'selected' : ''}>Todo mês</option><option value="intervalo_meses" ${schedule.recorrencia === 'intervalo_meses' ? 'selected' : ''}>A cada alguns meses</option><option value="unica" ${schedule.recorrencia === 'unica' ? 'selected' : ''}>Uma única vez</option></select></div>
             </div>
             <div id="taskScheduleWeekDays" class="task-weekdays">${dayNames.map((name, day) => `<label><input type="checkbox" value="${day}" ${(schedule.dias || []).map(Number).includes(day) ? 'checked' : ''}><span>${name}</span></label>`).join('')}</div>
             <div id="taskScheduleOneDate" class="form-group"><label>Data:</label><input id="taskScheduleDate" type="date" value="${escapeHtml(schedule.dataUnica)}"></div>
             <div id="taskScheduleMonthDay" class="form-group"><label>Dia do mês:</label><input id="taskScheduleDayOfMonth" type="number" min="1" max="31" value="${Number(schedule.diaMes || 1)}"></div>
-            <div id="taskScheduleMonthInterval" class="task-form-grid"><div class="form-group"><label>Repetir a cada:</label><select id="taskScheduleIntervalMonths"><option value="2" ${Number(schedule.intervaloMeses) === 2 ? 'selected' : ''}>2 meses</option><option value="3" ${Number(schedule.intervaloMeses) === 3 ? 'selected' : ''}>3 meses</option><option value="6" ${Number(schedule.intervaloMeses || 6) === 6 ? 'selected' : ''}>6 meses</option><option value="12" ${Number(schedule.intervaloMeses) === 12 ? 'selected' : ''}>12 meses</option></select></div><div class="form-group"><label>Começando em:</label><input id="taskScheduleStartDate" type="date" value="${escapeHtml(schedule.dataInicio || todayKey())}"></div></div>
-            <label class="task-compact-switch"><input id="taskScheduleAlarm" type="checkbox" ${schedule.alarme !== false ? 'checked' : ''}><span>⏰ Avisar no horário</span></label>
+            <div id="taskScheduleMonthInterval" class="task-form-grid"><div class="form-group"><label>Repetir a cada:</label><select id="taskScheduleIntervalMonths"><option value="2" ${Number(schedule.intervaloMeses) === 2 ? 'selected' : ''}>2 meses</option><option value="3" ${Number(schedule.intervaloMeses) === 3 ? 'selected' : ''}>3 meses</option><option value="4" ${Number(schedule.intervaloMeses) === 4 ? 'selected' : ''}>4 meses</option><option value="6" ${Number(schedule.intervaloMeses) === 6 ? 'selected' : ''}>6 meses</option><option value="12" ${Number(schedule.intervaloMeses) === 12 ? 'selected' : ''}>12 meses</option></select></div><div class="form-group"><label>Começando em:</label><input id="taskScheduleStartDate" type="date" value="${escapeHtml(schedule.dataInicio || todayKey())}"></div></div>
+            <label class="task-toggle-row task-alarm-toggle"><span class="task-toggle-copy"><b aria-hidden="true">⏰</b><strong>Alarme</strong></span><span class="switch-moderno"><input id="taskScheduleAlarm" type="checkbox" ${schedule.alarme ? 'checked' : ''}><span class="switch-trilho"></span></span></label>
             <div class="task-schedule-editor-actions"><button type="button" class="btn-cancel" onclick="AloTasks.cancelScheduleEditor()">Cancelar</button><button type="button" class="btn-action" onclick="AloTasks.saveScheduleDraft()">Salvar horário</button></div>`;
         panel.style.display = 'block';
         toggleScheduleRecurrenceFields();
@@ -1296,6 +1298,7 @@
         const days = Array.from(document.querySelectorAll('#taskScheduleWeekDays input:checked')).map(input => Number(input.value));
         const date = document.getElementById('taskScheduleDate')?.value;
         if (!time) { alert('Informe o horário.'); return false; }
+        if (!recurrence) { alert('Escolha a frequência.'); return false; }
         if (recurrence === 'semanal' && !days.length) { alert('Escolha pelo menos um dia da semana.'); return false; }
         if (recurrence === 'unica' && !date) { alert('Informe a data.'); return false; }
         const index = Number(formState.editingSchedule);
@@ -1329,6 +1332,7 @@
     }
     function openHygieneLibrary() {
         document.getElementById('modalConfigTasksMenu').style.display = 'none';
+        document.getElementById('modalTasksManager').style.display = 'none';
         const list = document.getElementById('taskHygieneLibraryList');
         const templates = global.AloTaskTemplates?.templates || [];
         list.innerHTML = templates.map(template => `
@@ -1341,7 +1345,7 @@
     }
     function closeHygieneLibrary() {
         document.getElementById('modalTaskHygieneLibrary').style.display = 'none';
-        openSettingsMenu();
+        openManager('templates');
     }
     function taskPublicUrl(taskId) {
         const url = new URL(global.location.href);
@@ -1451,21 +1455,22 @@
             title.innerText = index >= 0 ? 'Editar Funcionário' : 'Novo Funcionário';
             body.innerHTML = `<div class="form-group"><label>Nome:</label><input id="taskEmployeeName" value="${escapeHtml(employee.nome)}" placeholder="Nome do funcionário"></div><div class="form-group"><label>Setor principal:</label><select id="taskEmployeeArea"><option value="">Trabalha em vários setores</option>${areaOptions(employee.setorId)}</select></div><label class="task-simple-switch"><input id="taskEmployeeActive" type="checkbox" ${employee.ativo !== false ? 'checked' : ''}><span>Funcionário ativo</span></label>`;
         } else {
-            const task = preset || (index >= 0 ? db().tarefas[index] : { id: createId('tarefa'), nome: '', setorId: db().setoresTarefas[0]?.id || '', funcionarioId: '', horario: '09:00', recorrencia: 'diaria', dias: [1,2,3,4,5,6,0], dataUnica: todayKey(), prioridade: 'normal', alarme: true, tempoEsperadoMin: 0, instrucoes: '', procedimentoFormato: 'rico', permiteRemarcacao: false, registroPop: false, ativo: true });
+            const isNewTask = !preset && index < 0;
+            const task = preset || (index >= 0 ? db().tarefas[index] : { id: createId('tarefa'), nome: '', setorId: db().setoresTarefas[0]?.id || '', funcionarioId: '', prioridade: 'normal', tempoEsperadoMin: 0, instrucoes: '', procedimentoFormato: 'rico', permiteRemarcacao: false, registroPop: false, ativo: true });
             title.innerText = index >= 0 ? 'Editar Tarefa' : 'Nova Tarefa';
             formState.taskId = task.id;
-            formState.schedules = getTaskSchedules(task);
+            formState.schedules = isNewTask ? [] : getTaskSchedules(task);
             formState.hasPhoto = Boolean(task.fotoReferencia);
             pendingTaskPhoto = '';
             removeTaskPhoto = false;
             body.innerHTML = `
                 <div class="form-group"><label>Nome curto:</label><input id="taskName" value="${escapeHtml(task.nome)}" placeholder="Ex: Higienizar bancada"></div>
                 <div class="task-form-grid"><div class="form-group"><label>Setor:</label><select id="taskArea" onchange="AloTasks.refreshTaskEmployeeOptions()">${areaOptions(task.setorId)}</select></div><div class="form-group"><label>Responsável:</label><select id="taskEmployee">${employeeOptions(task.funcionarioId, task.setorId)}</select></div></div>
-                <section class="task-schedule-section"><div class="task-form-section-title"><span><strong>Horários e frequência</strong><small>Você pode cadastrar manhã, noite ou dias diferentes.</small></span><button type="button" class="task-add-schedule" onclick="AloTasks.openScheduleEditor()">＋ Cadastrar horário</button></div><div id="taskScheduleList" class="task-schedule-list"></div><div id="taskScheduleEditor" class="task-schedule-editor" style="display:none"></div></section>
+                <section class="task-schedule-section"><div class="task-form-section-title"><strong>Horários e frequência</strong><button type="button" class="task-add-schedule" onclick="AloTasks.openScheduleEditor()">＋ Cadastrar horário</button></div><div id="taskScheduleList" class="task-schedule-list"></div><div id="taskScheduleEditor" class="task-schedule-editor" style="display:none"></div></section>
                 <div class="task-form-grid"><div class="form-group"><label>Prioridade:</label><select id="taskPriority"><option value="normal" ${task.prioridade !== 'urgente' ? 'selected' : ''}>Normal</option><option value="urgente" ${task.prioridade === 'urgente' ? 'selected' : ''}>Urgente</option></select></div><div class="form-group"><label>Tempo esperado (min.):</label><input id="taskExpected" type="number" min="0" value="${Number(task.tempoEsperadoMin || 0)}"></div></div>
                 <div class="form-group"><label>Procedimento:</label>${richEditorMarkup('taskInstructions', task.instrucoes, task.procedimentoFormato, 'Escreva o procedimento', 1800)}</div>
-                <div class="task-photo-field"><div class="task-form-section-title"><span><strong>Foto de referência</strong><small>Mostre como o prato, o salão ou a montagem deve ficar.</small></span><button type="button" class="task-photo-pick" onclick="document.getElementById('taskPhotoInput').click()">📷 Escolher foto</button></div><input id="taskPhotoInput" type="file" accept="image/jpeg,image/png,image/webp" hidden onchange="AloTasks.handleTaskPhoto(this)"><div class="task-photo-preview"><span id="taskPhotoPreviewEmpty">Nenhuma foto cadastrada</span><img id="taskPhotoPreviewImage" alt="Prévia da foto de referência" style="display:none"><button type="button" id="taskPhotoRemoveButton" onclick="AloTasks.removeTaskPhotoDraft()" style="display:none">Remover foto</button></div></div>
-                <div class="task-option-grid"><label class="task-compact-switch"><input id="taskAllowReschedule" type="checkbox" ${task.permiteRemarcacao ? 'checked' : ''}><span>📅 Permitir remarcar</span></label><label class="task-compact-switch"><input id="taskPopRequired" type="checkbox" ${task.registroPop ? 'checked' : ''}><span>📋 Exigir registro POP</span></label><label class="task-compact-switch"><input id="taskActive" type="checkbox" ${task.ativo !== false ? 'checked' : ''}><span>✓ Tarefa ativa</span></label></div>`;
+                <div class="task-photo-field"><div class="task-form-section-title"><strong>Foto de referência</strong><button type="button" class="task-photo-pick" onclick="document.getElementById('taskPhotoInput').click()">📷 Escolher foto</button></div><input id="taskPhotoInput" type="file" accept="image/jpeg,image/png,image/webp" hidden onchange="AloTasks.handleTaskPhoto(this)"><div class="task-photo-preview"><span id="taskPhotoPreviewEmpty">Nenhuma foto cadastrada</span><img id="taskPhotoPreviewImage" alt="Prévia da foto de referência" style="display:none"><button type="button" id="taskPhotoRemoveButton" onclick="AloTasks.removeTaskPhotoDraft()" style="display:none">Remover foto</button></div></div>
+                <div class="task-option-grid"><label class="task-toggle-row"><span class="task-toggle-copy"><b aria-hidden="true">📅</b><strong>Permitir remarcar</strong></span><span class="switch-moderno"><input id="taskAllowReschedule" type="checkbox" ${task.permiteRemarcacao ? 'checked' : ''}><span class="switch-trilho"></span></span></label><label class="task-toggle-row"><span class="task-toggle-copy"><b aria-hidden="true">📋</b><strong>Exigir registro POP</strong></span><span class="switch-moderno"><input id="taskPopRequired" type="checkbox" ${task.registroPop ? 'checked' : ''}><span class="switch-trilho"></span></span></label><label class="task-toggle-row"><span class="task-toggle-copy"><b aria-hidden="true">✓</b><strong>Tarefa ativa</strong></span><span class="switch-moderno"><input id="taskActive" type="checkbox" ${task.ativo !== false ? 'checked' : ''}><span class="switch-trilho"></span></span></label></div>`;
             renderTaskSchedules();
         }
         deps.openModalTop('modalTaskForm');

@@ -2,30 +2,30 @@
 <html lang="pt-BR">
 <head>
     <meta charset="UTF-8">
-    <link rel="icon" href="icon.png?v=2.0.9">
-    <link rel="apple-touch-icon" href="icon.png?v=2.0.9">
+    <link rel="icon" href="icon.png?v=2.0.10">
+    <link rel="apple-touch-icon" href="icon.png?v=2.0.10">
     <link rel="manifest" href="manifest.json">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
     <meta name="mobile-web-app-capable" content="yes">
     <meta name="theme-color" content="#1565C0" id="metaThemeColor">
-    <title>Alô Cozinha v2.0.9</title>
+    <title>Alô Cozinha v2.0.10</title>
 
-    <link rel="stylesheet" href="styles.css?v=2.0.9">
-    <link rel="stylesheet" href="tasks.css?v=2.0.9">
+    <link rel="stylesheet" href="styles.css?v=2.0.10">
+    <link rel="stylesheet" href="tasks.css?v=2.0.10">
 </head>
 <body class="theme-panelas" oncontextmenu="return false;">
 
 <div id="overlayInatividade"></div>
 
 <div id="splashScreen">
-    <img src="icon.png?v=2.0.9" alt="Logo" class="splash-icone" onerror="this.src='data:image/svg+xml;utf8,<svg xmlns=\'http://www.w3.org/2000/svg\' viewBox=\'0 0 100 100\'><text y=\'50\' font-size=\'40\'>🍲</text></svg>'">
+    <img src="icon.png?v=2.0.10" alt="Logo" class="splash-icone" onerror="this.src='data:image/svg+xml;utf8,<svg xmlns=\'http://www.w3.org/2000/svg\' viewBox=\'0 0 100 100\'><text y=\'50\' font-size=\'40\'>🍲</text></svg>'">
     <div class="splash-titulo">Alô Cozinha</div>
-    <div class="splash-versao">v2.0.9</div>
+    <div class="splash-versao">v2.0.10</div>
 </div>
 
 <main id="moduleHome" class="module-home" aria-label="Escolher módulo">
     <div class="module-home-inner">
-        <img src="icon.png?v=2.0.9" alt="Alô Cozinha" class="module-home-logo">
+        <img src="icon.png?v=2.0.10" alt="Alô Cozinha" class="module-home-logo">
         <h1>Alô Cozinha</h1>
         <div class="module-choice-grid">
             <button class="module-choice module-choice-kds" onclick="AloTasks.openModule('kds')">
@@ -34,7 +34,7 @@
             </button>
             <button class="module-choice module-choice-tasks" onclick="AloTasks.openModule('tasks')">
                 <span class="module-choice-icon">📋</span>
-                <strong>Lista de Atividades</strong>
+                <strong>Checklist</strong>
             </button>
             <button class="module-choice module-choice-settings" onclick="abrirLoginAdmin('painel')">
                 <span class="module-choice-icon">⚙️</span>
@@ -45,14 +45,14 @@
 </main>
 
 <section id="publicTaskView" class="public-task-view" style="display:none" aria-label="Consulta da atividade">
-    <header><img src="icon.png?v=2.0.9" alt=""><span><strong>Alô Cozinha</strong><small>Registro de higienização</small></span></header>
+    <header><img src="icon.png?v=2.0.10" alt=""><span><strong>Alô Cozinha</strong><small>Registro de higienização</small></span></header>
     <main id="publicTaskContent"><div class="tasks-empty">Carregando atividade...</div></main>
 </section>
 
 <aside id="globalTaskAlarm" class="task-alarm-banner" aria-live="assertive" style="display:none;">
     <button class="task-alarm-main" onclick="AloTasks.openAlarmTask()">
         <span class="task-alarm-icon">⏰</span>
-        <span class="task-alarm-copy"><em>Atividade no horário</em><strong id="globalTaskAlarmName">Atividade pendente</strong><small id="globalTaskAlarmMeta"></small></span>
+        <span class="task-alarm-copy"><strong id="globalTaskAlarmName">Atividade pendente</strong><small id="globalTaskAlarmMeta"></small></span>
     </button>
     <div class="task-alarm-actions">
         <button class="task-alarm-start" onclick="AloTasks.startAlarmTask()"><span>▶</span> Iniciar</button>
@@ -64,22 +64,24 @@
 <div class="app-container" id="kdsModule" style="display:none;">
     <div class="header" id="mainHeader">
         <button class="module-wordmark-button" onclick="AloTasks.showHome()" aria-label="Alô Cozinha, voltar aos módulos" title="Voltar aos módulos">
-            <img src="icon.png?v=2.0.9" class="module-wordmark-icon" alt="">
+            <img src="icon.png?v=2.0.10" class="module-wordmark-icon" alt="">
             <span class="module-wordmark-copy"><strong>Alô</strong><small>COZINHA</small></span>
             <span class="module-home-return" aria-hidden="true">↩</span>
         </button>
-        <span class="module-context-icon" aria-hidden="true">📱</span>
-        <div class="header-area-picker">
-            <button type="button" id="areaPickerButton" class="header-area-button" onclick="toggleSeletorAreas()" aria-haspopup="listbox" aria-expanded="false" aria-label="Escolher área atual">
-                <span id="emojiAreaAtual" class="header-area-emoji" aria-hidden="true">🥘</span>
-                <strong id="nomeAreaAtual">Panelas</strong>
-                <span class="header-area-chevron" aria-hidden="true">⌄</span>
-            </button>
-            <div id="areaPickerOptions" class="header-area-options" role="listbox" aria-label="Áreas do KDS"></div>
-            <select class="header-select-native" id="seletorModo" aria-hidden="true" tabindex="-1">
-                <option value="panelas">Panelas</option>
-                <option value="cozinha">Cozinha</option>
-            </select>
+        <div class="module-header-center">
+            <span class="module-context-name"><span aria-hidden="true">📱</span><strong>KDS</strong></span>
+            <div class="header-area-picker">
+                <button type="button" id="areaPickerButton" class="header-area-button" onclick="toggleSeletorAreas()" aria-haspopup="listbox" aria-expanded="false" aria-label="Escolher área atual">
+                    <span id="emojiAreaAtual" class="header-area-emoji" aria-hidden="true">🥘</span>
+                    <strong id="nomeAreaAtual">Panelas</strong>
+                    <span class="header-area-chevron" aria-hidden="true">⌄</span>
+                </button>
+                <div id="areaPickerOptions" class="header-area-options" role="listbox" aria-label="Áreas do KDS"></div>
+                <select class="header-select-native" id="seletorModo" aria-hidden="true" tabindex="-1">
+                    <option value="panelas">Panelas</option>
+                    <option value="cozinha">Cozinha</option>
+                </select>
+            </div>
         </div>
 
         <div style="display: flex; align-items: center;">
@@ -230,7 +232,7 @@
 
 <div class="modal-overlay" id="modalPainelUnificado">
     <div class="modal">
-        <div style="text-align: center; color: #666; font-size: 13px; font-weight: bold; margin-bottom: 20px;">Alô Cozinha - v2.0.9</div>
+        <div style="text-align: center; color: #666; font-size: 13px; font-weight: bold; margin-bottom: 20px;">Alô Cozinha - v2.0.10</div>
 
         <button class="btn-outline" onclick="abrirConfiguracoesKds()">🍽️ Configurações KDS</button>
         <button class="btn-outline" onclick="AloTasks.openSettingsMenu()" style="border-color:#00695c; color:#00695c;">📋 Configurações Tarefas</button>
@@ -258,7 +260,6 @@
         <div class="modal-title">Configurações Tarefas</div>
         <button class="btn-outline" onclick="AloTasks.manageTaskAreas()">🗺️ Setores das Tarefas</button>
         <button class="btn-outline" onclick="AloTasks.manageEmployees()">👤 Funcionários</button>
-        <button class="btn-outline task-hygiene-library-button" onclick="AloTasks.openHygieneLibrary()">🧼 Modelos de Higienização</button>
         <button class="btn-outline" onclick="AloTasks.manageTemplates()">📋 Gerenciar Tarefas</button>
         <button class="btn-outline" onclick="AloTasks.openReports()" style="border-color:#00695c; color:#00695c;">📊 Relatórios por Tarefas</button>
         <button class="btn-outline" onclick="AloTasks.openBasicSettings()">⚙️ Configurações Básicas</button>
@@ -289,6 +290,7 @@
 <div class="modal-overlay" id="modalTasksManager">
     <div class="modal task-manager-modal">
         <div class="modal-title" id="tasksManagerTitle">Gerenciar</div>
+        <button id="tasksManagerHygiene" class="btn-outline task-hygiene-library-button" onclick="AloTasks.openHygieneLibrary()" style="display:none">🧼 Modelos de Higienização</button>
         <button id="tasksManagerNew" class="btn-action" style="width:100%; margin-bottom:12px;">+ Novo</button>
         <div id="tasksManagerList" class="task-manager-list"></div>
         <div class="modal-actions"><button class="btn-cancel" onclick="AloTasks.backToSettingsMenu()">Voltar</button></div>
@@ -405,26 +407,28 @@
     </div>
 </div>
 
-<section id="tasksModule" class="tasks-module" style="display:none;" aria-label="Lista de atividades">
+<section id="tasksModule" class="tasks-module" style="display:none;" aria-label="Checklist">
     <header class="tasks-header">
         <button class="module-wordmark-button" onclick="AloTasks.showHome()" aria-label="Alô Cozinha, voltar aos módulos" title="Voltar aos módulos">
-            <img src="icon.png?v=2.0.9" class="module-wordmark-icon" alt="">
+            <img src="icon.png?v=2.0.10" class="module-wordmark-icon" alt="">
             <span class="module-wordmark-copy"><strong>Alô</strong><small>COZINHA</small></span>
             <span class="module-home-return" aria-hidden="true">↩</span>
         </button>
-        <span class="module-context-icon" aria-hidden="true">📋</span>
-        <div class="header-area-picker tasks-area-picker">
-            <button type="button" id="tasksAreaPickerButton" class="header-area-button" onclick="AloTasks.toggleAreaPicker()" aria-haspopup="listbox" aria-expanded="false" aria-label="Escolher setor das atividades">
-                <span id="tasksAreaEmoji" class="header-area-emoji" aria-hidden="true">📍</span>
-                <strong id="tasksAreaName">Todos os setores</strong>
-                <span class="header-area-chevron" aria-hidden="true">⌄</span>
-            </button>
-            <div id="tasksAreaPickerOptions" class="header-area-options" role="listbox" aria-label="Setores das atividades"></div>
-            <select id="tasksAreaFilter" class="header-select-native" aria-hidden="true" tabindex="-1"></select>
+        <div class="module-header-center">
+            <span class="module-context-name"><span aria-hidden="true">📋</span><strong>Checklist</strong></span>
+            <div class="header-area-picker tasks-area-picker">
+                <button type="button" id="tasksAreaPickerButton" class="header-area-button" onclick="AloTasks.toggleAreaPicker()" aria-haspopup="listbox" aria-expanded="false" aria-label="Escolher setor do checklist">
+                    <span id="tasksAreaEmoji" class="header-area-emoji" aria-hidden="true">📍</span>
+                    <strong id="tasksAreaName">Todos os setores</strong>
+                    <span class="header-area-chevron" aria-hidden="true">⌄</span>
+                </button>
+                <div id="tasksAreaPickerOptions" class="header-area-options" role="listbox" aria-label="Setores do checklist"></div>
+                <select id="tasksAreaFilter" class="header-select-native" aria-hidden="true" tabindex="-1"></select>
+            </div>
         </div>
         <div class="tasks-header-actions">
             <button id="tasksSyncIndicator" class="tasks-sync-indicator" onclick="AloTasks.syncNow()" aria-label="Sincronizar tarefas" title="Sincronizar">↻</button>
-            <button class="tasks-settings-button" onclick="abrirLoginAdmin('tasks')" aria-label="Configurações das atividades" title="Configurações das atividades">⚙️</button>
+            <button class="tasks-settings-button" onclick="abrirLoginAdmin('tasks')" aria-label="Configurações do Checklist" title="Configurações do Checklist">⚙️</button>
         </div>
     </header>
     <div class="tasks-toolbar">
@@ -642,16 +646,16 @@
     </div>
 </div>
 
-<script defer src="logic.js?v=2.0.9"></script>
-<script defer src="storage.js?v=2.0.9"></script>
-<script defer src="api.js?v=2.0.9"></script>
-<script defer src="audio.js?v=2.0.9"></script>
-<script defer src="sync.js?v=2.0.9"></script>
-<script defer src="catalog-sync.js?v=2.0.9"></script>
-<script defer src="ui.js?v=2.0.9"></script>
-<script defer src="task-templates.js?v=2.0.9"></script>
-<script defer src="vendor/qrcode.js?v=2.0.9"></script>
-<script defer src="tasks.js?v=2.0.9"></script>
-<script defer src="app.js?v=2.0.9"></script>
+<script defer src="logic.js?v=2.0.10"></script>
+<script defer src="storage.js?v=2.0.10"></script>
+<script defer src="api.js?v=2.0.10"></script>
+<script defer src="audio.js?v=2.0.10"></script>
+<script defer src="sync.js?v=2.0.10"></script>
+<script defer src="catalog-sync.js?v=2.0.10"></script>
+<script defer src="ui.js?v=2.0.10"></script>
+<script defer src="task-templates.js?v=2.0.10"></script>
+<script defer src="vendor/qrcode.js?v=2.0.10"></script>
+<script defer src="tasks.js?v=2.0.10"></script>
+<script defer src="app.js?v=2.0.10"></script>
 </body>
 </html>
