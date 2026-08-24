@@ -4,6 +4,8 @@ const PROP_BANCO = 'kds_banco';
 const PROP_BANCO_REVISION = 'kds_banco_revision';
 const PROP_PEDIDOS_REVISION = 'kds_pedidos_revision';
 const PROP_ATIVIDADES_REVISION = 'kds_atividades_revision';
+const PROP_FOTOS_TAREFAS = 'kds_fotos_tarefas';
+const PASTA_FOTOS_TAREFAS = 'Alô Cozinha - Fotos das Tarefas';
 const CACHE_PEDIDOS_PREFIX = 'kds_pedidos_visiveis_';
 const BASE_HEADERS = ['ID', 'Produto', 'Status', 'Timestamp', 'FinalizadoEm', 'Motivo'];
 const EXTRA_HEADERS = ['AtualizadoEm', 'Revisao', 'OperacaoId', 'AreaOrigem', 'AreaDestino'];
@@ -15,7 +17,7 @@ const HEADERS_ATIVIDADES = [
   'IniciadoEm', 'FinalizadoEm', 'DuracaoSegundos', 'AlarmeStatus', 'AtualizadoEm',
   'Revisao', 'OperacaoId', 'Prioridade', 'TempoEsperadoMin', 'Observacao',
   'PermiteRemarcacao', 'RegistroPop', 'Procedimento', 'FuncionarioNome', 'RemarcadoDe', 'RemarcadoEm',
-  'ProcedimentoFormato'
+  'ProcedimentoFormato', 'ProgramacaoId'
 ];
 const VALID_ACTIVITY_STATUSES = new Set(['pendente', 'em_execucao', 'concluida', 'nao_realizada', 'cancelada']);
 
@@ -92,6 +94,56 @@ function findRecordsById_(sheet) {
     records[values[0].toString()] = { row: index + 2, values: values };
   });
   return records;
+}
+
+function mapaFotosTarefas_() {
+  const raw = PropertiesService.getDocumentProperties().getProperty(PROP_FOTOS_TAREFAS);
+  if (!raw) return {};
+  try { return JSON.parse(raw); } catch (error) { return {}; }
+}
+
+function pastaFotosTarefas_() {
+  const folders = DriveApp.getFoldersByName(PASTA_FOTOS_TAREFAS);
+  return folders.hasNext() ? folders.next() : DriveApp.createFolder(PASTA_FOTOS_TAREFAS);
+}
+
+function salvarFotoTarefa_(tarefaId, imagem) {
+  const id = String(tarefaId || '').trim();
+  const match = String(imagem || '').match(/^data:(image\/(?:jpeg|png|webp));base64,([A-Za-z0-9+/=]+)$/);
+  if (!id || !match) throw new Error('Foto inválida.');
+  if (match[2].length > 2400000) throw new Error('A foto ultrapassa o limite permitido.');
+  const map = mapaFotosTarefas_();
+  if (map[id] && map[id].fileId) {
+    try { DriveApp.getFileById(map[id].fileId).setTrashed(true); } catch (error) {}
+  }
+  const extension = match[1] === 'image/png' ? 'png' : (match[1] === 'image/webp' ? 'webp' : 'jpg');
+  const blob = Utilities.newBlob(Utilities.base64Decode(match[2]), match[1], 'tarefa-' + id + '.' + extension);
+  const file = pastaFotosTarefas_().createFile(blob);
+  try { file.setSharing(DriveApp.Access.ANYONE_WITH_LINK, DriveApp.Permission.VIEW); } catch (error) {}
+  map[id] = { fileId: file.getId(), atualizadoEm: new Date().toISOString() };
+  PropertiesService.getDocumentProperties().setProperty(PROP_FOTOS_TAREFAS, JSON.stringify(map));
+  return map[id];
+}
+
+function excluirFotoTarefa_(tarefaId) {
+  const id = String(tarefaId || '').trim();
+  const map = mapaFotosTarefas_();
+  if (map[id] && map[id].fileId) {
+    try { DriveApp.getFileById(map[id].fileId).setTrashed(true); } catch (error) {}
+    delete map[id];
+    PropertiesService.getDocumentProperties().setProperty(PROP_FOTOS_TAREFAS, JSON.stringify(map));
+  }
+}
+
+function fotoTarefa_(tarefaId) {
+  const record = mapaFotosTarefas_()[String(tarefaId || '').trim()];
+  if (!record || !record.fileId) return { status: 'ok', encontrada: false };
+  return {
+    status: 'ok',
+    encontrada: true,
+    atualizadaEm: record.atualizadoEm || '',
+    url: 'https://drive.google.com/thumbnail?id=' + encodeURIComponent(record.fileId) + '&sz=w1200'
+  };
 }
 
 function asBoolean_(value) {
@@ -292,7 +344,8 @@ function activityFromRow_(row) {
     funcionarioNome: row[21] || '',
     remarcadoDe: row[22] || '',
     remarcadoEm: asIso_(row[23]),
-    procedimentoFormato: row[24] || 'texto'
+    procedimentoFormato: row[24] || 'texto',
+    programacaoId: String(row[25] || 'principal')
   };
 }
 
@@ -306,7 +359,7 @@ function activityToRow_(activity, revision) {
     activity.prioridade || 'normal', Number(activity.tempoEsperadoMin || 0), activity.observacao || '',
     Boolean(activity.permiteRemarcacao), Boolean(activity.registroPop), activity.procedimento || '',
     activity.funcionarioNome || '', activity.remarcadoDe || '', activity.remarcadoEm || '',
-    activity.procedimentoFormato || 'texto'
+    activity.procedimentoFormato || 'texto', activity.programacaoId || 'principal'
   ];
 }
 
@@ -499,6 +552,16 @@ function doPost(e) {
       return json_({ status: 'ok', count: result.count, revision: result.revision });
     }
 
+    if (action === 'salvar_foto_tarefa') {
+      const photo = salvarFotoTarefa_(params.tarefaId, params.imagem);
+      return json_({ status: 'ok', foto: photo });
+    }
+
+    if (action === 'excluir_foto_tarefa') {
+      excluirFotoTarefa_(params.tarefaId);
+      return json_({ status: 'ok' });
+    }
+
     if (action === 'salvar_banco') {
       return json_(salvarBanco_(params.dados || {}, params.expectedRevision));
     }
@@ -514,6 +577,7 @@ function doPost(e) {
 function doGet(e) {
   const action = e && e.parameter ? e.parameter.action : '';
   if (action === 'carregar_banco') return json_(bancosComRevisao_());
+  if (action === 'foto_tarefa') return json_(fotoTarefa_(e.parameter.tarefaId));
 
   if (action === 'sincronizar_atividades') {
     const revision = getAtividadesRevision_();

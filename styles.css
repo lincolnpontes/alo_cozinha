@@ -127,7 +127,10 @@ body { font-family: Arial, sans-serif; background-color: #f0f2f5; margin: 0; pad
             .pedido-acoes { width: 100%; }
             .btn-pedido-acao { flex: 1; }
             .emoji-area-opcoes { grid-template-columns: repeat(4, 1fr); }
-            .header-area-button { min-width: 104px; }
+            .header-area-button { min-width: 104px; grid-template-columns: minmax(0, 1fr) 15px; gap: 3px; }
+            .header-area-button strong { font-size: 16px; }
+            .header-area-emoji { display: none; }
+            .header-area-chevron { font-size: 14px; }
             .header-area-options { position: fixed; top: 62px; left: 10px; width: calc(100vw - 20px); transform: none; }
         }
 

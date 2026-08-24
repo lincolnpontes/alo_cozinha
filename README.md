@@ -1,9 +1,13 @@
-# Alô Cozinha v2.0.8
+# Alô Cozinha v2.0.9
 
 Aplicativo para operação de restaurante com dois módulos: pedidos entre áreas (KDS) e lista de atividades por setor.
 
 ## Novidades da v2
 
+- A v2.0.9 leva a troca de setor para o cabeçalho das atividades e permite vários horários e frequências na mesma tarefa.
+- A biblioteca sanitária oferece modelos editáveis com base na RDC Anvisa 216/2004, sem fixar diluição ou tempo de contato de saneantes.
+- Tarefas podem ter foto de referência sincronizada pelo Google Drive e QR Code para consulta do procedimento e das últimas execuções.
+- Alarmes, controles e cores foram redesenhados com superfícies translúcidas e ações mais compactas.
 - A v2.0.8 mostra o marcador imediatamente em linhas vazias, limita o alinhamento à linha ou seleção atual e mantém o marcador junto ao texto à direita.
 - Os separadores de estado ganharam faixas semânticas mais nítidas, o Total ficou compacto e o seletor de áreas do KDS foi redesenhado com emojis e função de cada área.
 - A confirmação de atividade não realizada agora usa somente a pergunta e as ações Cancelar/Confirmar.

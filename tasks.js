@@ -33,6 +33,9 @@
     let reportActivitiesCache = [];
     let reportDays = 7;
     let reportAreaId = 'todos';
+    let pendingTaskPhoto = '';
+    let removeTaskPhoto = false;
+    const taskPhotoCache = new Map();
     let initialized = false;
 
     function db() { return deps.getDatabase(); }
@@ -60,6 +63,7 @@
         return {
             id: String(activity.id || ''),
             tarefaId: String(activity.tarefaId || ''),
+            programacaoId: String(activity.programacaoId || 'principal'),
             nome: activity.nome || '',
             setorId: String(activity.setorId || ''),
             funcionarioId: String(activity.funcionarioId || ''),
@@ -86,6 +90,30 @@
             syncState: activity.syncState || 'confirmed'
         };
     }
+    function normalizeSchedule(schedule, index = 0, legacy = {}) {
+        const source = schedule || legacy;
+        const recurrence = ['diaria', 'semanal', 'mensal', 'intervalo_meses', 'unica'].includes(source.recorrencia) ? source.recorrencia : 'diaria';
+        return {
+            id: String(source.id || (index === 0 ? 'principal' : createId('horario'))),
+            horario: source.horario || legacy.horario || '09:00',
+            recorrencia: recurrence,
+            dias: recurrence === 'diaria' ? [0, 1, 2, 3, 4, 5, 6] : (Array.isArray(source.dias) ? source.dias.map(Number) : []),
+            dataUnica: source.dataUnica || legacy.dataUnica || todayKey(),
+            diaMes: Math.max(1, Math.min(31, Number(source.diaMes || 1))),
+            intervaloMeses: Math.max(1, Math.min(24, Number(source.intervaloMeses || 6))),
+            dataInicio: source.dataInicio || todayKey(),
+            alarme: source.alarme !== false
+        };
+    }
+    function getTaskSchedules(task) {
+        const schedules = Array.isArray(task.programacoes) && task.programacoes.length
+            ? task.programacoes
+            : [task];
+        return schedules.map((schedule, index) => normalizeSchedule(schedule, index, task));
+    }
+    function scheduleForActivity(activity, task) {
+        return getTaskSchedules(task).find(schedule => schedule.id === activity.programacaoId) || getTaskSchedules(task)[0];
+    }
     function normalizeDefinitions() {
         const data = db();
         if (!Array.isArray(data.setoresTarefas) || !data.setoresTarefas.length) {
@@ -99,10 +127,23 @@
             ativo: employee.ativo !== false
         }));
         if (!Array.isArray(data.tarefas)) data.tarefas = [];
-        data.tarefas = data.tarefas.map(task => ({
-            ...task,
-            procedimentoFormato: hasRichMarkup(task.instrucoes) ? 'rico' : normalizeProcedureFormat(task.procedimentoFormato)
-        }));
+        data.tarefas = data.tarefas.map(task => {
+            const programacoes = getTaskSchedules(task);
+            const principal = programacoes[0];
+            return {
+                ...task,
+                programacoes,
+                horario: principal.horario,
+                recorrencia: principal.recorrencia,
+                dias: principal.dias,
+                dataUnica: principal.dataUnica,
+                diaMes: principal.diaMes,
+                intervaloMeses: principal.intervaloMeses,
+                dataInicio: principal.dataInicio,
+                alarme: principal.alarme,
+                procedimentoFormato: hasRichMarkup(task.instrucoes) ? 'rico' : normalizeProcedureFormat(task.procedimentoFormato)
+            };
+        });
         data.configsTarefas = {
             som: 'beep', volume: '80', repeticaoMinutos: '5',
             ...(data.configsTarefas || {})
@@ -122,39 +163,52 @@
     function scheduledDate(activity) {
         return new Date(`${activity.data}T${activity.horario || '00:00'}:00`);
     }
-    function appliesToday(template, date = new Date()) {
-        if (!template.ativo) return false;
-        if (template.recorrencia === 'unica') return template.dataUnica === todayKey(date);
-        const days = Array.isArray(template.dias) ? template.dias.map(Number) : [];
-        return template.recorrencia === 'diaria' || days.includes(date.getDay());
+    function appliesToday(task, schedule, date = new Date()) {
+        if (!task.ativo) return false;
+        if (schedule.recorrencia === 'unica') return schedule.dataUnica === todayKey(date);
+        if (schedule.recorrencia === 'mensal') return date.getDate() === Number(schedule.diaMes || 1);
+        if (schedule.recorrencia === 'intervalo_meses') {
+            const start = new Date(`${schedule.dataInicio || todayKey(date)}T00:00:00`);
+            if (isNaN(start.getTime()) || date < start || date.getDate() !== start.getDate()) return false;
+            const months = (date.getFullYear() - start.getFullYear()) * 12 + date.getMonth() - start.getMonth();
+            return months % Number(schedule.intervaloMeses || 1) === 0;
+        }
+        const days = Array.isArray(schedule.dias) ? schedule.dias.map(Number) : [];
+        return schedule.recorrencia === 'diaria' || days.includes(date.getDay());
     }
     function generateToday() {
         const key = todayKey();
         const existing = new Set(activities.map(activity => activity.id));
-        db().tarefas.filter(task => appliesToday(task)).forEach(task => {
-            const id = `atividade_${task.id}_${key}`;
-            if (existing.has(id)) return;
-            const activity = normalizeActivity({
-                id,
-                tarefaId: task.id,
-                nome: task.nome,
-                setorId: task.setorId,
-                funcionarioId: task.funcionarioId || '',
-                data: key,
-                horario: task.horario,
-                prioridade: task.prioridade,
-                tempoEsperadoMin: task.tempoEsperadoMin,
-                permiteRemarcacao: Boolean(task.permiteRemarcacao),
-                registroPop: Boolean(task.registroPop),
-                procedimento: task.instrucoes || '',
-                procedimentoFormato: hasRichMarkup(task.instrucoes) ? 'rico' : normalizeProcedureFormat(task.procedimentoFormato),
-                alarmeStatus: task.alarme ? 'aguardando' : 'desativado',
-                status: 'pendente',
-                atualizadoEm: nowIso(),
-                syncState: navigator.onLine ? 'queued' : 'offline'
+        db().tarefas.forEach(task => {
+            getTaskSchedules(task).forEach((schedule, index) => {
+                if (!appliesToday(task, schedule)) return;
+                const id = schedule.id === 'principal'
+                    ? `atividade_${task.id}_${key}`
+                    : `atividade_${task.id}_${schedule.id}_${key}`;
+                if (existing.has(id)) return;
+                const activity = normalizeActivity({
+                    id,
+                    tarefaId: task.id,
+                    programacaoId: schedule.id,
+                    nome: task.nome,
+                    setorId: task.setorId,
+                    funcionarioId: task.funcionarioId || '',
+                    data: key,
+                    horario: schedule.horario,
+                    prioridade: task.prioridade,
+                    tempoEsperadoMin: task.tempoEsperadoMin,
+                    permiteRemarcacao: Boolean(task.permiteRemarcacao),
+                    registroPop: Boolean(task.registroPop),
+                    procedimento: task.instrucoes || '',
+                    procedimentoFormato: hasRichMarkup(task.instrucoes) ? 'rico' : normalizeProcedureFormat(task.procedimentoFormato),
+                    alarmeStatus: schedule.alarme ? 'aguardando' : 'desativado',
+                    status: 'pendente',
+                    atualizadoEm: nowIso(),
+                    syncState: navigator.onLine ? 'queued' : 'offline'
+                });
+                queueActivity(activity, '', false);
+                existing.add(id);
             });
-            queueActivity(activity, '', false);
-            existing.add(id);
         });
         saveRuntime();
     }
@@ -260,13 +314,61 @@
 
     function renderAreaOptions() {
         const select = document.getElementById('tasksAreaFilter');
-        if (!select) return;
+        const options = document.getElementById('tasksAreaPickerOptions');
+        const button = document.getElementById('tasksAreaPickerButton');
+        if (!select || !options || !button) return;
         const activeAreas = db().setoresTarefas.filter(area => area.ativo !== false);
         select.innerHTML = '<option value="todos">Todos os setores</option>' + activeAreas.map(area =>
             `<option value="${escapeHtml(area.id)}">${escapeHtml(area.emoji)} ${escapeHtml(area.nome)}</option>`
         ).join('');
         if (!activeAreas.some(area => area.id === selectedArea)) selectedArea = 'todos';
         select.value = selectedArea;
+        const current = selectedArea === 'todos'
+            ? { id: 'todos', nome: 'Todos', emoji: '📍' }
+            : getArea(selectedArea);
+        document.getElementById('tasksAreaEmoji').textContent = current.emoji;
+        document.getElementById('tasksAreaName').textContent = current.nome;
+        const title = document.createElement('div');
+        title.className = 'header-area-options-title';
+        title.textContent = 'Trocar setor';
+        const choices = [{ id: 'todos', nome: 'Todos os setores', emoji: '📍' }, ...activeAreas];
+        options.replaceChildren(title, ...choices.map(area => {
+            const choice = document.createElement('button');
+            choice.type = 'button';
+            choice.className = `header-area-option${area.id === selectedArea ? ' selected' : ''}`;
+            choice.setAttribute('role', 'option');
+            choice.setAttribute('aria-selected', String(area.id === selectedArea));
+            const emoji = document.createElement('span');
+            emoji.className = 'header-area-option-emoji';
+            emoji.textContent = area.emoji;
+            const copy = document.createElement('span');
+            copy.className = 'header-area-option-copy';
+            const name = document.createElement('strong');
+            name.textContent = area.nome;
+            const role = document.createElement('small');
+            role.textContent = area.id === 'todos' ? 'Visão geral das atividades' : 'Atividades deste setor';
+            copy.append(name, role);
+            const check = document.createElement('b');
+            check.setAttribute('aria-hidden', 'true');
+            check.textContent = area.id === selectedArea ? '✓' : '';
+            choice.append(emoji, copy, check);
+            choice.addEventListener('click', () => setArea(area.id));
+            return choice;
+        }));
+    }
+    function closeAreaPicker() {
+        const options = document.getElementById('tasksAreaPickerOptions');
+        const button = document.getElementById('tasksAreaPickerButton');
+        if (options) options.classList.remove('open');
+        if (button) button.setAttribute('aria-expanded', 'false');
+    }
+    function toggleAreaPicker() {
+        const options = document.getElementById('tasksAreaPickerOptions');
+        const button = document.getElementById('tasksAreaPickerButton');
+        if (!options || !button) return;
+        const opening = !options.classList.contains('open');
+        options.classList.toggle('open', opening);
+        button.setAttribute('aria-expanded', String(opening));
     }
     function taskTiming(activity) {
         const scheduled = scheduledDate(activity);
@@ -550,6 +652,76 @@
         const editor = document.getElementById(editorId);
         return editor && editor.innerText.trim() ? sanitizeRichHtml(editor.innerHTML) : '';
     }
+    function compressTaskPhoto(file) {
+        return new Promise((resolve, reject) => {
+            if (!file || !String(file.type || '').startsWith('image/')) { reject(new Error('Escolha uma imagem.')); return; }
+            const url = URL.createObjectURL(file);
+            const image = new Image();
+            image.onload = () => {
+                const scale = Math.min(1, 1280 / Math.max(image.width, image.height));
+                const canvas = document.createElement('canvas');
+                canvas.width = Math.max(1, Math.round(image.width * scale));
+                canvas.height = Math.max(1, Math.round(image.height * scale));
+                canvas.getContext('2d').drawImage(image, 0, 0, canvas.width, canvas.height);
+                URL.revokeObjectURL(url);
+                const dataUrl = canvas.toDataURL('image/jpeg', .78);
+                if (dataUrl.length > 2400000) reject(new Error('A foto ainda ficou muito grande. Escolha outra imagem.'));
+                else resolve(dataUrl);
+            };
+            image.onerror = () => { URL.revokeObjectURL(url); reject(new Error('Não foi possível abrir esta imagem.')); };
+            image.src = url;
+        });
+    }
+    function showTaskPhotoPreview(url, saved = false) {
+        const image = document.getElementById('taskPhotoPreviewImage');
+        const empty = document.getElementById('taskPhotoPreviewEmpty');
+        const remove = document.getElementById('taskPhotoRemoveButton');
+        if (image) { image.src = url || ''; image.style.display = url ? 'block' : 'none'; }
+        if (empty) empty.style.display = url ? 'none' : 'grid';
+        if (remove) remove.style.display = url ? 'inline-flex' : 'none';
+        if (saved && url) taskPhotoCache.set(formState.taskId, url);
+    }
+    async function resolveTaskPhotoUrl(taskId) {
+        if (taskPhotoCache.has(taskId)) return taskPhotoCache.get(taskId);
+        const url = deps.getUrl();
+        if (!url) return '';
+        const response = await global.AloApi.getTaskPhoto(url, taskId);
+        const photoUrl = response?.encontrada ? response.url : '';
+        if (photoUrl) taskPhotoCache.set(taskId, photoUrl);
+        return photoUrl;
+    }
+    async function loadTaskFormPhoto(taskId) {
+        try { showTaskPhotoPreview(await resolveTaskPhotoUrl(taskId), true); }
+        catch (error) { showTaskPhotoPreview(''); }
+    }
+    async function handleTaskPhoto(input) {
+        try {
+            pendingTaskPhoto = await compressTaskPhoto(input?.files?.[0]);
+            removeTaskPhoto = false;
+            showTaskPhotoPreview(pendingTaskPhoto);
+        } catch (error) {
+            alert(error.message || 'Não foi possível preparar a foto.');
+        } finally {
+            if (input) input.value = '';
+        }
+    }
+    function removeTaskPhotoDraft() {
+        pendingTaskPhoto = '';
+        removeTaskPhoto = true;
+        taskPhotoCache.delete(formState.taskId);
+        showTaskPhotoPreview('');
+    }
+    async function renderTaskPhoto(taskId, targetId) {
+        const target = document.getElementById(targetId);
+        if (!target) return;
+        try {
+            const url = await resolveTaskPhotoUrl(taskId);
+            if (!url) { target.remove(); return; }
+            target.innerHTML = `<strong>Foto de referência</strong><img src="${escapeHtml(url)}" alt="Foto de referência da atividade">`;
+        } catch (error) {
+            target.remove();
+        }
+    }
     function render() {
         if (!initialized) return;
         renderAreaOptions();
@@ -746,9 +918,11 @@
                 ${activity.remarcadoDe ? `<div><small>Remarcada da data</small><strong>${escapeHtml(formatDateKey(activity.remarcadoDe))}</strong></div>` : ''}
             </div>
             ${activity.registroPop ? '<div class="task-pop-badge">POP registrado</div>' : ''}
+            ${template.fotoReferencia ? '<div id="taskDetailPhoto" class="task-reference-photo"><span>Carregando foto...</span></div>' : ''}
             ${procedure ? `<div class="task-procedure-box"><strong>Procedimento</strong><div class="task-procedure-content">${procedureHtml(procedure, procedureFormat)}</div></div>` : ''}
             ${activity.observacao ? `<div class="task-procedure-box"><strong>Observação</strong><div class="task-procedure-content">${sanitizeRichHtml(activity.observacao)}</div></div>` : ''}`;
         deps.openModalTop('modalTaskFinished');
+        if (template.fotoReferencia) renderTaskPhoto(template.id, 'taskDetailPhoto');
     }
     function openFinishedTask(id) { openTaskDetails(id); }
     function closeFinishedTask() {
@@ -806,6 +980,7 @@
         const activity = activities.find(item => item.id === finishedActivityId);
         if (!activity || !isFinalStatus(activity.status) || !['pendente', 'em_execucao'].includes(targetStatus)) return;
         const template = db().tarefas.find(item => item.id === activity.tarefaId) || {};
+        const schedule = scheduleForActivity(activity, template);
         const previousStatus = activity.status;
         const previousDuration = Math.max(0, Number(activity.duracaoSegundos || 0));
         const resumeStartedAt = new Date(Date.now() - previousDuration * 1000).toISOString();
@@ -818,7 +993,7 @@
             duracaoSegundos: 0,
             funcionarioId: targetStatus === 'em_execucao' ? activity.funcionarioId : (template.funcionarioId || ''),
             funcionarioNome: targetStatus === 'em_execucao' ? activity.funcionarioNome : '',
-            alarmeStatus: targetStatus === 'em_execucao' ? 'reconhecido' : (template.alarme === false ? 'desativado' : 'aguardando')
+            alarmeStatus: targetStatus === 'em_execucao' ? 'reconhecido' : (schedule.alarme === false ? 'desativado' : 'aguardando')
         }, previousStatus);
     }
     function returnTaskToPending() {
@@ -830,6 +1005,7 @@
         }
         if (activity.status !== 'em_execucao') return;
         const template = db().tarefas.find(item => item.id === activity.tarefaId) || {};
+        const schedule = scheduleForActivity(activity, template);
         const previousStatus = activity.status;
         closeFinishedTask();
         queueActivity({
@@ -840,7 +1016,7 @@
             duracaoSegundos: 0,
             funcionarioId: template.funcionarioId || '',
             funcionarioNome: '',
-            alarmeStatus: template.alarme === false ? 'desativado' : 'aguardando'
+            alarmeStatus: schedule.alarme === false ? 'desativado' : 'aguardando'
         }, previousStatus);
     }
     function openReschedule(id) {
@@ -867,6 +1043,7 @@
         if (!activity || !newDate) return;
         if (newDate < todayKey()) return alert('Escolha hoje ou uma data futura.');
         const template = db().tarefas.find(item => item.id === activity.tarefaId) || {};
+        const schedule = scheduleForActivity(activity, template);
         const previousStatus = activity.status;
         cancelReschedule();
         queueActivity({
@@ -879,7 +1056,7 @@
             funcionarioNome: '',
             remarcadoDe: activity.remarcadoDe || activity.data,
             remarcadoEm: nowIso(),
-            alarmeStatus: template.alarme === false ? 'desativado' : 'aguardando'
+            alarmeStatus: schedule.alarme === false ? 'desativado' : 'aguardando'
         }, previousStatus);
     }
     function confirmEmployeeSelection() {
@@ -993,11 +1170,12 @@
     function setArea(area) {
         selectedArea = area;
         localStorage.setItem(STORAGE_SELECTED_AREA, area);
+        closeAreaPicker();
         render();
     }
 
     function closeAllSettings() {
-        ['modalPainelUnificado', 'modalConfigTasksMenu', 'modalTasksManager', 'modalTaskForm', 'modalTaskReports', 'modalTaskHistory', 'modalTaskBasicSettings']
+        ['modalPainelUnificado', 'modalConfigTasksMenu', 'modalTasksManager', 'modalTaskForm', 'modalTaskHygieneLibrary', 'modalTaskQr', 'modalTaskReports', 'modalTaskHistory', 'modalTaskBasicSettings']
             .forEach(id => { const element = document.getElementById(id); if (element) element.style.display = 'none'; });
     }
     function openSettingsMenu() {
@@ -1014,8 +1192,8 @@
         else document.getElementById('modalTasksManager').style.display = 'none';
         deps.openModalTop('modalConfigTasksMenu');
     }
-    function managerItem(title, subtitle, index, active) {
-        return `<div class="task-manager-item ${active === false ? 'inactive' : ''}"><div><strong>${escapeHtml(title)}</strong><span>${escapeHtml(subtitle)}</span></div><button onclick="AloTasks.editManagedItem(${index})" aria-label="Editar" title="Editar">✏️</button></div>`;
+    function managerItem(title, subtitle, index, active, qrId = '') {
+        return `<div class="task-manager-item ${active === false ? 'inactive' : ''}"><div><strong>${escapeHtml(title)}</strong><span>${escapeHtml(subtitle)}</span></div><div class="task-manager-actions">${qrId ? `<button onclick="AloTasks.openTaskQr('${escapeHtml(qrId)}')" aria-label="Gerar QR Code" title="Gerar QR Code">▦</button>` : ''}<button onclick="AloTasks.editManagedItem(${index})" aria-label="Editar" title="Editar">✏️</button></div></div>`;
     }
     function openManager(type) {
         managerType = type;
@@ -1032,7 +1210,11 @@
             list.innerHTML = db().funcionarios.map((employee, index) => managerItem(employee.nome, employee.setorId ? getArea(employee.setorId).nome : 'Todos os setores', index, employee.ativo)).join('');
         } else {
             title.innerText = 'Tarefas Cadastradas';
-            list.innerHTML = db().tarefas.map((task, index) => managerItem(task.nome, `${getArea(task.setorId).nome} · ${task.horario} · ${task.recorrencia === 'unica' ? task.dataUnica : task.recorrencia}`, index, task.ativo)).join('');
+            list.innerHTML = db().tarefas.map((task, index) => {
+                const schedules = getTaskSchedules(task);
+                const scheduleSummary = schedules.length === 1 ? `${schedules[0].horario} · ${recurrenceLabel(schedules[0])}` : `${schedules.length} horários cadastrados`;
+                return managerItem(task.nome, `${getArea(task.setorId).nome} · ${scheduleSummary}`, index, task.ativo, task.id);
+            }).join('');
         }
         if (!list.innerHTML) list.innerHTML = '<div class="tasks-empty">Nenhum cadastro ainda.</div>';
         deps.openModalTop('modalTasksManager');
@@ -1051,8 +1233,212 @@
             `<option value="${escapeHtml(employee.id)}" ${employee.id === selected ? 'selected' : ''}>${escapeHtml(employee.nome)}</option>`
         ).join('');
     }
-    function openForm(type, index) {
-        formState = { type, index };
+    function recurrenceLabel(schedule) {
+        if (schedule.recorrencia === 'unica') return `Uma vez · ${formatDateKey(schedule.dataUnica)}`;
+        if (schedule.recorrencia === 'mensal') return `Todo mês · dia ${schedule.diaMes}`;
+        if (schedule.recorrencia === 'intervalo_meses') return `A cada ${schedule.intervaloMeses} meses`;
+        if (schedule.recorrencia === 'semanal') {
+            const names = ['Dom', 'Seg', 'Ter', 'Qua', 'Qui', 'Sex', 'Sáb'];
+            return (schedule.dias || []).map(day => names[Number(day)]).filter(Boolean).join(', ') || 'Dias não definidos';
+        }
+        return 'Todos os dias';
+    }
+    function renderTaskSchedules() {
+        const list = document.getElementById('taskScheduleList');
+        if (!list) return;
+        const schedules = formState.schedules || [];
+        list.innerHTML = schedules.length ? schedules.map((schedule, index) => `
+            <div class="task-schedule-card">
+                <div class="task-schedule-time"><span>🕒</span><strong>${escapeHtml(schedule.horario)}</strong></div>
+                <div class="task-schedule-copy"><strong>${escapeHtml(recurrenceLabel(schedule))}</strong><small>${schedule.alarme === false ? 'Sem alarme' : 'Com alarme'}</small></div>
+                <button type="button" onclick="AloTasks.openScheduleEditor(${index})" aria-label="Editar horário" title="Editar horário">✎</button>
+                <button type="button" class="task-schedule-delete" onclick="AloTasks.deleteScheduleDraft(${index})" aria-label="Excluir horário" title="Excluir horário">🗑️</button>
+            </div>`).join('') : '<div class="task-schedule-empty">Cadastre pelo menos um horário.</div>';
+    }
+    function openScheduleEditor(index = -1) {
+        const panel = document.getElementById('taskScheduleEditor');
+        if (!panel) return;
+        const schedule = index >= 0
+            ? formState.schedules[index]
+            : normalizeSchedule({ horario: '09:00', recorrencia: 'diaria', dias: [0, 1, 2, 3, 4, 5, 6], dataUnica: todayKey(), alarme: true }, formState.schedules.length);
+        formState.editingSchedule = index;
+        const dayNames = ['Dom', 'Seg', 'Ter', 'Qua', 'Qui', 'Sex', 'Sáb'];
+        panel.innerHTML = `
+            <div class="task-schedule-editor-head"><strong>${index >= 0 ? 'Editar horário' : 'Novo horário'}</strong><button type="button" onclick="AloTasks.cancelScheduleEditor()" aria-label="Fechar">×</button></div>
+            <div class="task-form-grid">
+                <div class="form-group"><label>Horário:</label><input id="taskScheduleTime" type="time" value="${escapeHtml(schedule.horario)}"></div>
+                <div class="form-group"><label>Frequência:</label><select id="taskScheduleRecurrence" onchange="AloTasks.toggleScheduleRecurrenceFields()"><option value="diaria" ${schedule.recorrencia === 'diaria' ? 'selected' : ''}>Todos os dias</option><option value="semanal" ${schedule.recorrencia === 'semanal' ? 'selected' : ''}>Dias específicos</option><option value="mensal" ${schedule.recorrencia === 'mensal' ? 'selected' : ''}>Todo mês</option><option value="intervalo_meses" ${schedule.recorrencia === 'intervalo_meses' ? 'selected' : ''}>A cada alguns meses</option><option value="unica" ${schedule.recorrencia === 'unica' ? 'selected' : ''}>Uma única vez</option></select></div>
+            </div>
+            <div id="taskScheduleWeekDays" class="task-weekdays">${dayNames.map((name, day) => `<label><input type="checkbox" value="${day}" ${(schedule.dias || []).map(Number).includes(day) ? 'checked' : ''}><span>${name}</span></label>`).join('')}</div>
+            <div id="taskScheduleOneDate" class="form-group"><label>Data:</label><input id="taskScheduleDate" type="date" value="${escapeHtml(schedule.dataUnica)}"></div>
+            <div id="taskScheduleMonthDay" class="form-group"><label>Dia do mês:</label><input id="taskScheduleDayOfMonth" type="number" min="1" max="31" value="${Number(schedule.diaMes || 1)}"></div>
+            <div id="taskScheduleMonthInterval" class="task-form-grid"><div class="form-group"><label>Repetir a cada:</label><select id="taskScheduleIntervalMonths"><option value="2" ${Number(schedule.intervaloMeses) === 2 ? 'selected' : ''}>2 meses</option><option value="3" ${Number(schedule.intervaloMeses) === 3 ? 'selected' : ''}>3 meses</option><option value="6" ${Number(schedule.intervaloMeses || 6) === 6 ? 'selected' : ''}>6 meses</option><option value="12" ${Number(schedule.intervaloMeses) === 12 ? 'selected' : ''}>12 meses</option></select></div><div class="form-group"><label>Começando em:</label><input id="taskScheduleStartDate" type="date" value="${escapeHtml(schedule.dataInicio || todayKey())}"></div></div>
+            <label class="task-compact-switch"><input id="taskScheduleAlarm" type="checkbox" ${schedule.alarme !== false ? 'checked' : ''}><span>⏰ Avisar no horário</span></label>
+            <div class="task-schedule-editor-actions"><button type="button" class="btn-cancel" onclick="AloTasks.cancelScheduleEditor()">Cancelar</button><button type="button" class="btn-action" onclick="AloTasks.saveScheduleDraft()">Salvar horário</button></div>`;
+        panel.style.display = 'block';
+        toggleScheduleRecurrenceFields();
+        requestAnimationFrame(() => panel.scrollIntoView({ block: 'nearest', behavior: 'smooth' }));
+    }
+    function toggleScheduleRecurrenceFields() {
+        const recurrence = document.getElementById('taskScheduleRecurrence')?.value;
+        const weekdays = document.getElementById('taskScheduleWeekDays');
+        const date = document.getElementById('taskScheduleOneDate');
+        const monthDay = document.getElementById('taskScheduleMonthDay');
+        const monthInterval = document.getElementById('taskScheduleMonthInterval');
+        if (weekdays) weekdays.style.display = recurrence === 'semanal' ? 'grid' : 'none';
+        if (date) date.style.display = recurrence === 'unica' ? 'block' : 'none';
+        if (monthDay) monthDay.style.display = recurrence === 'mensal' ? 'block' : 'none';
+        if (monthInterval) monthInterval.style.display = recurrence === 'intervalo_meses' ? 'grid' : 'none';
+    }
+    function saveScheduleDraft() {
+        const time = document.getElementById('taskScheduleTime')?.value;
+        const recurrence = document.getElementById('taskScheduleRecurrence')?.value;
+        const days = Array.from(document.querySelectorAll('#taskScheduleWeekDays input:checked')).map(input => Number(input.value));
+        const date = document.getElementById('taskScheduleDate')?.value;
+        if (!time) { alert('Informe o horário.'); return false; }
+        if (recurrence === 'semanal' && !days.length) { alert('Escolha pelo menos um dia da semana.'); return false; }
+        if (recurrence === 'unica' && !date) { alert('Informe a data.'); return false; }
+        const index = Number(formState.editingSchedule);
+        const current = index >= 0 ? formState.schedules[index] : null;
+        const value = normalizeSchedule({
+            id: current?.id || (formState.schedules.length ? createId('horario') : 'principal'),
+            horario: time,
+            recorrencia: recurrence,
+            dias: recurrence === 'diaria' ? [0, 1, 2, 3, 4, 5, 6] : days,
+            dataUnica: date || todayKey(),
+            diaMes: Number(document.getElementById('taskScheduleDayOfMonth')?.value || 1),
+            intervaloMeses: Number(document.getElementById('taskScheduleIntervalMonths')?.value || 6),
+            dataInicio: document.getElementById('taskScheduleStartDate')?.value || todayKey(),
+            alarme: document.getElementById('taskScheduleAlarm').checked
+        }, index >= 0 ? index : formState.schedules.length);
+        if (index >= 0) formState.schedules[index] = value;
+        else formState.schedules.push(value);
+        cancelScheduleEditor();
+        renderTaskSchedules();
+        return true;
+    }
+    function cancelScheduleEditor() {
+        const panel = document.getElementById('taskScheduleEditor');
+        if (panel) { panel.style.display = 'none'; panel.innerHTML = ''; }
+        formState.editingSchedule = -1;
+    }
+    function deleteScheduleDraft(index) {
+        formState.schedules.splice(index, 1);
+        cancelScheduleEditor();
+        renderTaskSchedules();
+    }
+    function openHygieneLibrary() {
+        document.getElementById('modalConfigTasksMenu').style.display = 'none';
+        const list = document.getElementById('taskHygieneLibraryList');
+        const templates = global.AloTaskTemplates?.templates || [];
+        list.innerHTML = templates.map(template => `
+            <article class="task-hygiene-template">
+                <span class="task-hygiene-template-icon">${escapeHtml(template.icon)}</span>
+                <div><small>${escapeHtml(template.category)}</small><strong>${escapeHtml(template.name)}</strong><p>${escapeHtml(template.summary)}</p><span>${template.schedules.length} ${template.schedules.length === 1 ? 'horário sugerido' : 'horários sugeridos'} · ${template.pop ? 'Registro POP' : 'Registro simples'}</span></div>
+                <button type="button" onclick="AloTasks.useHygieneTemplate('${escapeHtml(template.id)}')">Usar modelo</button>
+            </article>`).join('');
+        deps.openModalTop('modalTaskHygieneLibrary');
+    }
+    function closeHygieneLibrary() {
+        document.getElementById('modalTaskHygieneLibrary').style.display = 'none';
+        openSettingsMenu();
+    }
+    function taskPublicUrl(taskId) {
+        const url = new URL(global.location.href);
+        url.hash = '';
+        url.search = '';
+        url.searchParams.set('consulta', 'tarefa');
+        url.searchParams.set('id', taskId);
+        const apiUrl = deps.getUrl();
+        if (apiUrl) url.searchParams.set('api', apiUrl);
+        return url.toString();
+    }
+    function openTaskQr(taskId) {
+        const task = db().tarefas.find(item => item.id === taskId);
+        if (!task || typeof global.qrcode !== 'function') return alert('Não foi possível gerar o QR Code.');
+        const publicUrl = taskPublicUrl(taskId);
+        const qr = global.qrcode(0, 'M');
+        qr.addData(publicUrl);
+        qr.make();
+        document.getElementById('taskQrName').textContent = task.nome;
+        document.getElementById('taskQrCode').innerHTML = qr.createSvgTag({ cellSize: 5, margin: 4, scalable: true });
+        document.getElementById('taskQrLocalWarning').style.display = ['127.0.0.1', 'localhost'].includes(global.location.hostname) || !deps.getUrl() ? 'block' : 'none';
+        deps.openModalTop('modalTaskQr');
+    }
+    function closeTaskQr() { document.getElementById('modalTaskQr').style.display = 'none'; }
+    function printTaskQr() {
+        document.body.classList.add('printing-task-qr');
+        global.print();
+        setTimeout(() => document.body.classList.remove('printing-task-qr'), 500);
+    }
+
+    async function openPublicTaskFromUrl() {
+        const params = new URLSearchParams(global.location.search);
+        if (params.get('consulta') !== 'tarefa') return false;
+        const taskId = params.get('id') || '';
+        const apiUrl = params.get('api') || deps.getUrl();
+        const view = document.getElementById('publicTaskView');
+        const content = document.getElementById('publicTaskContent');
+        document.getElementById('splashScreen').style.display = 'none';
+        document.getElementById('moduleHome').style.display = 'none';
+        document.getElementById('kdsModule').style.display = 'none';
+        document.getElementById('tasksModule').style.display = 'none';
+        view.style.display = 'block';
+        if (!apiUrl || !taskId) {
+            content.innerHTML = '<div class="public-task-error"><strong>Consulta indisponível</strong><span>O QR Code está incompleto. Gere um novo código nas configurações da tarefa.</span></div>';
+            return true;
+        }
+        try {
+            const bank = await global.AloApi.getBank(apiUrl);
+            const task = (bank.tarefas || []).find(item => String(item.id) === taskId);
+            if (!task) throw new Error('Tarefa não encontrada.');
+            const area = (bank.setoresTarefas || []).find(item => item.id === task.setorId) || { nome: 'Sem setor', emoji: '📍' };
+            const end = new Date();
+            const start = new Date();
+            start.setDate(start.getDate() - 365);
+            const history = await global.AloApi.getActivityHistory(apiUrl, todayKey(start), todayKey(end));
+            const records = (history.atividades || []).filter(item => String(item.tarefaId) === taskId && item.status === 'concluida')
+                .sort((left, right) => new Date(right.finalizadoEm || 0) - new Date(left.finalizadoEm || 0)).slice(0, 12);
+            let photoUrl = '';
+            if (task.fotoReferencia) {
+                try { const photo = await global.AloApi.getTaskPhoto(apiUrl, taskId); photoUrl = photo?.encontrada ? photo.url : ''; } catch (error) {}
+            }
+            content.innerHTML = `
+                <section class="public-task-summary"><span>${escapeHtml(area.emoji)}</span><div><small>${escapeHtml(area.nome)}</small><h1>${escapeHtml(task.nome)}</h1><p>Consulta do procedimento e das execuções registradas.</p></div></section>
+                ${photoUrl ? `<section class="public-task-panel"><h2>Foto de referência</h2><img class="public-task-photo" src="${escapeHtml(photoUrl)}" alt="Foto de referência da atividade"></section>` : ''}
+                <section class="public-task-panel"><h2>Procedimento</h2><div class="task-procedure-content">${procedureHtml(task.instrucoes || 'Procedimento não informado.', task.procedimentoFormato || 'rico')}</div></section>
+                <section class="public-task-panel"><h2>Últimas execuções</h2>${records.length ? `<div class="public-task-history">${records.map(record => `<article><strong>${escapeHtml(formatDateTime(record.finalizadoEm))}</strong><span>${escapeHtml(record.funcionarioNome || 'Responsável não informado')}</span>${record.observacao ? `<small>${sanitizeRichHtml(record.observacao)}</small>` : ''}</article>`).join('')}</div>` : '<div class="tasks-empty">Nenhuma execução encontrada no último ano.</div>'}</section>
+                <p class="public-task-footnote">Registro operacional do Alô Cozinha. Em caso de dúvida, consulte o responsável pelo estabelecimento.</p>`;
+        } catch (error) {
+            content.innerHTML = `<div class="public-task-error"><strong>Não foi possível carregar</strong><span>${escapeHtml(error.message || 'Verifique a internet e tente novamente.')}</span></div>`;
+        }
+        return true;
+    }
+    function useHygieneTemplate(id) {
+        const template = (global.AloTaskTemplates?.templates || []).find(item => item.id === id);
+        if (!template) return;
+        const hint = String(template.areaHint || '').toLocaleLowerCase('pt-BR');
+        const area = db().setoresTarefas.find(item => String(item.nome || '').toLocaleLowerCase('pt-BR').includes(hint))
+            || db().setoresTarefas.find(item => item.ativo !== false)
+            || db().setoresTarefas[0];
+        document.getElementById('modalTaskHygieneLibrary').style.display = 'none';
+        openForm('templates', -1, {
+            id: createId('tarefa'),
+            nome: template.name,
+            setorId: area?.id || '',
+            funcionarioId: '',
+            programacoes: template.schedules,
+            prioridade: 'normal',
+            tempoEsperadoMin: template.expected,
+            instrucoes: template.procedure,
+            procedimentoFormato: 'rico',
+            permiteRemarcacao: template.id === 'higienizar_reservatorio',
+            registroPop: template.pop,
+            ativo: true
+        });
+    }
+    function openForm(type, index, preset = null) {
+        formState = { type, index, schedules: [], editingSchedule: -1 };
         document.getElementById('modalTasksManager').style.display = 'none';
         const title = document.getElementById('taskFormTitle');
         const body = document.getElementById('taskFormBody');
@@ -1065,13 +1451,25 @@
             title.innerText = index >= 0 ? 'Editar Funcionário' : 'Novo Funcionário';
             body.innerHTML = `<div class="form-group"><label>Nome:</label><input id="taskEmployeeName" value="${escapeHtml(employee.nome)}" placeholder="Nome do funcionário"></div><div class="form-group"><label>Setor principal:</label><select id="taskEmployeeArea"><option value="">Trabalha em vários setores</option>${areaOptions(employee.setorId)}</select></div><label class="task-simple-switch"><input id="taskEmployeeActive" type="checkbox" ${employee.ativo !== false ? 'checked' : ''}><span>Funcionário ativo</span></label>`;
         } else {
-            const task = index >= 0 ? db().tarefas[index] : { nome: '', setorId: db().setoresTarefas[0]?.id || '', funcionarioId: '', horario: '09:00', recorrencia: 'diaria', dias: [1,2,3,4,5,6,0], dataUnica: todayKey(), prioridade: 'normal', alarme: true, tempoEsperadoMin: 0, instrucoes: '', procedimentoFormato: 'rico', permiteRemarcacao: false, registroPop: false, ativo: true };
+            const task = preset || (index >= 0 ? db().tarefas[index] : { id: createId('tarefa'), nome: '', setorId: db().setoresTarefas[0]?.id || '', funcionarioId: '', horario: '09:00', recorrencia: 'diaria', dias: [1,2,3,4,5,6,0], dataUnica: todayKey(), prioridade: 'normal', alarme: true, tempoEsperadoMin: 0, instrucoes: '', procedimentoFormato: 'rico', permiteRemarcacao: false, registroPop: false, ativo: true });
             title.innerText = index >= 0 ? 'Editar Tarefa' : 'Nova Tarefa';
-            const dayNames = ['Dom','Seg','Ter','Qua','Qui','Sex','Sáb'];
-            body.innerHTML = `<div class="form-group"><label>Nome curto:</label><input id="taskName" value="${escapeHtml(task.nome)}" placeholder="Ex: Limpar a chapa"></div><div class="task-form-grid"><div class="form-group"><label>Setor:</label><select id="taskArea" onchange="AloTasks.refreshTaskEmployeeOptions()">${areaOptions(task.setorId)}</select></div><div class="form-group"><label>Horário:</label><input id="taskTime" type="time" value="${escapeHtml(task.horario)}"></div></div><div class="form-group"><label>Responsável:</label><select id="taskEmployee">${employeeOptions(task.funcionarioId, task.setorId)}</select></div><div class="task-form-grid"><div class="form-group"><label>Frequência:</label><select id="taskRecurrence" onchange="AloTasks.toggleRecurrenceFields()"><option value="diaria" ${task.recorrencia === 'diaria' ? 'selected' : ''}>Todos os dias</option><option value="semanal" ${task.recorrencia === 'semanal' ? 'selected' : ''}>Dias específicos</option><option value="unica" ${task.recorrencia === 'unica' ? 'selected' : ''}>Uma única vez</option></select></div><div class="form-group"><label>Prioridade:</label><select id="taskPriority"><option value="normal" ${task.prioridade !== 'urgente' ? 'selected' : ''}>Normal</option><option value="urgente" ${task.prioridade === 'urgente' ? 'selected' : ''}>Urgente</option></select></div></div><div id="taskWeekDays" class="task-weekdays">${dayNames.map((name, day) => `<label><input type="checkbox" value="${day}" ${(task.dias || []).map(Number).includes(day) ? 'checked' : ''}><span>${name}</span></label>`).join('')}</div><div id="taskOneDate" class="form-group"><label>Data:</label><input id="taskDate" type="date" value="${escapeHtml(task.dataUnica)}"></div><div class="task-form-grid"><div class="form-group"><label>Tempo esperado (min.):</label><input id="taskExpected" type="number" min="0" value="${Number(task.tempoEsperadoMin || 0)}"></div><label class="task-simple-switch task-alarm-switch"><input id="taskAlarmEnabled" type="checkbox" ${task.alarme !== false ? 'checked' : ''}><span>⏰ Alarme</span></label></div><div class="form-group"><label>Procedimento:</label>${richEditorMarkup('taskInstructions', task.instrucoes, task.procedimentoFormato, 'Escreva o procedimento', 1000)}</div><label class="task-simple-switch"><input id="taskAllowReschedule" type="checkbox" ${task.permiteRemarcacao ? 'checked' : ''}><span>📅 Permitir remarcar para outro dia</span></label><label class="task-simple-switch"><input id="taskPopRequired" type="checkbox" ${task.registroPop ? 'checked' : ''}><span>📋 Exigir registro POP ao concluir</span></label><label class="task-simple-switch"><input id="taskActive" type="checkbox" ${task.ativo !== false ? 'checked' : ''}><span>Tarefa ativa</span></label>`;
-            toggleRecurrenceFields();
+            formState.taskId = task.id;
+            formState.schedules = getTaskSchedules(task);
+            formState.hasPhoto = Boolean(task.fotoReferencia);
+            pendingTaskPhoto = '';
+            removeTaskPhoto = false;
+            body.innerHTML = `
+                <div class="form-group"><label>Nome curto:</label><input id="taskName" value="${escapeHtml(task.nome)}" placeholder="Ex: Higienizar bancada"></div>
+                <div class="task-form-grid"><div class="form-group"><label>Setor:</label><select id="taskArea" onchange="AloTasks.refreshTaskEmployeeOptions()">${areaOptions(task.setorId)}</select></div><div class="form-group"><label>Responsável:</label><select id="taskEmployee">${employeeOptions(task.funcionarioId, task.setorId)}</select></div></div>
+                <section class="task-schedule-section"><div class="task-form-section-title"><span><strong>Horários e frequência</strong><small>Você pode cadastrar manhã, noite ou dias diferentes.</small></span><button type="button" class="task-add-schedule" onclick="AloTasks.openScheduleEditor()">＋ Cadastrar horário</button></div><div id="taskScheduleList" class="task-schedule-list"></div><div id="taskScheduleEditor" class="task-schedule-editor" style="display:none"></div></section>
+                <div class="task-form-grid"><div class="form-group"><label>Prioridade:</label><select id="taskPriority"><option value="normal" ${task.prioridade !== 'urgente' ? 'selected' : ''}>Normal</option><option value="urgente" ${task.prioridade === 'urgente' ? 'selected' : ''}>Urgente</option></select></div><div class="form-group"><label>Tempo esperado (min.):</label><input id="taskExpected" type="number" min="0" value="${Number(task.tempoEsperadoMin || 0)}"></div></div>
+                <div class="form-group"><label>Procedimento:</label>${richEditorMarkup('taskInstructions', task.instrucoes, task.procedimentoFormato, 'Escreva o procedimento', 1800)}</div>
+                <div class="task-photo-field"><div class="task-form-section-title"><span><strong>Foto de referência</strong><small>Mostre como o prato, o salão ou a montagem deve ficar.</small></span><button type="button" class="task-photo-pick" onclick="document.getElementById('taskPhotoInput').click()">📷 Escolher foto</button></div><input id="taskPhotoInput" type="file" accept="image/jpeg,image/png,image/webp" hidden onchange="AloTasks.handleTaskPhoto(this)"><div class="task-photo-preview"><span id="taskPhotoPreviewEmpty">Nenhuma foto cadastrada</span><img id="taskPhotoPreviewImage" alt="Prévia da foto de referência" style="display:none"><button type="button" id="taskPhotoRemoveButton" onclick="AloTasks.removeTaskPhotoDraft()" style="display:none">Remover foto</button></div></div>
+                <div class="task-option-grid"><label class="task-compact-switch"><input id="taskAllowReschedule" type="checkbox" ${task.permiteRemarcacao ? 'checked' : ''}><span>📅 Permitir remarcar</span></label><label class="task-compact-switch"><input id="taskPopRequired" type="checkbox" ${task.registroPop ? 'checked' : ''}><span>📋 Exigir registro POP</span></label><label class="task-compact-switch"><input id="taskActive" type="checkbox" ${task.ativo !== false ? 'checked' : ''}><span>✓ Tarefa ativa</span></label></div>`;
+            renderTaskSchedules();
         }
         deps.openModalTop('modalTaskForm');
+        if (type === 'templates' && formState.hasPhoto) requestAnimationFrame(() => loadTaskFormPhoto(formState.taskId));
     }
     function toggleRecurrenceFields() {
         const recurrence = document.getElementById('taskRecurrence')?.value;
@@ -1084,7 +1482,7 @@
         const areaId = document.getElementById('taskArea').value;
         document.getElementById('taskEmployee').innerHTML = employeeOptions('', areaId);
     }
-    function saveCurrentForm() {
+    async function saveCurrentForm() {
         const { type, index } = formState;
         if (type === 'areas') {
             const nome = document.getElementById('taskAreaName').value.trim();
@@ -1102,27 +1500,48 @@
         } else {
             const nome = document.getElementById('taskName').value.trim();
             const setorId = document.getElementById('taskArea').value;
-            const horario = document.getElementById('taskTime').value;
-            const recurrence = document.getElementById('taskRecurrence').value;
-            const dias = Array.from(document.querySelectorAll('#taskWeekDays input:checked')).map(input => Number(input.value));
-            if (!nome || !setorId || !horario) return alert('Informe nome, setor e horário.');
-            if (recurrence === 'semanal' && !dias.length) return alert('Escolha pelo menos um dia da semana.');
+            if (document.getElementById('taskScheduleEditor')?.style.display !== 'none' && !saveScheduleDraft()) return;
+            if (!nome || !setorId) return alert('Informe nome e setor.');
+            if (!formState.schedules.length) return alert('Cadastre pelo menos um horário.');
             const current = index >= 0 ? db().tarefas[index] : null;
+            const programacoes = formState.schedules.map((schedule, scheduleIndex) => normalizeSchedule(schedule, scheduleIndex));
+            const principal = programacoes[0];
             const value = {
-                id: current?.id || createId('tarefa'), nome, setorId,
+                id: current?.id || formState.taskId || createId('tarefa'), nome, setorId,
                 funcionarioId: document.getElementById('taskEmployee').value,
-                horario, recorrencia: recurrence,
-                dias: recurrence === 'diaria' ? [0,1,2,3,4,5,6] : dias,
-                dataUnica: document.getElementById('taskDate').value,
+                programacoes,
+                horario: principal.horario,
+                recorrencia: principal.recorrencia,
+                dias: principal.dias,
+                dataUnica: principal.dataUnica,
+                diaMes: principal.diaMes,
+                intervaloMeses: principal.intervaloMeses,
+                dataInicio: principal.dataInicio,
                 prioridade: document.getElementById('taskPriority').value,
-                alarme: document.getElementById('taskAlarmEnabled').checked,
+                alarme: principal.alarme,
                 tempoEsperadoMin: Number(document.getElementById('taskExpected').value || 0),
                 instrucoes: richEditorValue('taskInstructions'),
                 procedimentoFormato: 'rico',
                 permiteRemarcacao: document.getElementById('taskAllowReschedule').checked,
                 registroPop: document.getElementById('taskPopRequired').checked,
+                fotoReferencia: removeTaskPhoto ? false : Boolean(pendingTaskPhoto || current?.fotoReferencia || formState.hasPhoto),
                 ativo: document.getElementById('taskActive').checked
             };
+            if (pendingTaskPhoto || removeTaskPhoto) {
+                const serverUrl = deps.getUrl();
+                if (!serverUrl) return alert('Configure a URL do servidor antes de salvar uma foto.');
+                try {
+                    if (pendingTaskPhoto) {
+                        await global.AloApi.uploadTaskPhoto(serverUrl, value.id, pendingTaskPhoto);
+                        taskPhotoCache.set(value.id, pendingTaskPhoto);
+                    } else if (removeTaskPhoto) {
+                        await global.AloApi.deleteTaskPhoto(serverUrl, value.id);
+                        taskPhotoCache.delete(value.id);
+                    }
+                } catch (error) {
+                    return alert('A foto não foi enviada. Verifique a internet e tente salvar novamente.');
+                }
+            }
             if (index >= 0) db().tarefas[index] = value; else db().tarefas.push(value);
         }
         deps.markDatabaseChanged();
@@ -1252,6 +1671,10 @@
         activities = parseJson(STORAGE_ACTIVITIES, []).map(normalizeActivity);
         outbox = parseJson(STORAGE_OUTBOX, []);
         initialized = true;
+        if (new URLSearchParams(global.location.search).get('consulta') === 'tarefa') {
+            openPublicTaskFromUrl();
+            return;
+        }
         generateToday();
         render();
         setSyncIndicator(navigator.onLine ? 'online' : 'offline');
@@ -1273,6 +1696,8 @@
         document.addEventListener('click', unlockAlarm, { once: true });
         document.addEventListener('touchstart', unlockAlarm, { once: true });
         document.addEventListener('pointerdown', event => {
+            const areaPicker = document.querySelector('.tasks-area-picker');
+            if (areaPicker && !areaPicker.contains(event.target)) closeAreaPicker();
             const choices = document.getElementById('taskFinishedChoices');
             const button = document.querySelector('#taskFinishedContent .task-status-edit-button');
             if (!choices || choices.style.display === 'none' || choices.contains(event.target) || button?.contains(event.target)) return;
@@ -1282,7 +1707,7 @@
     }
 
     global.AloTasks = Object.freeze({
-        init, refreshDefinitions, showHome, openModule, setTab, setArea, syncNow,
+        init, refreshDefinitions, showHome, openModule, setTab, setArea, toggleAreaPicker, syncNow,
         startTask, completeTask, markTaskNotDone, confirmEmployeeSelection,
         openTaskDetails, openFinishedTask, closeFinishedTask, undoFinishedTask, returnTaskToPending,
         toggleTaskStatusEditMenu, runTaskDetailAction,
@@ -1292,7 +1717,11 @@
         openSettingsMenu, backToControlPanel, backToSettingsMenu,
         manageTaskAreas, manageEmployees, manageTemplates, editManagedItem,
         cancelForm, saveCurrentForm, toggleRecurrenceFields, refreshTaskEmployeeOptions,
+        openScheduleEditor, saveScheduleDraft, cancelScheduleEditor, deleteScheduleDraft, toggleScheduleRecurrenceFields,
         formatRichEditor, cycleRichEditorAlignment, limitRichEditor,
+        handleTaskPhoto, removeTaskPhotoDraft,
+        openHygieneLibrary, closeHygieneLibrary, useHygieneTemplate,
+        openTaskQr, closeTaskQr, printTaskQr,
         openBasicSettings, saveBasicSettings, openReports, renderReports, changeReportArea,
         openTaskHistory, closeTaskHistory, printTaskHistory, closeReports
     });

@@ -48,5 +48,19 @@
         return response.json();
     }
 
-    global.AloApi = Object.freeze({ buildUrl, post, sync, getBank, getHistory, syncActivities, getActivityHistory });
+    async function uploadTaskPhoto(baseUrl, taskId, dataUrl) {
+        return post(baseUrl, { action: 'salvar_foto_tarefa', tarefaId: taskId, imagem: dataUrl });
+    }
+
+    async function deleteTaskPhoto(baseUrl, taskId) {
+        return post(baseUrl, { action: 'excluir_foto_tarefa', tarefaId: taskId });
+    }
+
+    async function getTaskPhoto(baseUrl, taskId) {
+        const response = await fetch(buildUrl(baseUrl, { action: 'foto_tarefa', tarefaId: taskId }), { cache: 'no-store' });
+        if (!response.ok) throw new Error('Não foi possível carregar a foto.');
+        return response.json();
+    }
+
+    global.AloApi = Object.freeze({ buildUrl, post, sync, getBank, getHistory, syncActivities, getActivityHistory, uploadTaskPhoto, deleteTaskPhoto, getTaskPhoto });
 })(window);

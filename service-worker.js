@@ -1,24 +1,26 @@
-const VERSION = '2.0.8';
+const VERSION = '2.0.9';
 const CACHE_NAME = `alo-cozinha-${VERSION}`;
 const APP_SHELL = [
   './',
   './index.html',
-  './styles.css?v=2.0.8',
-  './tasks.css?v=2.0.8',
-  './logic.js?v=2.0.8',
-  './storage.js?v=2.0.8',
-  './api.js?v=2.0.8',
-  './audio.js?v=2.0.8',
-  './sync.js?v=2.0.8',
-  './catalog-sync.js?v=2.0.8',
-  './ui.js?v=2.0.8',
-  './tasks.js?v=2.0.8',
-  './app.js?v=2.0.8',
+  './styles.css?v=2.0.9',
+  './tasks.css?v=2.0.9',
+  './logic.js?v=2.0.9',
+  './storage.js?v=2.0.9',
+  './api.js?v=2.0.9',
+  './audio.js?v=2.0.9',
+  './sync.js?v=2.0.9',
+  './catalog-sync.js?v=2.0.9',
+  './ui.js?v=2.0.9',
+  './task-templates.js?v=2.0.9',
+  './vendor/qrcode.js?v=2.0.9',
+  './tasks.js?v=2.0.9',
+  './app.js?v=2.0.9',
   './assets/sounds/alarme-curto.ogg',
   './assets/sounds/beep-classico.ogg',
   './assets/sounds/sino-forte.ogg',
   './manifest.json',
-  './icon.png?v=2.0.8'
+  './icon.png?v=2.0.9'
 ];
 
 self.addEventListener('install', event => {

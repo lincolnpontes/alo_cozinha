@@ -2126,7 +2126,7 @@ let db = carregarBanco();
     };
 
     if ('serviceWorker' in navigator) {
-        window.addEventListener('load', () => navigator.serviceWorker.register('./service-worker.js?v=2.0.8').catch(() => {}));
+        window.addEventListener('load', () => navigator.serviceWorker.register('./service-worker.js?v=2.0.9').catch(() => {}));
     }
 
     iniciarComSyncConfiavel();

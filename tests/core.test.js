@@ -498,13 +498,14 @@ function testPasswordDialogsHaveExplicitConfirmation() {
     assert.equal(app.includes('Senha incorreta. Tente novamente.'), true);
 }
 
-function testV208TaskExperience() {
+function testV209TaskExperience() {
     const html = fs.readFileSync(path.join(root, 'index.html'), 'utf8');
     const tasks = fs.readFileSync(path.join(root, 'tasks.js'), 'utf8');
     const app = fs.readFileSync(path.join(root, 'app.js'), 'utf8');
     const css = fs.readFileSync(path.join(root, 'tasks.css'), 'utf8');
     const ui = fs.readFileSync(path.join(root, 'ui.js'), 'utf8');
     const gas = fs.readFileSync(path.join(root, 'google-apps-script.gs'), 'utf8');
+    const templates = fs.readFileSync(path.join(root, 'task-templates.js'), 'utf8');
     const panel = html.slice(html.indexOf('id="modalPainelUnificado"'), html.indexOf('id="modalConfigKds"'));
     const kdsSettings = html.slice(html.indexOf('id="modalConfigKds"'), html.indexOf('id="modalConfigTasksMenu"'));
 
@@ -520,8 +521,9 @@ function testV208TaskExperience() {
     assert.equal(html.includes('id="modalTaskFinished"'), true);
     assert.equal(html.includes('id="modalTaskPop"'), true);
     assert.equal(html.includes('id="modalTaskReschedule"'), true);
-    assert.equal((html.match(/class="module-header-switch/g) || []).length, 2);
-    assert.equal(html.includes('aria-label="Trocar de módulo"'), true);
+    assert.equal((html.match(/class="module-header-switch/g) || []).length, 0);
+    assert.equal((html.match(/class="module-context-icon"/g) || []).length, 2);
+    assert.equal(html.includes('aria-label="Trocar de módulo"'), false);
     assert.equal(tasks.includes('function undoFinishedTask(targetStatus)'), true);
     assert.equal(tasks.includes('function openReschedule(id)'), true);
     assert.equal(tasks.includes('function confirmPopCompletion()'), true);
@@ -549,7 +551,8 @@ function testV208TaskExperience() {
     assert.equal(html.indexOf('id="modalTaskHistory"') > html.indexOf('id="modalTaskReports"'), true, 'historico deve ficar acima do relatorio');
     assert.equal(css.includes('#modalTaskHistory { z-index: 1300; }'), true, 'historico precisa de camada superior');
     assert.equal(gas.includes("'ProcedimentoFormato'"), true, 'o formato do procedimento precisa sincronizar entre aparelhos');
-    assert.equal(html.includes('kds-header-title'), true, 'o cabecalho deve identificar o KDS');
+    assert.equal(html.includes('id="tasksAreaPickerOptions"'), true, 'o setor das atividades deve ser trocado no cabecalho');
+    assert.equal((html.match(/class="module-home-return"/g) || []).length, 2, 'a marca deve indicar o retorno ao inicio');
     assert.equal(html.includes('id="tasksSummary"'), false, 'a faixa redundante de resumo deve ser removida');
     assert.equal(html.includes('id="taskTabTotalCount"'), true, 'Total deve mostrar sua contagem na aba');
     assert.equal(html.includes('id="taskTabPendingCount"'), true, 'Pendentes deve mostrar sua contagem na aba');
@@ -577,9 +580,9 @@ function testV208TaskExperience() {
     assert.equal(css.includes('.task-detail-status.running { color: #733fa0; }'), true, 'Em execucao deve aparecer em roxo');
     assert.equal(app.includes("let destinoConfiguracoes = 'painel'"), true, 'o painel deve lembrar de onde as configuracoes foram abertas');
     assert.equal(app.includes("destinoConfiguracoes === 'tasks'"), true, 'as configuracoes de atividades devem voltar ao modulo');
-    assert.equal(css.includes('background: #fde8e8'), true);
-    assert.equal(css.includes('background: #eee5f6'), true);
-    assert.equal(css.includes('background: #e4f3e7'), true);
+    assert.equal(css.includes('background: rgba(238, 87, 87, .14)'), true);
+    assert.equal(css.includes('background: rgba(126, 78, 166, .13)'), true);
+    assert.equal(css.includes('background: rgba(42, 157, 127, .12)'), true);
     assert.equal(html.includes('id="areaPickerOptions"'), true, 'o KDS deve usar seletor de area com emojis');
     assert.equal(app.includes('function selecionarAreaCabecalho(areaId)'), true, 'o seletor visual deve trocar a area');
     assert.equal(ui.includes('global.AloUiDialog'), true, 'dialogos do app devem substituir caixas do navegador');
@@ -588,6 +591,21 @@ function testV208TaskExperience() {
     assert.equal(tasks.includes("className: 'running'"), true, 'separadores devem receber estado visual');
     assert.equal(app.includes("title.textContent = 'Trocar área'"), true, 'seletor do KDS deve identificar a troca de area');
     assert.equal(app.includes("role.textContent = area.tipo === 'recebimento'"), true, 'seletor do KDS deve explicar a funcao da area');
+    assert.equal(tasks.includes('function getTaskSchedules(task)'), true, 'tarefas antigas devem migrar para programacoes');
+    assert.equal(tasks.includes('getTaskSchedules(task).forEach((schedule, index)'), true, 'uma tarefa deve gerar varias ocorrencias no dia');
+    assert.equal(tasks.includes("recorrencia === 'intervalo_meses'"), true, 'frequencias longas devem atender higienizacao semestral');
+    assert.equal(tasks.includes('function openScheduleEditor(index = -1)'), true, 'cadastro deve permitir varios horarios');
+    assert.equal(tasks.includes('＋ Cadastrar horário'), true);
+    assert.equal(html.includes('task-alarm-switch'), false, 'alarme gigante deve sair do formulario principal');
+    assert.equal(html.includes('id="modalTaskHygieneLibrary"'), true);
+    assert.equal(templates.includes('higienizar_reservatorio'), true);
+    assert.equal(templates.includes('tempo de contato do fabricante'), true);
+    assert.equal(tasks.includes('function compressTaskPhoto(file)'), true);
+    assert.equal(gas.includes("action === 'salvar_foto_tarefa'"), true);
+    assert.equal(html.includes('id="modalTaskQr"'), true);
+    assert.equal(tasks.includes("url.searchParams.set('consulta', 'tarefa')"), true);
+    assert.equal(tasks.includes('function openPublicTaskFromUrl()'), true);
+    assert.equal(gas.includes("'ProcedimentoFormato', 'ProgramacaoId'"), true);
     const appWithoutDialogApi = app.replaceAll('AloUiDialog.confirm(', '').replaceAll('AloUiDialog.prompt(', '');
     const tasksWithoutDialogApi = tasks.replaceAll('global.AloUiDialog.confirm(', '');
     assert.equal(/\bconfirm\(/.test(appWithoutDialogApi) || /\bprompt\(/.test(appWithoutDialogApi) || /\bconfirm\(/.test(tasksWithoutDialogApi), false, 'nao pode restar dialogo nativo');
@@ -704,10 +722,10 @@ async function testCatalogAutoPublish() {
     testAppsScriptKeepsActivityIdempotentAndRejectsStaleStatus();
     testOldClientPreservesV2TaskCatalog();
     testPasswordDialogsHaveExplicitConfirmation();
-    testV208TaskExperience();
+    testV209TaskExperience();
     testAudioMode();
     await testCatalogAutoPublish();
-    console.log('Testes críticos da v2.0.8 passaram.');
+    console.log('Testes críticos da v2.0.9 passaram.');
 })().catch(error => {
     console.error(error);
     process.exitCode = 1;
