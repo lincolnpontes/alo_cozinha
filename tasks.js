@@ -14,7 +14,7 @@
     let outbox = [];
     let revision = localStorage.getItem(STORAGE_REVISION) || '';
     let selectedTab = 'total';
-    let selectedArea = localStorage.getItem(STORAGE_SELECTED_AREA) || 'todos';
+    let selectedArea = localStorage.getItem(STORAGE_SELECTED_AREA) || '';
     let activeModule = 'home';
     let syncRunning = false;
     let syncTimer = null;
@@ -330,7 +330,16 @@
         select.innerHTML = '<option value="todos">Todos os setores</option>' + activeAreas.map(area =>
             `<option value="${escapeHtml(area.id)}">${escapeHtml(area.emoji)} ${escapeHtml(area.nome)}</option>`
         ).join('');
-        if (!activeAreas.some(area => area.id === selectedArea)) selectedArea = 'todos';
+        if (!activeAreas.some(area => area.id === selectedArea)) {
+            const kdsAreaId = db().configs?.areaAtual;
+            const kdsArea = (db().areas || []).find(area => area.id === kdsAreaId);
+            const normalizeName = value => String(value || '').normalize('NFD').replace(/[\u0300-\u036f]/g, '').toLocaleLowerCase('pt-BR').trim();
+            const matchingArea = kdsArea
+                ? activeAreas.find(area => normalizeName(area.nome) === normalizeName(kdsArea.nome))
+                : null;
+            selectedArea = matchingArea?.id || 'todos';
+            localStorage.setItem(STORAGE_SELECTED_AREA, selectedArea);
+        }
         select.value = selectedArea;
         const current = selectedArea === 'todos'
             ? { id: 'todos', nome: 'Todos', emoji: '📍' }
@@ -1355,15 +1364,17 @@
         document.getElementById('modalConfigTasksMenu').style.display = 'none';
         document.getElementById('modalTasksManager').style.display = 'none';
         hygieneGroupFilter = 'Todos';
-        renderHygieneLibrary();
+        renderHygieneLibrary(true);
         deps.openModalTop('modalTaskHygieneLibrary');
     }
-    function renderHygieneLibrary() {
+    function renderHygieneLibrary(renderFilters = false) {
         const list = document.getElementById('taskHygieneLibraryList');
         const filters = document.getElementById('taskHygieneFilters');
         const templates = global.AloTaskTemplates?.templates || [];
         const groups = ['Todos', ...new Set(templates.map(template => template.group || template.category))];
-        filters.innerHTML = groups.map(group => `<button type="button" class="${group === hygieneGroupFilter ? 'active' : ''}" onclick="AloTasks.setHygieneGroup('${escapeHtml(group)}')">${escapeHtml(group)}</button>`).join('');
+        if (renderFilters) {
+            filters.innerHTML = groups.map(group => `<button type="button" data-hygiene-group="${escapeHtml(group)}" class="${group === hygieneGroupFilter ? 'active' : ''}" onclick="AloTasks.setHygieneGroup('${escapeHtml(group)}')">${escapeHtml(group)}</button>`).join('');
+        }
         const visible = hygieneGroupFilter === 'Todos' ? templates : templates.filter(template => (template.group || template.category) === hygieneGroupFilter);
         list.innerHTML = visible.map(template => `
             <article class="task-hygiene-template">
@@ -1374,7 +1385,10 @@
     }
     function setHygieneGroup(group) {
         hygieneGroupFilter = group;
-        renderHygieneLibrary();
+        document.querySelectorAll('#taskHygieneFilters button').forEach(button => {
+            button.classList.toggle('active', button.dataset.hygieneGroup === group);
+        });
+        renderHygieneLibrary(false);
     }
     function closeHygieneLibrary() {
         document.getElementById('modalTaskHygieneLibrary').style.display = 'none';

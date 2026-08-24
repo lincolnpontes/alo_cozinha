@@ -1,3 +1,4 @@
+const STORAGE_KDS_SELECTED_AREA = 'alo_kds_selected_area_v1';
 let db = carregarBanco();
     let categoriaAtual = null;
     let ordemPopular = false; // FLAG DO FILTRO "TODOS" DINÂMICO
@@ -53,9 +54,11 @@ let db = carregarBanco();
             produto.areaOrigem = produto.areasOrigem[0];
             if (!db.areas.some(area => area.id === produto.areaDestino && area.tipo === 'recebimento')) produto.areaDestino = 'cozinha';
         });
+        const areaLocal = db.areas.find(area => area.id === localStorage.getItem(STORAGE_KDS_SELECTED_AREA));
         const areaSalva = db.areas.find(area => area.id === db.configs.areaAtual);
         const areaLegada = db.areas.find(area => area.id === db.configs.modo);
-        db.configs.areaAtual = (areaSalva || areaLegada || db.areas[0]).id;
+        db.configs.areaAtual = (areaLocal || areaSalva || areaLegada || db.areas[0]).id;
+        localStorage.setItem(STORAGE_KDS_SELECTED_AREA, db.configs.areaAtual);
         const atual = db.areas.find(area => area.id === db.configs.areaAtual);
         db.configs.modo = atual && atual.tipo === 'recebimento' ? 'cozinha' : 'panelas';
     }
@@ -462,6 +465,7 @@ let db = carregarBanco();
         const area = db.areas.find(item => item.id === areaId) || getAreaAtual();
         db.configs.areaAtual = area.id;
         db.configs.modo = area.tipo === 'recebimento' ? 'cozinha' : 'panelas';
+        localStorage.setItem(STORAGE_KDS_SELECTED_AREA, area.id);
         salvarBancoLocal();
         aplicarModoVisual(area.id);
     }
@@ -2141,7 +2145,7 @@ let db = carregarBanco();
     };
 
     if ('serviceWorker' in navigator) {
-        window.addEventListener('load', () => navigator.serviceWorker.register('./service-worker.js?v=2.0.11').catch(() => {}));
+        window.addEventListener('load', () => navigator.serviceWorker.register('./service-worker.js?v=2.0.12').catch(() => {}));
     }
 
     iniciarComSyncConfiavel();
