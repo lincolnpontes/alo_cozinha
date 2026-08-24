@@ -81,7 +81,7 @@ let db = carregarBanco();
     function ajustarNomeAreaCabecalho(element, nome) {
         if (!element) return;
         const length = Array.from(String(nome || '')).length;
-        const desktop = length > 24 ? 12 : (length > 17 ? 14 : (length > 11 ? 16 : 18));
+        const desktop = length > 30 ? 10 : (length > 24 ? 11 : (length > 17 ? 14 : (length > 11 ? 16 : 18)));
         const mobile = length > 24 ? 10 : (length > 17 ? 11 : (length > 11 ? 12 : 14));
         element.style.setProperty('--area-name-size', `${desktop}px`);
         element.style.setProperty('--area-name-size-mobile', `${mobile}px`);
@@ -2145,7 +2145,7 @@ let db = carregarBanco();
     };
 
     if ('serviceWorker' in navigator) {
-        window.addEventListener('load', () => navigator.serviceWorker.register('./service-worker.js?v=2.0.12').catch(() => {}));
+        window.addEventListener('load', () => navigator.serviceWorker.register('./service-worker.js?v=2.0.13').catch(() => {}));
     }
 
     iniciarComSyncConfiavel();

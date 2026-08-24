@@ -14,7 +14,7 @@
     let outbox = [];
     let revision = localStorage.getItem(STORAGE_REVISION) || '';
     let selectedTab = 'total';
-    let selectedArea = localStorage.getItem(STORAGE_SELECTED_AREA) || '';
+    let selectedArea = localStorage.getItem(STORAGE_SELECTED_AREA) || 'todos';
     let activeModule = 'home';
     let syncRunning = false;
     let syncTimer = null;
@@ -59,7 +59,7 @@
     function adjustHeaderAreaName(element, name) {
         if (!element) return;
         const length = Array.from(String(name || '')).length;
-        const desktop = length > 24 ? 12 : (length > 17 ? 14 : (length > 11 ? 16 : 18));
+        const desktop = length > 30 ? 10 : (length > 24 ? 11 : (length > 17 ? 14 : (length > 11 ? 16 : 18)));
         const mobile = length > 24 ? 10 : (length > 17 ? 11 : (length > 11 ? 12 : 14));
         element.style.setProperty('--area-name-size', `${desktop}px`);
         element.style.setProperty('--area-name-size-mobile', `${mobile}px`);
@@ -331,13 +331,7 @@
             `<option value="${escapeHtml(area.id)}">${escapeHtml(area.emoji)} ${escapeHtml(area.nome)}</option>`
         ).join('');
         if (!activeAreas.some(area => area.id === selectedArea)) {
-            const kdsAreaId = db().configs?.areaAtual;
-            const kdsArea = (db().areas || []).find(area => area.id === kdsAreaId);
-            const normalizeName = value => String(value || '').normalize('NFD').replace(/[\u0300-\u036f]/g, '').toLocaleLowerCase('pt-BR').trim();
-            const matchingArea = kdsArea
-                ? activeAreas.find(area => normalizeName(area.nome) === normalizeName(kdsArea.nome))
-                : null;
-            selectedArea = matchingArea?.id || 'todos';
+            selectedArea = 'todos';
             localStorage.setItem(STORAGE_SELECTED_AREA, selectedArea);
         }
         select.value = selectedArea;
@@ -770,9 +764,9 @@
             const stateClass = activity.status === 'em_execucao' ? 'running' : (timing.overdue ? 'late' : activity.status);
             let actions = '';
             if (activity.status === 'pendente') {
-                actions = `<button class="task-primary-action" onclick="event.stopPropagation();AloTasks.startTask('${activity.id}')">▶ Iniciar</button><button class="task-complete-action" onclick="event.stopPropagation();AloTasks.completeTask('${activity.id}', true)">✓ Concluir</button>${canReschedule ? `<button class="task-reschedule-action" onclick="event.stopPropagation();AloTasks.openReschedule('${activity.id}')" aria-label="Remarcar atividade" title="Remarcar">📅</button>` : ''}<button class="task-skip-action" onclick="event.stopPropagation();AloTasks.markTaskNotDone('${activity.id}')" aria-label="Marcar como não realizada" title="Não foi feita">❌</button>`;
+                actions = `<button class="task-primary-action" onclick="event.stopPropagation();AloTasks.startTask('${activity.id}')">▶ Iniciar</button><button class="task-complete-action" onclick="event.stopPropagation();AloTasks.completeTask('${activity.id}', true)">✓ Concluído</button>${canReschedule ? `<button class="task-reschedule-action" onclick="event.stopPropagation();AloTasks.openReschedule('${activity.id}')" aria-label="Remarcar atividade" title="Remarcar">📅</button>` : ''}<button class="task-skip-action" onclick="event.stopPropagation();AloTasks.markTaskNotDone('${activity.id}')" aria-label="Marcar como não realizada" title="Não foi feita">❌</button>`;
             } else if (activity.status === 'em_execucao') {
-                actions = `<button class="task-complete-action" onclick="event.stopPropagation();AloTasks.completeTask('${activity.id}', false)">✓ Concluir</button>${canReschedule ? `<button class="task-reschedule-action" onclick="event.stopPropagation();AloTasks.openReschedule('${activity.id}')" aria-label="Remarcar atividade" title="Remarcar">📅</button>` : ''}`;
+                actions = `<button class="task-complete-action" onclick="event.stopPropagation();AloTasks.completeTask('${activity.id}', false)">✓ Concluído</button>${canReschedule ? `<button class="task-reschedule-action" onclick="event.stopPropagation();AloTasks.openReschedule('${activity.id}')" aria-label="Remarcar atividade" title="Remarcar">📅</button>` : ''}`;
             }
             const detailsAction = ` onclick="AloTasks.openTaskDetails('${activity.id}')" onkeydown="if(event.target===event.currentTarget&&(event.key==='Enter'||event.key===' ')){event.preventDefault();AloTasks.openTaskDetails('${activity.id}')}" tabindex="0" aria-label="Abrir detalhes de ${escapeHtml(activity.nome)}"`;
             const urgent = activity.prioridade === 'urgente' ? '<b class="task-urgent-label">URGENTE</b>' : '';
@@ -923,8 +917,8 @@
         const detailActions = document.getElementById('taskDetailActions');
         detailActions.style.gridTemplateColumns = activity.status === 'pendente' ? 'repeat(2, minmax(0, 1fr))' : '1fr';
         detailActions.innerHTML = activity.status === 'pendente'
-            ? `<button class="task-primary-action" onclick="AloTasks.runTaskDetailAction('start')">▶ Iniciar</button><button class="task-complete-action" onclick="AloTasks.runTaskDetailAction('complete')">✓ Concluir</button>`
-            : (activity.status === 'em_execucao' ? `<button class="task-complete-action" onclick="AloTasks.runTaskDetailAction('complete')">✓ Concluir</button>` : '');
+            ? `<button class="task-primary-action" onclick="AloTasks.runTaskDetailAction('start')">▶ Iniciar</button><button class="task-complete-action" onclick="AloTasks.runTaskDetailAction('complete')">✓ Concluído</button>`
+            : (activity.status === 'em_execucao' ? `<button class="task-complete-action" onclick="AloTasks.runTaskDetailAction('complete')">✓ Concluído</button>` : '');
         document.getElementById('taskFinishedContent').innerHTML = `
             <div class="task-finished-summary"><strong>${escapeHtml(activity.nome)}</strong><span class="task-detail-status ${statusClass}">${statusText}${editableStatus ? `<button type="button" class="task-status-edit-button" onclick="AloTasks.toggleTaskStatusEditMenu()" aria-label="Editar estado" title="Editar estado" aria-expanded="false">✎</button>` : ''}</span></div>
             <div class="task-detail-grid">

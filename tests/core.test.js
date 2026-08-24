@@ -498,7 +498,7 @@ function testPasswordDialogsHaveExplicitConfirmation() {
     assert.equal(app.includes('Senha incorreta. Tente novamente.'), true);
 }
 
-function testV2012TaskExperience() {
+function testV2013TaskExperience() {
     const html = fs.readFileSync(path.join(root, 'index.html'), 'utf8');
     const tasks = fs.readFileSync(path.join(root, 'tasks.js'), 'utf8');
     const app = fs.readFileSync(path.join(root, 'app.js'), 'utf8');
@@ -618,14 +618,19 @@ function testV2012TaskExperience() {
     assert.equal(tasks.includes('function adjustHeaderAreaName'), true, 'Checklist deve adaptar nomes longos de setor');
     assert.equal(app.includes('function ajustarNomeAreaCabecalho'), true, 'KDS deve usar o mesmo ajuste de nomes longos');
     assert.equal(css.includes('--area-name-size-mobile'), true, 'o tamanho adaptativo deve funcionar no celular');
-    assert.equal(css.includes('#mainHeader .header-area-button { width: 100%; max-width: 230px; }'), true, 'KDS e Checklist devem usar seletores com a mesma largura');
-    assert.equal(css.includes('#mainHeader .header-area-picker { width: min(132px, 100%); max-width: 132px; }'), true, 'os seletores devem continuar iguais no celular');
+    assert.equal(css.includes('.tasks-area-picker { width: fit-content;'), true, 'o seletor do Checklist deve ser compacto e adaptavel');
+    assert.equal(css.includes('#mainHeader .header-area-picker { width: fit-content;'), true, 'o KDS deve manter o seletor compacto');
+    assert.equal(css.includes('max-width: min(260px, 100%)'), true, 'nomes longos devem ter espaco adicional sem alargar nomes curtos');
     assert.equal(css.includes('height: min(760px, 92vh)'), true, 'a biblioteca sanitaria nao deve mudar a posicao superior ao filtrar');
     assert.equal(css.includes('align-content: start'), true, 'somente a lista dos modelos deve variar de altura');
     assert.equal(app.includes("const STORAGE_KDS_SELECTED_AREA = 'alo_kds_selected_area_v1'"), true, 'o setor do KDS deve ser local ao equipamento');
     assert.equal(app.includes('localStorage.setItem(STORAGE_KDS_SELECTED_AREA, area.id)'), true, 'a troca de setor do KDS deve ser lembrada localmente');
     assert.equal(tasks.includes("const STORAGE_SELECTED_AREA = 'alo_tasks_selected_area_v2'"), true, 'o Checklist deve guardar seu setor localmente');
-    assert.equal(tasks.includes('matchingArea?.id || \'todos\''), true, 'o primeiro acesso ao Checklist deve aproveitar o setor equivalente do KDS');
+    assert.equal(tasks.includes('matchingArea'), false, 'KDS e Checklist nao devem associar setores automaticamente');
+    assert.equal(tasks.includes("let selectedArea = localStorage.getItem(STORAGE_SELECTED_AREA) || 'todos'"), true, 'o Checklist deve manter uma preferencia local independente');
+    assert.equal(html.includes('↩ Voltar para pendente'), true, 'a correcao de estado deve explicar seu efeito');
+    assert.equal(html.includes('<span>✓</span> Concluído'), true, 'o alarme deve usar Concluído');
+    assert.equal(tasks.includes('✓ Concluído</button>'), true, 'os botoes das tarefas devem usar Concluído');
     assert.equal(html.includes('id="taskHygieneFilters"'), true, 'modelos sanitarios devem possuir filtros objetivos');
     assert.equal(tasks.includes('function setHygieneGroup(group)'), true, 'os filtros sanitarios devem ser funcionais');
     assert.equal(templates.includes('triagem_saude_manipuladores'), true, 'RDC 216 exige controle de saude dos manipuladores');
@@ -760,10 +765,10 @@ async function testCatalogAutoPublish() {
     testAppsScriptKeepsActivityIdempotentAndRejectsStaleStatus();
     testOldClientPreservesV2TaskCatalog();
     testPasswordDialogsHaveExplicitConfirmation();
-    testV2012TaskExperience();
+    testV2013TaskExperience();
     testAudioMode();
     await testCatalogAutoPublish();
-    console.log('Testes críticos da v2.0.12 passaram.');
+    console.log('Testes críticos da v2.0.13 passaram.');
 })().catch(error => {
     console.error(error);
     process.exitCode = 1;

@@ -140,8 +140,8 @@
     color: #fff;
 }
 
-.tasks-area-picker { width: min(230px, 100%); min-width: 0; max-width: 230px; justify-content: center; }
-.tasks-area-picker .header-area-button { width: 100%; max-width: 230px; }
+.tasks-area-picker { width: fit-content; min-width: 0; max-width: min(260px, 100%); justify-content: center; }
+.tasks-area-picker .header-area-button { width: fit-content; max-width: 260px; }
 
 .tasks-header-title {
     min-width: 0;
@@ -168,8 +168,8 @@
 }
 .kds-header-title > span { font-size: 28px; line-height: 1; }
 #mainHeader { display: grid; grid-template-columns: auto minmax(0, 1fr) auto; gap: 8px; }
-#mainHeader .header-area-picker { width: min(230px, 100%); max-width: 230px; justify-content: center; }
-#mainHeader .header-area-button { width: 100%; max-width: 230px; }
+#mainHeader .header-area-picker { width: fit-content; max-width: min(260px, 100%); justify-content: center; }
+#mainHeader .header-area-button { width: fit-content; max-width: 260px; }
 
 .tasks-header-actions { display: flex; align-items: center; gap: 8px; }
 .tasks-sync-indicator,
@@ -718,7 +718,7 @@
     .module-context-name > span { font-size: 22px; }
     .module-context-name > strong { font-size: 16px; }
     .module-header-center .header-area-picker,
-    #mainHeader .header-area-picker { width: min(132px, 100%); max-width: 132px; }
+    #mainHeader .header-area-picker { width: fit-content; max-width: min(132px, 100%); }
     .module-header-center .header-area-button { min-height: 28px; padding-block: 2px; }
     .module-header-center .header-area-button strong { font-size: var(--area-name-size-mobile, 14px); text-align: center; }
     .module-header-center .header-area-chevron { font-size: 13px; }
