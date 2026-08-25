@@ -911,6 +911,7 @@
         document.getElementById('taskDetailsTitle').innerText = isFinished ? 'Registro da Atividade' : 'Detalhes da Atividade';
         const choices = document.getElementById('taskFinishedChoices');
         choices.style.display = 'none';
+        choices.classList.toggle('single-action', !isFinished);
         choices.style.gridTemplateColumns = isFinished ? '' : '1fr';
         document.getElementById('taskResumeButton').style.display = isFinished ? '' : 'none';
         document.getElementById('taskPendingButton').style.display = editableStatus ? '' : 'none';

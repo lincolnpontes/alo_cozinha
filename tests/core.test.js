@@ -498,7 +498,7 @@ function testPasswordDialogsHaveExplicitConfirmation() {
     assert.equal(app.includes('Senha incorreta. Tente novamente.'), true);
 }
 
-function testV2013TaskExperience() {
+function testV2014TaskExperience() {
     const html = fs.readFileSync(path.join(root, 'index.html'), 'utf8');
     const tasks = fs.readFileSync(path.join(root, 'tasks.js'), 'utf8');
     const app = fs.readFileSync(path.join(root, 'app.js'), 'utf8');
@@ -629,6 +629,10 @@ function testV2013TaskExperience() {
     assert.equal(tasks.includes('matchingArea'), false, 'KDS e Checklist nao devem associar setores automaticamente');
     assert.equal(tasks.includes("let selectedArea = localStorage.getItem(STORAGE_SELECTED_AREA) || 'todos'"), true, 'o Checklist deve manter uma preferencia local independente');
     assert.equal(html.includes('↩ Voltar para pendente'), true, 'a correcao de estado deve explicar seu efeito');
+    assert.equal(tasks.includes("choices.classList.toggle('single-action', !isFinished)"), true, 'o menu com uma unica correcao deve ficar compacto');
+    assert.equal(css.includes('.task-finished-choices.single-action { width: min(180px'), true, 'o botao isolado deve manter o tamanho de uma opcao');
+    assert.equal((html.match(/class="header-area-chevron" aria-hidden="true">▾/g) || []).length, 2, 'KDS e Checklist devem usar o novo indicador de abertura');
+    assert.equal(html.includes('>⌄</span>'), false, 'o indicador antigo deve ser removido');
     assert.equal(html.includes('<span>✓</span> Concluído'), true, 'o alarme deve usar Concluído');
     assert.equal(tasks.includes('✓ Concluído</button>'), true, 'os botoes das tarefas devem usar Concluído');
     assert.equal(html.includes('id="taskHygieneFilters"'), true, 'modelos sanitarios devem possuir filtros objetivos');
@@ -765,10 +769,10 @@ async function testCatalogAutoPublish() {
     testAppsScriptKeepsActivityIdempotentAndRejectsStaleStatus();
     testOldClientPreservesV2TaskCatalog();
     testPasswordDialogsHaveExplicitConfirmation();
-    testV2013TaskExperience();
+    testV2014TaskExperience();
     testAudioMode();
     await testCatalogAutoPublish();
-    console.log('Testes críticos da v2.0.13 passaram.');
+    console.log('Testes críticos da v2.0.14 passaram.');
 })().catch(error => {
     console.error(error);
     process.exitCode = 1;

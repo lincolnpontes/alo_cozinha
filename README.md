@@ -1,9 +1,10 @@
-# Alô Cozinha v2.0.13
+# Alô Cozinha v2.0.14
 
 Aplicativo para operação de restaurante com dois módulos: pedidos entre áreas (KDS) e checklist por setor.
 
 ## Novidades da v2
 
+- A v2.0.14 compacta a correção de status isolada e refina os indicadores dos seletores de área.
 - A v2.0.13 deixa os seletores compactos, separa as preferências locais dos módulos e uniformiza as ações de conclusão.
 - A v2.0.12 iguala os seletores de setor, estabiliza os filtros sanitários e mantém a área de trabalho local em cada equipamento.
 - A v2.0.11 uniformiza os nomes dos setores, reorganiza funcionários e amplia os modelos sanitários para os controles da RDC 216.

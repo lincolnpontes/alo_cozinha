@@ -666,6 +666,7 @@
     transform: rotate(45deg);
 }
 .task-finished-choices[data-placement="below"]::after { top: -7px; bottom: auto; transform: rotate(225deg); }
+.task-finished-choices.single-action { width: min(180px, calc(100vw - 20px)); }
 .task-finished-choices button { margin: 0; min-height: 48px; }
 .task-resume-button { border-color: #7b4aa3; color: #65358d; }
 .task-pending-button { border-color: #c76d6d; background: #fff7f7; color: #9f2424; }
